@@ -80,23 +80,6 @@ private:
 	Heads Tail;
 };
 
-inline U32 CalculateRank(const IResourceTableInfo* Table)
-{
-	U32 Rank = 0;
-	const IResourceTableInfo* Parent = Table->GetParent();
-	while (Parent)
-	{
-		Rank++;
-		Parent = Parent->GetParent();
-	}
-	return Rank;
-}
-
-inline bool HasSameRankAndName(const IResourceTableInfo* Owner, const IResourceTableInfo* Parent)
-{
-	return CalculateRank(Owner) == CalculateRank(Parent) && (strcmp(Owner->GetName(), Parent->GetName()) == 0);
-}
-
 struct PinStyle
 {
 	enum Type { Input, Output };
@@ -161,7 +144,6 @@ struct PinStyle
 		if (Entry.GetParent() == nullptr)
 			return;
 
-		//bool SameRank = HasSameRankAndName(Entry.GetParent(), Entry.GetOwner());
 		fprintf(fhp, R"(
 		Output%zu -> Input%zu [constraint = true, penwidth = 2, )", Entry.ParentHash(), Entry.Hash());
 		PinColorStyle.Print(fhp);
@@ -189,8 +171,6 @@ struct ActionStyle
 {
 	ActionStyle(const IRenderPassAction* InRenderPassAction) : RenderPassAction(InRenderPassAction), LocalActionIndex(GlobalActionIndex++)
 	{
-		Rank = CalculateRank(RenderPassAction->GetRenderPassData());
-
 		for (const auto& Entry : RenderPassAction->GetRenderPassData()->AsInputIterator())
 		{
 			InputPins.push_back(PinStyle(PinStyle::Input, Entry, RenderPassAction));
@@ -318,7 +298,7 @@ digraph G
 			return a.GetRank() < b.GetRank();
 		});
 
-		PrintActions(fhp, "same");
+		PrintActions(fhp);
 
 		for (const auto& PinEntry : AllInputEntries)
 		{
@@ -326,7 +306,7 @@ digraph G
 		}
 	}
 
-	void PrintActions(FILE* fhp, const char* Rank) const
+	void PrintActions(FILE* fhp) const
 	{
 		if (Actions.size() == 0)
 			return;
@@ -334,27 +314,6 @@ digraph G
 		for (const auto& Action : Actions)
 		{
 			Action.Print(fhp);
-		}
-
-		const IResourceTableInfo* Previous = Actions[0].GetRenderPassAction()->GetRenderPassData();
-		for (U32 i = 0; i < Actions.size(); i++)
-		{
-			auto Action = Actions[i];
-			fprintf(fhp, R"(
-		{rank = %s; )", Rank);
-
-			bool SameRank = true;
-			while (SameRank && i < Actions.size())
-			{
-				Action = Actions[i];
-				Action.PrintName(fhp);
-				fprintf(fhp, R"( ; )");
-				i++;
-				SameRank = HasSameRankAndName(Previous, Action.GetRenderPassAction()->GetRenderPassData());
-				Previous = Action.GetRenderPassAction()->GetRenderPassData();
-			}
-
-			fprintf(fhp, R"(};)");
 		}
 	}
 

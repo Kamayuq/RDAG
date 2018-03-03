@@ -33,9 +33,8 @@ struct RenderPassBuilderBase
 	friend struct RenderPassBuilderBase;
 
 	RenderPassBuilderBase(const RenderPassBuilderBase&) = delete;
-	RenderPassBuilderBase(std::vector<const IRenderPassAction*>& InActionList, const IResourceTableInfo* InCurrentRenderPassData = nullptr)
-		: CurrentRenderPassData(InCurrentRenderPassData)
-		, ActionList(InActionList)
+	RenderPassBuilderBase(std::vector<const IRenderPassAction*>& InActionList)
+		: ActionList(InActionList)
 	{}
 
 	template<typename FunctionType, typename ReturnType = typename std::decay_t<typename Traits::function_traits<FunctionType>::return_type>::ReturnType>
@@ -53,8 +52,7 @@ struct RenderPassBuilderBase
 		typedef ReturnType NestedOutputTableType;
 
 		auto& LocalActionList = ActionList;
-		auto LocalCurrentRenderPassData = CurrentRenderPassData;
-		return [&LocalActionList, &Promise, BuildFunction, Name, LocalCurrentRenderPassData](const auto& s)
+		return [&LocalActionList, &Promise, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
@@ -64,7 +62,7 @@ struct RenderPassBuilderBase
 			ASYNC Builder(LocalActionList, NestedRenderPassData);
 
 			Promise = BuildFunction(Builder, input);
-			Promise.Run(NestedRenderPassData, Name, LocalCurrentRenderPassData);
+			Promise.Run(NestedRenderPassData, Name);
 
 			return s;
 		};
@@ -94,8 +92,7 @@ struct RenderPassBuilderBase
 		static_assert(std::is_assignable_v<BuildFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 
 		auto& LocalActionList = ActionList;
-		auto LocalCurrentRenderPassData = CurrentRenderPassData;
-		return [&LocalActionList, BuildFunction, Name, LocalCurrentRenderPassData](const auto& s)
+		return [&LocalActionList, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
@@ -103,8 +100,8 @@ struct RenderPassBuilderBase
 			auto input = s.template PopulateInput<InputTableType>();
 			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();
 
-			CRTP Builder(LocalActionList, NestedRenderPassData);
-			new (NestedRenderPassData) NestedOutputTableType(BuildFunction(Builder, input), Name, LocalCurrentRenderPassData, nullptr);
+			CRTP Builder(LocalActionList);
+			new (NestedRenderPassData) NestedOutputTableType(BuildFunction(Builder, input), Name, nullptr);
 			return NestedRenderPassData->Merge(s);
 		};
 	}
@@ -124,8 +121,7 @@ struct RenderPassBuilderBase
 		static_assert(std::is_assignable_v<QueueFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 
 		auto& LocalActionList = ActionList;
-		auto LocalCurrentRenderPassData = CurrentRenderPassData;
-		return [&LocalActionList, QueuedTask, Name, LocalCurrentRenderPassData](const auto& s)
+		return [&LocalActionList, QueuedTask, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
@@ -134,7 +130,7 @@ struct RenderPassBuilderBase
 			InputTableType input = s.template PopulateAll<InputTableType>();
 			RenderActionType* NewRenderAction = LinearAlloc<RenderActionType>();
 
-			new (NewRenderAction) RenderActionType(Name, LocalCurrentRenderPassData, input, QueuedTask);
+			new (NewRenderAction) RenderActionType(Name, input, QueuedTask);
 			{
 				std::lock_guard<std::mutex> lock(ActionListMutex);
 				LocalActionList.push_back(NewRenderAction);
@@ -353,9 +349,9 @@ private:
 		template<typename, typename>
 		friend struct RenderPassBuilderBase;
 
-		TRenderPassAction(const char* Name, const IResourceTableInfo* InParent, const RenderPassDataType& InRenderPassData, const FunctionType& InTask)
+		TRenderPassAction(const char* Name, const RenderPassDataType& InRenderPassData, const FunctionType& InTask)
 			: IRenderPassAction(Name)
-			, RenderPassData(InRenderPassData, Name, InParent, this)
+			, RenderPassData(InRenderPassData, Name, this)
 			, Task(InTask) {}
 
 	private:
@@ -373,7 +369,6 @@ private:
 		FunctionType Task;
 	};
 
-	const IResourceTableInfo* CurrentRenderPassData = nullptr;
 	std::vector<const IRenderPassAction*>& ActionList;
 };
 

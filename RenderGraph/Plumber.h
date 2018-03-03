@@ -429,7 +429,7 @@ public:
 		virtual IResourceTableInfo::Iterator end() const = 0;
 	};
 
-	IResourceTableInfo(const char* InName, const IResourceTableInfo* InParent, const IRenderPassAction* InAction) : Name(InName), Parent(InParent), Action(InAction) {}
+	IResourceTableInfo(const char* InName, const IRenderPassAction* InAction) : Name(InName), Action(InAction) {}
 	virtual ~IResourceTableInfo() {}
 	virtual const Iteratable& AsInputIterator() const = 0;
 	virtual const Iteratable& AsOutputIterator() const = 0;
@@ -439,11 +439,6 @@ public:
 		return Name;
 	}
 
-	const IResourceTableInfo* GetParent() const
-	{
-		return Parent;
-	}
-
 	const IRenderPassAction* GetAction() const
 	{
 		return Action;
@@ -451,7 +446,6 @@ public:
 
 private:
 	const char* Name = nullptr;
-	const IResourceTableInfo* Parent = nullptr;
 	const IRenderPassAction* Action = nullptr;
 };
 
@@ -692,15 +686,15 @@ public:
 	{}*/
 
 	ResourceTable(const ThisType& RTT)
-		: ResourceTable(RTT, RTT.GetName(), RTT.GetParent(), RTT.GetAction()) {};
+		: ResourceTable(RTT, RTT.GetName(), RTT.GetAction()) {};
 
-	explicit ResourceTable(const ThisType& RTT, const char* Name, const IResourceTableInfo* InParent, const IRenderPassAction* InAction)
-		: ResourceTable(RTT.GetInputTable(), RTT.GetOutputTable(), Name, InParent, InAction) {};
+	explicit ResourceTable(const ThisType& RTT, const char* Name, const IRenderPassAction* InAction)
+		: ResourceTable(RTT.GetInputTable(), RTT.GetOutputTable(), Name, InAction) {};
 
-	explicit ResourceTable(const InputTableType& IT, const OutputTableType& OT, const char* Name = "Unnamed", const IResourceTableInfo* InParent = nullptr, const IRenderPassAction* InAction = nullptr)
+	explicit ResourceTable(const InputTableType& IT, const OutputTableType& OT, const char* Name = "Unnamed", const IRenderPassAction* InAction = nullptr)
 		: InputTableType(IT)
 		, OutputTableType(OT) 
-		, IResourceTableInfo(Name, InParent, InAction)
+		, IResourceTableInfo(Name, InAction)
 		, InputIterator(this)
 		, OutputIterator(this)
 	{ 
