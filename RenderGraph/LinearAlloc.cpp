@@ -4,7 +4,7 @@
 #include "Assert.h"
 
 
-#define USE_ATOMICS 0
+#define USE_ATOMICS 1
 
 struct SimpleLinearAllocator
 {

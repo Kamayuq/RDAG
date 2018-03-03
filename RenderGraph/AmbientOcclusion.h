@@ -15,31 +15,7 @@ namespace RDAG
 }
 
 template<typename RenderContextType = RenderContext>
-struct DistanceFieldAORenderPass
-{
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::SceneViewInfo>,
-		OutputTable<RDAG::AmbientOcclusionResult>
-	);
-
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
-};
-
-template<typename RenderContextType = RenderContext>
-struct HorizonBasedAORenderPass
-{
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::Gbuffer, RDAG::DepthTarget>,
-		OutputTable<RDAG::AmbientOcclusionResult>
-	);
-
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
-};
-
-template<typename RenderContextType = RenderContext>
-struct AmbientOcclusionSelectionPass
+struct AmbientOcclusionPass
 {
 	RESOURCE_TABLE
 	(

@@ -10,17 +10,12 @@
 #include "TemporalAA.h"
 
 template<typename RenderContextType>
-auto RunGbufferAndVelocityPasses(const RenderPassBuilder& Builder)
+auto RunGbufferPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
 	(
 		Builder.BuildRenderPass("DepthRenderPass", DepthRenderPass<RenderContextType>::Build),
-		Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass<RenderContextType>::Build),
-#if ASYNC_VELOCITY
-		Builder.BuildAsyncRenderPass("VelocityRenderPass", VelocityRenderPass<RenderContextType>::Build, VelocityPassPromise)
-#else
-		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass<RenderContextType>::Build)
-#endif
+		Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass<RenderContextType>::Build)
 	);
 }
 
@@ -29,7 +24,7 @@ auto RunShadowAndLightingPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
 	(
-		Builder.BuildRenderPass("AmbientOcclusionSelectionPass", AmbientOcclusionSelectionPass<RenderContextType>::Build),
+		Builder.BuildRenderPass("AmbientOcclusionPass", AmbientOcclusionPass<RenderContextType>::Build),
 		Builder.BuildRenderPass("ShadowMapRenderPass", ShadowMapRenderPass<RenderContextType>::Build),
 		Builder.BuildRenderPass("DeferredLightingPass", DeferredLightingPass<RenderContextType>::Build)
 	);
@@ -65,7 +60,12 @@ typename DeferredRendererPass<RenderContextType>::PassOutputType DeferredRendere
 #endif
 	return Seq
 	(
-		RunGbufferAndVelocityPasses<RenderContextType>(Builder),
+		RunGbufferPasses<RenderContextType>(Builder),
+#if ASYNC_VELOCITY
+		Builder.BuildAsyncRenderPass("VelocityRenderPass", VelocityRenderPass<RenderContextType>::Build, VelocityPassPromise),
+#else
+		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass<RenderContextType>::Build),
+#endif
 		RunShadowAndLightingPasses<RenderContextType>(Builder),
 		RunTransparencyPasses<RenderContextType>(Builder),
 #if ASYNC_VELOCITY

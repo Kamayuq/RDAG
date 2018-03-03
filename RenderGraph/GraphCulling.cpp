@@ -63,27 +63,3 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 		}
 	}
 }
-
-/*
-void GraphProcessor::ScheduleGraphNodes(const struct IRenderPassAction* Pass, std::vector<const IRenderPassAction*>& OutPasses) const
-{
-	if (!Pass->IsCulled())
-	{
-		if (Pass->IsComposedPass())
-		{
-			const auto* ComposedPass = checked_cast<const ComposedRenderPass*>(Pass);
-			std::vector<const RenderPassBase*> SubPasses;
-			ComposedPass->GetSubPasses(SubPasses);
-			for (const RenderPassBase* SubPass : SubPasses)
-			{
-				ScheduleGraphNodes(SubPass, OutPasses);
-			}
-		}
-		else
-		{
-			const auto* LeafPass = checked_cast<const LeafRenderPass*>(Pass);
-			OutPasses.push_back(LeafPass);
-		}
-	}
-}
-*/

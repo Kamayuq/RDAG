@@ -853,10 +853,11 @@ private:
 		typedef decltype(Set::Intersect(std::declval<InputSet>(), std::declval<OutputSet>())) InputOutputSet;
 		return MakeFromSet(std::declval<InputSet>(), std::declval<InputOutputSet>());
 	}
-
+ 
+	typedef decltype(ExtractInputOutputTableType(std::declval<InputTableType>(), std::declval<OutputTableType>())) ExtractInputOutputType;
 public:
-	typedef ThisType PassOutputType;
-	typedef typename decltype(ExtractInputOutputTableType(std::declval<InputTableType>(), std::declval<OutputTableType>()))::ResourceTableType PassInputOutputType;
+	using PassOutputType = ThisType;
+	using PassInputOutputType = typename ExtractInputOutputType::ResourceTableType;
 };
 
 #define RESOURCE_TABLE(...)														\

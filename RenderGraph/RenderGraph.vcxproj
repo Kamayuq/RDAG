@@ -102,11 +102,8 @@
     <ClInclude Include="AmbientOcclusion.h" />
     <ClInclude Include="Assert.h" />
     <ClInclude Include="BilateralUpsample.h" />
-    <ClInclude Include="ContinuationMonad.h" />
-    <ClInclude Include="Float4.h" />
-    <ClInclude Include="Lazy.h" />
+    <ClInclude Include="Continuation.h" />
     <ClInclude Include="LinearAlloc.h" />
-    <ClInclude Include="Monad.h" />
     <ClInclude Include="DeferredLightingPass.h" />
     <ClInclude Include="DeferredRenderingPass.h" />
     <ClInclude Include="DepthPass.h" />
@@ -124,7 +121,7 @@
     <ClInclude Include="RHI.h" />
     <ClInclude Include="SharedResources.h" />
     <ClInclude Include="SimpleBlendPass.h" />
-    <ClInclude Include="SequenceMonad.h" />
+    <ClInclude Include="Sequence.h" />
     <ClInclude Include="TemporalAA.h" />
     <ClInclude Include="TransparencyPass.h" />
     <ClInclude Include="Types.h" />

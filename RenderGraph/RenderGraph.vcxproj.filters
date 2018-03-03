@@ -10,9 +10,6 @@
     <Filter Include="Game">
       <UniqueIdentifier>{374776e9-1d8e-401e-a6b4-1d39a58ade62}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Core\Math">
-      <UniqueIdentifier>{dddf6757-3264-45fb-9f43-b66d44f0a18d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Core\Plumber">
       <UniqueIdentifier>{1955161e-8bca-4f91-8196-5cac8c22511b}</UniqueIdentifier>
     </Filter>
@@ -81,16 +78,7 @@
     <ClInclude Include="LinearAlloc.h">
       <Filter>Core</Filter>
     </ClInclude>
-    <ClInclude Include="Float4.h">
-      <Filter>Core\Math</Filter>
-    </ClInclude>
     <ClInclude Include="Set.h">
-      <Filter>Core\Plumber</Filter>
-    </ClInclude>
-    <ClInclude Include="Monad.h">
-      <Filter>Core\Plumber</Filter>
-    </ClInclude>
-    <ClInclude Include="Lazy.h">
       <Filter>Core\Plumber</Filter>
     </ClInclude>
     <ClInclude Include="Graphvis.h">
@@ -105,10 +93,10 @@
     <ClInclude Include="SharedResources.h">
       <Filter>Lego</Filter>
     </ClInclude>
-    <ClInclude Include="SequenceMonad.h">
+    <ClInclude Include="Sequence.h">
       <Filter>Core\Plumber</Filter>
     </ClInclude>
-    <ClInclude Include="ContinuationMonad.h">
+    <ClInclude Include="Continuation.h">
       <Filter>Core\Plumber</Filter>
     </ClInclude>
   </ItemGroup>

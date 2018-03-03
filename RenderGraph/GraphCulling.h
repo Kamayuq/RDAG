@@ -20,8 +20,6 @@ struct GraphProcessor
 		}
 	}
 
-	//void ScheduleGraphNodes(const struct IRenderPassAction* Pass, std::vector<const IRenderPassAction*>& OutPasses) const;
-
 private:
 	void ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions, U32 ParentColor);
 

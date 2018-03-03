@@ -1,8 +1,8 @@
 #pragma once
 #include <mutex>
 #include "LinearAlloc.h"
-#include "ContinuationMonad.h"
-#include "SequenceMonad.h"
+#include "Continuation.h"
+#include "Sequence.h"
 #include "Plumber.h"
 #include "RHI.h"
 
