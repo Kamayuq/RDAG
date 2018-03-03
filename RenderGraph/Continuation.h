@@ -48,9 +48,8 @@ struct Promise : PromiseBase
 		return *this;
 	}
 
-
 	virtual ~Promise() { };
-	virtual void Run(T*, const char*, const class IResourceTableInfo*) { check(0); }
+	virtual void Run(T*, const char*) { check(0); }
 	virtual T Get() { check(0); return *static_cast<T*>(LambdaPtr); };
 
 protected:
@@ -75,11 +74,11 @@ struct PromiseImpl final : Promise<T>
 		this->LambdaPtr = new (LinearAlloc<L>()) L(InLambda);
 	}
 
-	void Run(T* Desination, const char* Name, const IResourceTableInfo* CurrentRenderPassData) override
+	void Run(T* Desination, const char* Name) override
 	{
 		 this->future = std::async(std::launch::async, [=] 
 		 { 
-			 new (Desination) T(PromiseBase::Run(*static_cast<L*>(this->LambdaPtr)), Name, CurrentRenderPassData, nullptr);
+			 new (Desination) T(PromiseBase::Run(*static_cast<L*>(this->LambdaPtr)), Name, nullptr);
 			 this->ResultPtr = Desination;
 			 return Desination;
 		 });

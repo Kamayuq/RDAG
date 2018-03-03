@@ -138,8 +138,7 @@ struct Wrapped : private Handle
 	template<typename, int, typename, typename...>
 	friend class ResourceTableIteratorInner;
 
-	template<typename, typename>
-	friend struct RenderPassBuilderBase;
+	friend struct RenderPassBuilder;
 
 	Wrapped() = default;
 
@@ -376,8 +375,7 @@ public:
 struct IRenderPassAction;
 class IResourceTableInfo
 {
-	template<typename, typename>
-	friend struct RenderPassBuilderBase;
+	friend struct RenderPassBuilder;
 
 public:
 	class Iterator
@@ -551,8 +549,7 @@ public:
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
 
-	template<typename, typename>
-	friend struct RenderPassBuilderBase;
+	friend struct RenderPassBuilder;
 
 	using BaseType::begin;
 	using BaseType::end;
@@ -580,8 +577,7 @@ public:
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
 
-	template<typename, typename>
-	friend struct RenderPassBuilderBase;
+	friend struct RenderPassBuilder;
 
 	using BaseType::begin;
 	using BaseType::end;
@@ -625,8 +621,7 @@ public:
 	template<typename, typename>
 	friend class ResourceTable;
 
-	template<typename, typename>
-	friend struct RenderPassBuilderBase;
+	friend struct RenderPassBuilder;
 
 	typedef TInputTableType InputTableType;
 	typedef TOutputTableType OutputTableType;
@@ -678,13 +673,6 @@ public:
 	}
 
 public:
-	
-	/*ResourceTable() 
-		: IResourceTableInfo("default", nullptr, nullptr)
-		, InputTableType(InputTableType())
-		, OutputTableType(OutputTableType())
-	{}*/
-
 	ResourceTable(const ThisType& RTT)
 		: ResourceTable(RTT, RTT.GetName(), RTT.GetAction()) {};
 
@@ -757,7 +745,7 @@ public:
 	constexpr auto PopulateInput() const
 	{
 		RTT::CheckIntegrity();
-		typedef typename RTT::PassInputOutputType RTT2;
+		typedef typename RTT::PassInputType RTT2;
 		return PopulateAll<RTT2>();
 	}
 
@@ -829,32 +817,18 @@ private:
 		static_assert(OutputTableType::IsOutputTable(), "Second Parameter must be the OutputTable");
 	}
 
-	template<typename ITT, typename OTT>
-	struct FromSetType { typedef ResourceTable<ITT, OTT> ResourceTableType; };
-
 	template<typename... XS, typename... YS>
-	static constexpr auto MakeFromSet(const Set::Type<XS...>&, const Set::Type<YS...>&)
-	{
-		return FromSetType<InputTable<XS...>, OutputTable<YS...>>();
-	}
+	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&) -> ResourceTable<InputTable<XS...>, OutputTable<YS...>>;
 
-	template<typename... XS, typename... YS>
-	static constexpr auto ExtractInputOutputTableType(const InputTable<XS...>&, const OutputTable<YS...>&)
-	{
-		check(false); //You don't call me you decltype me
-		typedef Set::Type<XS...> InputSet;
-		typedef Set::Type<YS...> OutputSet;
-		typedef decltype(Set::Intersect(std::declval<InputSet>(), std::declval<OutputSet>())) InputOutputSet;
-		return MakeFromSet(std::declval<InputSet>(), std::declval<InputOutputSet>());
-	}
+	template<typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
+	static constexpr auto ExtractInputOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets(InputSet(), InputOutputSet()));
  
-	typedef decltype(ExtractInputOutputTableType(std::declval<InputTableType>(), std::declval<OutputTableType>())) ExtractInputOutputType;
 public:
 	using PassOutputType = ThisType;
-	using PassInputOutputType = typename ExtractInputOutputType::ResourceTableType;
+	using PassInputType = decltype(ExtractInputOutputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
 };
 
 #define RESOURCE_TABLE(...)														\
 	using ResourceTableType	= ResourceTable< __VA_ARGS__ >;						\
-	using PassInputType		= typename ResourceTableType::PassInputOutputType;	\
+	using PassInputType		= typename ResourceTableType::PassInputType;		\
 	using PassOutputType	= typename ResourceTableType::PassOutputType;		

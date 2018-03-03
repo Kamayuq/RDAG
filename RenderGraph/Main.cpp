@@ -54,8 +54,7 @@ int main(int argc, char* argv[])
 		BackendType = (ERenderBackend::Type)rand();
 	}
 
-	std::vector<const IRenderPassAction*> ActionList;
-	RenderPassBuilder Builder(ActionList);
+	RenderPassBuilder Builder;
 
 	{
 		RESOURCE_TABLE
@@ -103,7 +102,7 @@ int main(int argc, char* argv[])
 			auto start = std::chrono::high_resolution_clock::now();
 
 			LinearReset();
-			ActionList.clear();
+			Builder.Reset();
 
 			switch (BackendType)
 			{
@@ -150,7 +149,7 @@ int main(int argc, char* argv[])
 		for (int i = 0; i < ItterationCount; i++)
 		{
 			GraphProcessor GPU;
-			GPU.ColorGraphNodes(ActionList);
+			GPU.ColorGraphNodes(Builder.GetActionList());
 		}
 
 		auto time = std::chrono::high_resolution_clock::now() - start;
@@ -158,7 +157,7 @@ int main(int argc, char* argv[])
 	}
 
 	{
-		GraphvisNeoWriter Writer("../test.dot", ActionList);
+		GraphvisNeoWriter Writer("../test.dot", Builder.GetActionList());
 	}
 
 	std::cin.get();

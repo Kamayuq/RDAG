@@ -26,15 +26,10 @@ private:
 	mutable U32 Color = UINT_MAX;
 };
 
-template<typename CRTP, typename ASYNC>
-struct RenderPassBuilderBase
+struct RenderPassBuilder
 {
-	template<typename, typename>
-	friend struct RenderPassBuilderBase;
-
-	RenderPassBuilderBase(const RenderPassBuilderBase&) = delete;
-	RenderPassBuilderBase(std::vector<const IRenderPassAction*>& InActionList)
-		: ActionList(InActionList)
+	RenderPassBuilder(const RenderPassBuilder&) = delete;
+	RenderPassBuilder()
 	{}
 
 	template<typename FunctionType, typename ReturnType = typename std::decay_t<typename Traits::function_traits<FunctionType>::return_type>::ReturnType>
@@ -51,17 +46,17 @@ struct RenderPassBuilderBase
 		static_assert(std::is_assignable_v<BuildFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 		typedef ReturnType NestedOutputTableType;
 
-		auto& LocalActionList = ActionList;
-		return [&LocalActionList, &Promise, BuildFunction, Name](const auto& s)
+		const RenderPassBuilder* Self = this;
+		return [Self, &Promise, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
 			auto input = s.template PopulateInput<InputTableType>();
 			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();
-			ASYNC Builder(LocalActionList, NestedRenderPassData);
-
-			Promise = BuildFunction(Builder, input);
+			
+			//TODO reinstatiate builder and merge actionlist
+			Promise = BuildFunction(*Self, input);
 			Promise.Run(NestedRenderPassData, Name);
 
 			return s;
@@ -74,6 +69,7 @@ struct RenderPassBuilderBase
 		return [&Promise](const auto& s)
 		{
 			CheckIsResourceTable(s);
+			//TODO reinstatiate builder and merge actionlist
 			return Promise.Get().Merge(s);
 		};
 	}
@@ -91,18 +87,13 @@ struct RenderPassBuilderBase
 		typedef NestedOutputTableType(*BuildFunctionType)(const BuilderType&, const InputTableType&);
 		static_assert(std::is_assignable_v<BuildFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 
-		auto& LocalActionList = ActionList;
-		return [&LocalActionList, BuildFunction, Name](const auto& s)
+		const RenderPassBuilder* Self = this;
+		return [Self, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
-			//typedef typename std::decay<decltype(s)>::type StateType;
-
 			auto input = s.template PopulateInput<InputTableType>();
-			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();
-
-			CRTP Builder(LocalActionList);
-			new (NestedRenderPassData) NestedOutputTableType(BuildFunction(Builder, input), Name, nullptr);
-			return NestedRenderPassData->Merge(s);
+			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input), Name, nullptr);
+			return NestedRenderPassData.Merge(s);
 		};
 	}
 
@@ -132,6 +123,7 @@ struct RenderPassBuilderBase
 
 			new (NewRenderAction) RenderActionType(Name, input, QueuedTask);
 			{
+				//TODO reinstatiate builder and merge actionlist
 				std::lock_guard<std::mutex> lock(ActionListMutex);
 				LocalActionList.push_back(NewRenderAction);
 			}
@@ -332,6 +324,16 @@ struct RenderPassBuilderBase
 		return ResourceTable<InputTable<>, OutputTable<>>(InputTable<>(), OutputTable<>(), "EmptyResourceTable");
 	}
 
+	const std::vector<const IRenderPassAction*>& GetActionList() //this should never be const
+	{
+		return ActionList;
+	}
+
+	void Reset()
+	{
+		ActionList.clear();
+	}
+
 private:
 	template<typename Handle>
 	using OutputTableType = ResourceTable<InputTable<>, OutputTable<Handle>>;
@@ -346,8 +348,7 @@ private:
 	template<typename ContextType, typename RenderPassDataType, typename FunctionType>
 	struct TRenderPassAction final : IRenderPassAction
 	{
-		template<typename, typename>
-		friend struct RenderPassBuilderBase;
+		friend struct RenderPassBuilder;
 
 		TRenderPassAction(const char* Name, const RenderPassDataType& InRenderPassData, const FunctionType& InTask)
 			: IRenderPassAction(Name)
@@ -369,43 +370,5 @@ private:
 		FunctionType Task;
 	};
 
-	std::vector<const IRenderPassAction*>& ActionList;
-};
-
-struct AsyncRenderPassBuilder : private RenderPassBuilderBase<AsyncRenderPassBuilder, AsyncRenderPassBuilder>
-{
-	typedef RenderPassBuilderBase<AsyncRenderPassBuilder, AsyncRenderPassBuilder> Base;
-	using Base::RenderPassBuilderBase;
-	using Base::BuildRenderPass;
-	using Base::MoveAllInputToOutputTableEntries;
-	using Base::MoveInputToOutputTableEntry;
-	using Base::MoveInputTableEntry;
-	using Base::MoveOutputToInputTableEntry;
-	using Base::MoveOutputTableEntry;
-	using Base::CreateInputResource;
-	using Base::CreateOutputResource;
-	using Base::ExtractResourceTableEntries;
-	using Base::GetEmptyResourceTable;
-	using Base::QueueRenderAction;
-	using Base::ReplaceResourceTableEntries;
-};
-
-struct RenderPassBuilder : private RenderPassBuilderBase<RenderPassBuilder, AsyncRenderPassBuilder>
-{
-	typedef RenderPassBuilderBase<RenderPassBuilder, AsyncRenderPassBuilder> Base;
-	using Base::RenderPassBuilderBase;
-	using Base::BuildAsyncRenderPass;
-	using Base::SynchronizeAsyncRenderPass;
-	using Base::BuildRenderPass;
-	using Base::MoveAllInputToOutputTableEntries;
-	using Base::MoveInputToOutputTableEntry;
-	using Base::MoveInputTableEntry;
-	using Base::MoveOutputToInputTableEntry;
-	using Base::MoveOutputTableEntry;
-	using Base::CreateInputResource;
-	using Base::CreateOutputResource;
-	using Base::ExtractResourceTableEntries;
-	using Base::GetEmptyResourceTable;
-	using Base::QueueRenderAction;
-	using Base::ReplaceResourceTableEntries;
+	mutable std::vector<const IRenderPassAction*> ActionList;
 };

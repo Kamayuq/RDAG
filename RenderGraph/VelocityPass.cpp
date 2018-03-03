@@ -1,7 +1,7 @@
 #include "VelocityPass.h"
 
 template<typename RenderContextType>
-typename VelocityRenderPass<RenderContextType>::ReturnType VelocityRenderPass<RenderContextType>::Build(const BuilderType& Builder, const PassInputType& Input)
+typename VelocityRenderPass<RenderContextType>::ReturnType VelocityRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto DepthInfo = Input.GetInputDescriptor<RDAG::DepthTarget>();
 	Texture2d::Descriptor VelocityDescriptor;
@@ -31,6 +31,6 @@ typename VelocityRenderPass<RenderContextType>::ReturnType VelocityRenderPass<Re
 		})
 	)(Input);
 }
-template VelocityRenderPass<RenderContext>::ReturnType VelocityRenderPass<RenderContext>::Build(const BuilderType&, const PassInputType&);
-template VelocityRenderPass<ParallelRenderContext>::ReturnType VelocityRenderPass<ParallelRenderContext>::Build(const BuilderType&, const PassInputType&);
-template VelocityRenderPass<VulkanRenderContext>::ReturnType VelocityRenderPass<VulkanRenderContext>::Build(const BuilderType&, const PassInputType&);
+template VelocityRenderPass<RenderContext>::ReturnType VelocityRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
+template VelocityRenderPass<ParallelRenderContext>::ReturnType VelocityRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
+template VelocityRenderPass<VulkanRenderContext>::ReturnType VelocityRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

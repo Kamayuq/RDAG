@@ -3,7 +3,7 @@
 #include "ResourceTypes.h"
 #include "DepthPass.h"
 
-#define ASYNC_VELOCITY 0
+#define ASYNC_VELOCITY 1
 
 namespace RDAG
 {
@@ -25,12 +25,10 @@ struct VelocityRenderPass
 
 #if ASYNC_VELOCITY
 	typedef Promise<PassOutputType> PromiseType;
-	using BuilderType=AsyncRenderPassBuilder;
 	using ReturnType=PromiseType;
 #else
-	using BuilderType=RenderPassBuilder;
 	using ReturnType=PassOutputType;
 #endif
 
-	static ReturnType Build(const BuilderType& Builder, const PassInputType& Input);
+	static ReturnType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
