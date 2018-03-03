@@ -135,8 +135,8 @@ struct Wrapped : private Handle
 	static constexpr U32 ResourceCount = Handle::ResourceCount;
 	typedef ResourceRevision RevisionArray[ResourceCount];
 
-	template<typename, int, typename, typename...>
-	friend class ResourceTableIteratorInner;
+	template<typename, int, typename...>
+	friend class ResourceTableIterator;
 
 	friend struct RenderPassBuilder;
 
@@ -302,11 +302,11 @@ public:
 	}
 };
 
-template<typename TableType, typename... XS>
+template<typename TableType, int Index, typename... XS>
 class ResourceTableIterator;
 
 template<typename TableType, int Index, typename X, typename... XS>
-class ResourceTableIteratorInner : public IResourceTableIterator
+class ResourceTableIterator<TableType, Index, X, XS...> : public IResourceTableIterator
 {
 	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner)
 	{
@@ -315,46 +315,28 @@ class ResourceTableIteratorInner : public IResourceTableIterator
 	}
 
 public:
-	ResourceTableIteratorInner(const TableType* InTablePtr, const IResourceTableInfo* Owner) : IResourceTableIterator(InTablePtr, Get(InTablePtr, Owner))
+	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo* Owner) : IResourceTableIterator(InTablePtr, Get(InTablePtr, Owner))
 	{}
 
 	IResourceTableIterator* Next() override
 	{
-		static_assert(sizeof(ResourceTableIteratorInner<TableType, Index - 1, X, XS...>) == sizeof(ResourceTableIteratorInner<TableType, Index, X, XS...>), "Size don't Match for inplace storage");
-		new (this) ResourceTableIteratorInner<TableType, Index - 1, X, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
-		return this;
+		if constexpr (Index + 1 < X::ResourceCount)
+		{
+			static_assert(sizeof(ResourceTableIterator<TableType, Index + 1, X, XS...>) == sizeof(ResourceTableIterator<TableType, Index, X, XS...>), "Size don't Match for inplace storage");
+			new (this) ResourceTableIterator<TableType, Index + 1, X, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
+			return this;
+		}
+		else
+		{
+			static_assert(sizeof(ResourceTableIterator<TableType, 0, XS...>) == sizeof(ResourceTableIterator<TableType, Index, X, XS...>), "Size don't Match for inplace storage");
+			new (this) ResourceTableIterator<TableType, 0, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
+			return this;
+		}
 	}
-};
-
-template<typename TableType, typename X, typename... XS>
-class ResourceTableIteratorInner<TableType, 0, X, XS...> : public IResourceTableIterator
-{
-	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner)
-	{
-		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
-		return ResourceTableEntry(Wrap.Revisions[0], Owner, X::Name);
-	}
-
-public:
-	ResourceTableIteratorInner(const TableType* InTablePtr, const IResourceTableInfo* Owner) : IResourceTableIterator(InTablePtr, Get(InTablePtr, Owner))
-	{}
-
-	IResourceTableIterator* Next() override
-	{
-		static_assert(sizeof(ResourceTableIterator<TableType, XS...>) == sizeof(ResourceTableIteratorInner<TableType, 0, X, XS...>), "Size don't Match for inplace storage");
-		new (this) ResourceTableIterator<TableType, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
-		return this;
-	}
-};
-
-template<typename TableType, typename X, typename... XS>
-class ResourceTableIterator<TableType, X, XS...> : public ResourceTableIteratorInner<TableType, X::ResourceCount - 1, X, XS...>
-{
-	using ResourceTableIteratorInner<TableType, X::ResourceCount - 1, X, XS...>::ResourceTableIteratorInner;
 };
 
 template<typename TableType>
-class ResourceTableIterator<TableType> : public IResourceTableIterator
+class ResourceTableIterator<TableType, 0> : public IResourceTableIterator
 {
 	static ResourceTableEntry Get()
 	{
@@ -367,7 +349,7 @@ public:
 
 	IResourceTableIterator* Next() override
 	{
-		new (this) ResourceTableIterator<TableType>(reinterpret_cast<const TableType*>(TablePtr), nullptr);
+		new (this) ResourceTableIterator<TableType, 0>(reinterpret_cast<const TableType*>(TablePtr), nullptr);
 		return this;
 	}
 };
@@ -386,7 +368,7 @@ public:
 		typedef const ResourceTableEntry& reference;
 		typedef std::input_iterator_tag iterator_category;
 
-		char* ItteratorStorage[sizeof(ResourceTableIterator<void>)];
+		char* ItteratorStorage[sizeof(ResourceTableIterator<void, 0>)];
 
 	public:
 		Iterator& operator++() 
@@ -414,8 +396,8 @@ public:
 		static Iterator MakeIterator(const TableType* InTableType, const IResourceTableInfo* Owner)
 		{
 			Iterator RetVal;
-			static_assert(sizeof(ResourceTableIterator<TableType, TS...>) == sizeof(ResourceTableIterator<void>), "Size don't Match for inplace storage");
-			new (RetVal.ItteratorStorage) ResourceTableIterator<TableType, TS...>(InTableType, Owner);
+			static_assert(sizeof(ResourceTableIterator<TableType, 0, TS...>) == sizeof(ResourceTableIterator<void, 0>), "Size don't Match for inplace storage");
+			new (RetVal.ItteratorStorage) ResourceTableIterator<TableType, 0, TS...>(InTableType, Owner);
 			return RetVal;
 		}
 	};
