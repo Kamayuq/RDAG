@@ -1,0 +1,176 @@
+#include <iostream>
+#include <cstdio>
+#include <chrono>
+#include <stdlib.h>
+
+#include "Plumber.h"
+#include "GraphCulling.h"
+#include "Graphvis.h"
+#include "Renderpass.h"
+#include "DeferredRenderingPass.h"
+#include "RHI.h"
+#include "LinearAlloc.h"
+#include "DownSamplePass.h"
+#include "PostprocessingPass.h"
+
+volatile ERenderBackend::Type BackendType = ERenderBackend::Vulkan;
+
+volatile bool TransparencyEnabled = true;
+volatile bool TransparencySeperateEnabled = true;
+volatile bool TemporalAaEnabled = true;
+volatile EAmbientOcclusionType::Enum AmbientOcclusionType = EAmbientOcclusionType::HorizonBased;
+
+int ItterationCount = 10000;
+
+
+namespace RDAG
+{
+	struct SimpleResourceHandle : Texture2dResourceHandle
+	{
+		static constexpr const char* Name = "SimpleResourceHandle";
+
+		explicit SimpleResourceHandle() {}
+	};
+}
+
+int main(int argc, char* argv[])
+{	
+	RDAG::SceneViewInfo ViewInfo;
+	ViewInfo.AmbientOcclusionType = AmbientOcclusionType;
+	ViewInfo.TransparencyEnabled = TransparencyEnabled;
+	ViewInfo.TransparencySeperateEnabled = TransparencySeperateEnabled;
+	ViewInfo.TemporalAaEnabled = TemporalAaEnabled;
+
+	if (argc > 200)
+	{
+		//check(0);
+		char* ViewInfoPtr = (char*)&ViewInfo;
+		srand(argv[1][0]);
+		for (int i = 0; i < (int)sizeof(RDAG::SceneViewInfo); i++)
+		{
+			ViewInfoPtr[i] = (char)rand();
+		}
+
+		BackendType = (ERenderBackend::Type)rand();
+	}
+
+	std::vector<const IRenderPassAction*> ActionList;
+	RenderPassBuilder Builder(ActionList);
+
+	{
+		RESOURCE_TABLE
+		(
+			InputTable<>,
+			OutputTable<RDAG::SimpleResourceHandle>
+		)
+
+		auto SimpleRenderPass = [](const RenderPassBuilder& Builder, const PassInputType& Input) -> PassOutputType
+		{
+			Texture2d::Descriptor TargetDescriptor;
+			TargetDescriptor.Name = "RenderTarget";
+			TargetDescriptor.Format = ERenderResourceFormat::ARGB8U;
+			TargetDescriptor.Height = 32;
+			TargetDescriptor.Width = 32;
+
+			return Seq
+			(
+				Builder.CreateOutputResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
+				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+				{
+					(void)Ctx;
+					//Ctx.draw();
+				})
+			)(Input);
+		};
+
+		Seq
+		(
+			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
+			Builder.MoveOutputTableEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
+			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16, RenderContext>::Build),
+			Builder.MoveOutputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
+			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass<RenderContext>::Build)
+		)(Builder.GetEmptyResourceTable());
+	}
+
+	
+	{
+		std::chrono::duration<long long, std::nano> minDuration(std::numeric_limits<long long>::max());
+		//minDuration = std::numeric_limits<decltype(minDuration)>::max();
+
+		for (int i = 0; i < ItterationCount; i++)
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+
+			LinearReset();
+			ActionList.clear();
+
+			switch (BackendType)
+			{
+			default:
+			case ERenderBackend::Sequence:
+				Seq
+				(
+					Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
+					Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass<RenderContext>::Build)
+				)(Builder.GetEmptyResourceTable());
+				break;
+			case ERenderBackend::Parallel:
+				Seq
+				(
+					Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
+					Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass<ParallelRenderContext>::Build)
+				)(Builder.GetEmptyResourceTable());
+				break;
+			case ERenderBackend::Vulkan:
+				Seq
+				(
+					Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
+					Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass<VulkanRenderContext>::Build)
+				)(Builder.GetEmptyResourceTable());
+				break;
+			}
+			auto time = std::chrono::high_resolution_clock::now() - start;
+			minDuration = std::min(minDuration, time);
+		}
+		std::cout << "build time: " << (std::chrono::duration_cast<std::chrono::microseconds>(minDuration).count()) << "us\n";
+	}
+	
+	//*/
+	/*for (auto Action : ActionList)
+	{
+		for (auto& Entry : Action->GetRenderPassData()->AsOutputIterator())
+		{
+			Entry.Materialize();
+		}
+	}*/
+	{
+		auto start = std::chrono::high_resolution_clock::now();
+
+		for (int i = 0; i < ItterationCount; i++)
+		{
+			GraphProcessor GPU;
+			GPU.ColorGraphNodes(ActionList);
+		}
+
+		auto time = std::chrono::high_resolution_clock::now() - start;
+		std::cout << "optimizer time: " << std::chrono::duration_cast<std::chrono::microseconds>(time).count() / (double)ItterationCount << "us\n";
+	}
+
+	{
+		GraphvisNeoWriter Writer("../test.dot", ActionList);
+	}
+
+	std::cin.get();
+
+/*	std::vector<const LeafRenderPass*> ScheduledPasses;
+	GPU.ScheduleGraphNodes(MainRenderPass, ScheduledPasses);
+	DispatchRenderpasses(BackendType, ScheduledPasses);
+
+	{
+		GraphvisWriter Writer("../test.dot", MainRenderPass);
+	}
+	*/
+	//std::cin.get();
+	return 0;
+}

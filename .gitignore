@@ -1,0 +1,9 @@
+Debug
+Release
+x64
+/RenderGraph.VC.db
+/RenderGraph.sdf
+/RenderGraph.VC.VC.opendb
+/.vs
+/test.dot
+/test.png

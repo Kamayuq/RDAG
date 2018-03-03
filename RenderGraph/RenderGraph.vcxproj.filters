@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Core">
+      <UniqueIdentifier>{0e7e4ed7-4b64-4208-8e02-0267fe273402}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lego">
+      <UniqueIdentifier>{8534e789-a7a2-4739-a303-8383564ed322}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{374776e9-1d8e-401e-a6b4-1d39a58ade62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Math">
+      <UniqueIdentifier>{dddf6757-3264-45fb-9f43-b66d44f0a18d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Plumber">
+      <UniqueIdentifier>{1955161e-8bca-4f91-8196-5cac8c22511b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Tool">
+      <UniqueIdentifier>{e171cf4c-24dd-42eb-9509-af85e81bee9e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Plumber.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="RHI.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="Assert.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="GbufferPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="ShadowMapPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="DeferredLightingPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderpass.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="ForwardPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="PostprocessingPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="TransparencyPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="DownSamplePass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="BilateralUpsample.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="DeferredRenderingPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleBlendPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="AmbientOcclusion.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="VelocityPass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="TemporalAA.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="Types.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="LinearAlloc.h">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Float4.h">
+      <Filter>Core\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Set.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
+    <ClInclude Include="Monad.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
+    <ClInclude Include="Lazy.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
+    <ClInclude Include="Graphvis.h">
+      <Filter>Core\Tool</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphCulling.h">
+      <Filter>Core\Tool</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceTypes.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedResources.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="SequenceMonad.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
+    <ClInclude Include="ContinuationMonad.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="ForwardPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowMapPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="TransparencyPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="DownSamplePass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="BilateralUpsample.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleBlendPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="PostProcessingPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="TemporalAA.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="AmbientOcclusion.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="DeferredLightingPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="DeferredRenderingPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="GbufferPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="VelocityPass.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="LinearAlloc.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Plumber.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Graphvis.cpp">
+      <Filter>Core\Tool</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphCulling.cpp">
+      <Filter>Core\Tool</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
