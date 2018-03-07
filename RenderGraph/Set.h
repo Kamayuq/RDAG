@@ -3,55 +3,23 @@
 
 struct Set final
 {
-	template<typename... TS>
-	struct Type final
-	{
-		constexpr Type()
-		{
-#if __clang__
-			static_assert(!(... || ContainsDupe<TS>()), "a set must have unique elements");
-#endif
-		}
+	template<typename T>
+	struct ConstexprType
+	{};
 
+	template<typename... TS>
+	struct Type final : private ConstexprType<TS&>...
+	{
 		template<typename C>
 		static constexpr bool Contains()
 		{
-			return ContainsInternal<false, C, TS...>();
+			return std::is_base_of_v<ConstexprType<C&>, Type<TS...>>;
 		}
 
 		static constexpr size_t GetSize() 
 		{ 
 			return sizeof...(TS); 
 		};
-
-	private:
-		template<typename C>
-		static constexpr bool ContainsDupe()
-		{
-			return ContainsInternal<true, C, TS...>();
-		}
-
-		template<bool DetectDupe, typename C, typename X, typename... XS>
-		static constexpr bool ContainsInternal()
-		{
-			if constexpr (std::is_same_v<C, X>)
-			{
-				if constexpr(!DetectDupe)
-					return true;
-				else
-					return ContainsInternal<false, C, XS...>();
-			}
-			else
-			{
-				return ContainsInternal<DetectDupe, C, XS...>();
-			}
-		}
-
-		template<bool DetectDupe, typename C>
-		static constexpr bool ContainsInternal()
-		{
-			return false;
-		}
 	};
 
 	template<typename... XS, typename... YS>

@@ -99,6 +99,9 @@
     <ClInclude Include="Continuation.h">
       <Filter>Core\Plumber</Filter>
     </ClInclude>
+    <ClInclude Include="Concepts.h">
+      <Filter>Core\Plumber</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <utility>
+#include "Concepts.h"
 #include "Types.h"
 #include "Assert.h"
 #include "LinearAlloc.h"
@@ -454,7 +455,10 @@ public:
 	static constexpr size_t GetSetSize() { return sizeof...(TS); };
 
 	template<typename C>
-	static constexpr bool Contains() { return GetSetType().template Contains<C>(); }
+	static constexpr bool Contains() 
+	{ 
+		return std::is_base_of_v<Wrapped<C>, ThisType>;
+	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Union(const TableType<YS...>& Other) const
@@ -477,9 +481,6 @@ public:
 	template<template<typename...> class TableType, typename... YS>
 	static constexpr auto Collect(const TableType<YS...>& Other)
 	{
-		typedef decltype(Set::Intersect(Set::Type<TS...>(), Set::Type<YS...>())) IntersectionSet;
-		constexpr bool Premise = IntersectionSet::GetSize() == GetSetSize();
-		ASSIGN_TYPE_ASSERT(Premise, Set::Type<TS...>, Set::Type<YS...>);
 		return CollectInternal(GetSetType(), Other);
 	}
 
@@ -603,6 +604,7 @@ public:
 	template<typename, typename>
 	friend class ResourceTable;
 
+	friend struct Concept_Detail::AssignableT;
 	friend struct RenderPassBuilder;
 
 	typedef TInputTableType InputTableType;
@@ -672,7 +674,7 @@ public:
 	};
 
 	template<typename ITT2, typename OTT2>
-	ResourceTable(const ResourceTable<ITT2, OTT2>& RTT) : ResourceTable(RTT.template PopulateAll<ThisType>())
+	ResourceTable(const ResourceTable<ITT2, OTT2>& RTT) : ResourceTable(RTT.template Populate<ThisType>())
 	{
 	}
 
@@ -709,26 +711,6 @@ public:
 		auto in = GetInputTable().Difference(Other.GetInputTable());
 		auto out = GetOutputTable().Difference(Other.GetOutputTable());
 		return ResourceTable<decltype(in), decltype(out)>(in, out);
-	}
-
-	template<typename RTT>
-	constexpr auto PopulateAll() const
-	{
-		RTT::CheckIntegrity();
-		typedef typename RTT::InputTableType ITT;
-		typedef typename RTT::OutputTableType OTT;
-
-		auto in = ITT::Collect(GetInputTable().Union(GetOutputTable()));
-		auto out = OTT::Collect(GetOutputTable());
-		return ResourceTable<ITT, OTT>(in, out);
-	}
-
-	template<typename RTT>
-	constexpr auto PopulateInput() const
-	{
-		RTT::CheckIntegrity();
-		typedef typename RTT::PassInputType RTT2;
-		return PopulateAll<RTT2>();
 	}
 
 	template<typename ITT, typename OTT>
@@ -777,6 +759,21 @@ public:
 	}
 
 private:
+	template<typename RTT>
+	constexpr auto Populate() const
+	{
+		RTT::CheckIntegrity();
+		typedef typename RTT::InputTableType ITT;
+		typedef typename RTT::OutputTableType OTT;
+
+		auto in = ITT::Collect(GetInputTable().Union(GetOutputTable()));
+		auto out = OTT::Collect(GetOutputTable());
+
+		//static_assert(std::is_same_v<decltype(in), ITT>, "missmatched input");
+		//static_assert(std::is_same_v<decltype(out), OTT>, "missmatched output");
+		return ResourceTable<ITT, OTT>(in, out);
+	}
+
 	template<typename Handle>
 	const auto& GetWrappedInput() const
 	{

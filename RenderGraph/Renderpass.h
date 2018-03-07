@@ -28,6 +28,21 @@ private:
 
 struct RenderPassBuilder
 {
+private:
+	template<typename A, typename B>
+	static A AssignConcept(const B& b)
+	{
+		constexpr bool assignable = IsAssignable<A, B>();
+		if constexpr(!assignable)
+		{
+			static_assert(assignable, "missing resourcetable entry: cannot assign");
+			bool available = b; (void)available;
+			bool requested = std::declval<A>(); (void)requested;
+		}
+		return b;
+	}
+
+public:
 	RenderPassBuilder(const RenderPassBuilder&) = delete;
 	RenderPassBuilder()
 	{}
@@ -36,25 +51,21 @@ struct RenderPassBuilder
 	auto BuildAsyncRenderPass(const char* Name, const FunctionType& BuildFunction, Promise<ReturnType>& Promise) const
 	{
 		typedef Traits::function_traits<FunctionType> Traits;
-		typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
 		typedef std::decay_t<typename Traits::return_type> PromiseType;
 		static_assert(Traits::arity == 2, "Build Functions have 2 parameters: the builder and the input table");
 		static_assert(std::is_base_of_v<PromiseBase, PromiseType>, "The returntype must be a Promise");
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
-		typedef PromiseType(*BuildFunctionType)(const BuilderType&, const InputTableType&);
-		static_assert(std::is_assignable_v<BuildFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 		typedef ReturnType NestedOutputTableType;
 
 		const RenderPassBuilder* Self = this;
 		return [Self, &Promise, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
-			//typedef typename std::decay<decltype(s)>::type StateType;
+			typedef typename std::decay<decltype(s)>::type StateType;
+			InputTableType input = AssignConcept<InputTableType, StateType>(s);
 
-			auto input = s.template PopulateInput<InputTableType>();
-			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();
-			
+			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();	
 			//TODO reinstatiate builder and merge actionlist
 			Promise = BuildFunction(*Self, input);
 			Promise.Run(NestedRenderPassData, Name);
@@ -78,20 +89,20 @@ struct RenderPassBuilder
 	auto BuildRenderPass(const char* Name, const FunctionType& BuildFunction) const
 	{
 		typedef Traits::function_traits<FunctionType> Traits;
-		typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
+		//typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
 		typedef std::decay_t<typename Traits::return_type> NestedOutputTableType;
 		static_assert(Traits::arity == 2, "Build Functions have 2 parameters: the builder and the input table");
 		static_assert(std::is_base_of_v<IResourceTableInfo, NestedOutputTableType>, "The returntype must be a resource table");
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
-		typedef NestedOutputTableType(*BuildFunctionType)(const BuilderType&, const InputTableType&);
-		static_assert(std::is_assignable_v<BuildFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 
 		const RenderPassBuilder* Self = this;
 		return [Self, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
-			auto input = s.template PopulateInput<InputTableType>();
+			typedef typename std::decay<decltype(s)>::type StateType;
+			InputTableType input = AssignConcept<InputTableType, StateType>(s);
+
 			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input), Name, nullptr);
 			return NestedRenderPassData.Merge(s);
 		};
@@ -108,8 +119,6 @@ struct RenderPassBuilder
 		static_assert(std::is_same_v<VoidReturnType, void>, "The returntype must be void");
 		static_assert(std::is_base_of_v<RenderContextBase, ContextType>, "The 1st parameter must be a rendercontext type");
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
-		typedef void(*QueueFunctionType)(ContextType&, const InputTableType&);
-		static_assert(std::is_assignable_v<QueueFunctionType&, FunctionType>, "Only global and static functions as well as lambdas without capture are allowed");
 
 		auto& LocalActionList = ActionList;
 		return [&LocalActionList, QueuedTask, Name](const auto& s)
@@ -117,11 +126,11 @@ struct RenderPassBuilder
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
-			typedef TRenderPassAction<ContextType, InputTableType, QueueFunctionType> RenderActionType;
-			InputTableType input = s.template PopulateAll<InputTableType>();
-			RenderActionType* NewRenderAction = LinearAlloc<RenderActionType>();
+			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
+			typedef typename std::decay<decltype(s)>::type StateType;
+			InputTableType input = AssignConcept<InputTableType, StateType>(s);
 
-			new (NewRenderAction) RenderActionType(Name, input, QueuedTask);
+			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			{
 				//TODO reinstatiate builder and merge actionlist
 				std::lock_guard<std::mutex> lock(ActionListMutex);
@@ -269,7 +278,8 @@ struct RenderPassBuilder
 		return [](const auto& s)
 		{
 			CheckIsResourceTable(s);
-			return s.template PopulateAll<ResourceTableType>();
+			typedef typename std::decay<decltype(s)>::type StateType;
+			return AssignConcept<ResourceTableType, StateType>(s);
 		};
 	}
 
