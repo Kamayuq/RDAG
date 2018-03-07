@@ -61,7 +61,7 @@
       <CompileAs>CompileAsCpp</CompileAs>
       <MinimalRebuild>true</MinimalRebuild>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <AdditionalOptions>/Ze %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Ze /d2cgsummary /Bt %(AdditionalOptions)</AdditionalOptions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
@@ -69,6 +69,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <AdditionalOptions>/time+ %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

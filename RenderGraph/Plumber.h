@@ -604,7 +604,6 @@ public:
 	template<typename, typename>
 	friend class ResourceTable;
 
-	friend struct Concept_Detail::AssignableT;
 	friend struct RenderPassBuilder;
 
 	typedef TInputTableType InputTableType;
@@ -769,8 +768,14 @@ private:
 		auto in = ITT::Collect(GetInputTable().Union(GetOutputTable()));
 		auto out = OTT::Collect(GetOutputTable());
 
-		//static_assert(std::is_same_v<decltype(in), ITT>, "missmatched input");
-		//static_assert(std::is_same_v<decltype(out), OTT>, "missmatched output");
+		constexpr bool assignable = std::is_same_v<decltype(in), ITT> && std::is_same_v<decltype(out), OTT>;
+		if constexpr(!assignable)
+		{
+			static_assert(assignable, "missing resourcetable entry: cannot assign");
+			bool available = *this; (void)available;
+			bool requested = std::declval<RTT>(); (void)requested;
+		}
+
 		return ResourceTable<ITT, OTT>(in, out);
 	}
 

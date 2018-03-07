@@ -19,7 +19,6 @@ auto RunGbufferPasses(const RenderPassBuilder& Builder)
 	);
 }
 
-
 auto RunShadowAndLightingPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
@@ -30,7 +29,6 @@ auto RunShadowAndLightingPasses(const RenderPassBuilder& Builder)
 	);
 }
 
-
 auto RunTransparencyPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
@@ -39,7 +37,6 @@ auto RunTransparencyPasses(const RenderPassBuilder& Builder)
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build)
 	);
 }
-
 
 auto RunPostprocessingPasses(const RenderPassBuilder& Builder)
 {
@@ -51,7 +48,6 @@ auto RunPostprocessingPasses(const RenderPassBuilder& Builder)
 		Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build)
 	);
 }
-
 
 typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {

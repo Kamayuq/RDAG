@@ -30,15 +30,7 @@ namespace Concept_Detail
 	template<typename T>
 	T value(TypeT<T>);
 	
-	struct AssignableT
-	{
-		template<typename A, typename B>
-		static auto Do(A&& a, B&& b)
-		{
-			return b.template Populate<std::decay_t<decltype(a)>>();
-		}
-	};
-	constexpr auto isAssignable = IsValid([](auto&& a, auto&& b) -> decltype(AssignableT::Do(a,b)){});
+	constexpr auto isAssignable = IsValid([](auto&& a, auto&& b) -> decltype(std::decay_t<decltype(a)>(b)){});
 }
 
 template<typename A, typename B>

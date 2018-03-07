@@ -28,20 +28,6 @@ private:
 
 struct RenderPassBuilder
 {
-private:
-	template<typename A, typename B>
-	static A AssignConcept(const B& b)
-	{
-		constexpr bool assignable = IsAssignable<A, B>();
-		if constexpr(!assignable)
-		{
-			static_assert(assignable, "missing resourcetable entry: cannot assign");
-			bool available = b; (void)available;
-			bool requested = std::declval<A>(); (void)requested;
-		}
-		return b;
-	}
-
 public:
 	RenderPassBuilder(const RenderPassBuilder&) = delete;
 	RenderPassBuilder()
@@ -62,8 +48,7 @@ public:
 		return [Self, &Promise, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			InputTableType input = AssignConcept<InputTableType, StateType>(s);
+			InputTableType input = s;
 
 			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();	
 			//TODO reinstatiate builder and merge actionlist
@@ -100,8 +85,7 @@ public:
 		return [Self, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			InputTableType input = AssignConcept<InputTableType, StateType>(s);
+			InputTableType input = s;
 
 			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input), Name, nullptr);
 			return NestedRenderPassData.Merge(s);
@@ -127,8 +111,7 @@ public:
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
 			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
-			typedef typename std::decay<decltype(s)>::type StateType;
-			InputTableType input = AssignConcept<InputTableType, StateType>(s);
+			InputTableType input = s;
 
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			{
@@ -275,11 +258,10 @@ public:
 	template<typename ResourceTableType>
 	auto ExtractResourceTableEntries() const
 	{
-		return [](const auto& s)
+		return [](const auto& s) -> ResourceTableType
 		{
 			CheckIsResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			return AssignConcept<ResourceTableType, StateType>(s);
+			return s;
 		};
 	}
 
