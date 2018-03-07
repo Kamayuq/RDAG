@@ -33,7 +33,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType>
+
 struct ToneMappingPass
 {
 	RESOURCE_TABLE
@@ -45,7 +45,7 @@ struct ToneMappingPass
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
 
-template<typename RenderContextType = RenderContext>
+
 struct PostProcessingPass
 {
 	RESOURCE_TABLE

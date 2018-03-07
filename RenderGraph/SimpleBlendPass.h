@@ -43,7 +43,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct SimpleBlendPass
 {
 	RESOURCE_TABLE

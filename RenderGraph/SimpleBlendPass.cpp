@@ -1,7 +1,7 @@
 #include "SimpleBlendPass.h"
 
-template<typename RenderContextType>
-typename SimpleBlendPass<RenderContextType>::PassOutputType SimpleBlendPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto BlendSrcInfo = Input.GetInputDescriptor<RDAG::BlendSource>(0);
 	Texture2d::Descriptor BlendDstDescriptor;
@@ -32,6 +32,3 @@ typename SimpleBlendPass<RenderContextType>::PassOutputType SimpleBlendPass<Rend
 		})
 	)(Input);
 }
-template SimpleBlendPass<RenderContext>::PassOutputType SimpleBlendPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template SimpleBlendPass<ParallelRenderContext>::PassOutputType SimpleBlendPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template SimpleBlendPass<VulkanRenderContext>::PassOutputType SimpleBlendPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

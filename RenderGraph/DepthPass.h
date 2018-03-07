@@ -22,7 +22,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct DepthRenderPass
 {
 	RESOURCE_TABLE

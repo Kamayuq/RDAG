@@ -1,8 +1,8 @@
 #include "ShadowMapPass.h"
 #include "DepthPass.h"
 
-template<typename RenderContextType>
-typename ShadowMapRenderPass<RenderContextType>::PassOutputType ShadowMapRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {	
 	PassOutputType Output = Builder.CreateOutputResource<RDAG::ShadowMapTextureArray>({})(Input);
 
@@ -16,12 +16,9 @@ typename ShadowMapRenderPass<RenderContextType>::PassOutputType ShadowMapRenderP
 	{
 		Output = Seq
 		(
-			Builder.BuildRenderPass("ShadowMap_DepthRenderPass", DepthRenderPass<RenderContextType>::Build),
+			Builder.BuildRenderPass("ShadowMap_DepthRenderPass", DepthRenderPass::Build),
 			Builder.MoveOutputTableEntry<RDAG::DepthTarget, RDAG::ShadowMapTextureArray>(0, i)
 		)(Output);
 	}
 	return Output;
 }
-template ShadowMapRenderPass<RenderContext>::PassOutputType ShadowMapRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template ShadowMapRenderPass<ParallelRenderContext>::PassOutputType ShadowMapRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template ShadowMapRenderPass<VulkanRenderContext>::PassOutputType ShadowMapRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

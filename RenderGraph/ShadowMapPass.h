@@ -19,7 +19,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct ShadowMapRenderPass
 {
 	RESOURCE_TABLE

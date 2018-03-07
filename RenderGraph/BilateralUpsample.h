@@ -31,7 +31,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct BilateralUpsampleRenderPass
 {
 	RESOURCE_TABLE

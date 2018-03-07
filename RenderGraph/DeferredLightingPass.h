@@ -16,7 +16,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct DeferredLightingPass
 {
 	RESOURCE_TABLE

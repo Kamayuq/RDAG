@@ -1,7 +1,7 @@
 #include "AmbientOcclusion.h"
 
-template<typename RenderContextType>
-typename AmbientOcclusionPass<RenderContextType>::PassOutputType AmbientOcclusionPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	const auto& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor AoDescriptor;
@@ -59,6 +59,3 @@ typename AmbientOcclusionPass<RenderContextType>::PassOutputType AmbientOcclusio
 		}
 	}
 }
-template AmbientOcclusionPass<RenderContext>::PassOutputType AmbientOcclusionPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template AmbientOcclusionPass<ParallelRenderContext>::PassOutputType AmbientOcclusionPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template AmbientOcclusionPass<VulkanRenderContext>::PassOutputType AmbientOcclusionPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

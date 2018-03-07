@@ -82,3 +82,4 @@ struct VulkanRenderContext final : private RenderContextBase
 	}
 };
 
+using RenderContextType = RenderContext;

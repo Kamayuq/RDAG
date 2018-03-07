@@ -2,8 +2,8 @@
 #include "DownSamplePass.h"
 #include "TemporalAA.h"
 
-template<typename RenderContextType>
-typename ToneMappingPass<RenderContextType>::PassOutputType ToneMappingPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto PPfxInfo = Input.GetInputDescriptor<RDAG::PostProcessingInput>();
 	ExternalTexture2dResourceHandle::Descriptor ResultDescriptor;
@@ -30,21 +30,14 @@ typename ToneMappingPass<RenderContextType>::PassOutputType ToneMappingPass<Rend
 		})
 	)(Input);
 }
-template ToneMappingPass<RenderContext>::PassOutputType ToneMappingPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template ToneMappingPass<ParallelRenderContext>::PassOutputType ToneMappingPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template ToneMappingPass<VulkanRenderContext>::PassOutputType ToneMappingPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
 
-template<typename RenderContextType>
-typename PostProcessingPass<RenderContextType>::PassOutputType PostProcessingPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	return Seq
 	(
 		Builder.MoveInputTableEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
-		Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16, RenderContextType>::Build),
+		Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
 		Builder.MoveOutputToInputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(4, 0),
-		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass<RenderContextType>::Build)
+		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 	)(Input);
 }
-template PostProcessingPass<RenderContext>::PassOutputType PostProcessingPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template PostProcessingPass<ParallelRenderContext>::PassOutputType PostProcessingPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template PostProcessingPass<VulkanRenderContext>::PassOutputType PostProcessingPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

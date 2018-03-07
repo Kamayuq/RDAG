@@ -1,7 +1,7 @@
 #include "DownSamplePass.h"
 
-template<typename RenderContextType>
-typename DownsampleRenderPass<RenderContextType>::PassOutputType DownsampleRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto DownSampleInfo = Input.GetInputDescriptor<RDAG::DownsampleInput>();
 	Texture2d::Descriptor DownsampleDescriptor;
@@ -27,6 +27,3 @@ typename DownsampleRenderPass<RenderContextType>::PassOutputType DownsampleRende
 		})
 	)(Input);
 }
-template DownsampleRenderPass<RenderContext>::PassOutputType DownsampleRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template DownsampleRenderPass<ParallelRenderContext>::PassOutputType DownsampleRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template DownsampleRenderPass<VulkanRenderContext>::PassOutputType DownsampleRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

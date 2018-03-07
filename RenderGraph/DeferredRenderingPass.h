@@ -4,7 +4,7 @@
 #include "SharedResources.h"
 #include "PostprocessingPass.h"
 
-template<typename RenderContextType = RenderContext>
+
 struct DeferredRendererPass
 {
 	RESOURCE_TABLE

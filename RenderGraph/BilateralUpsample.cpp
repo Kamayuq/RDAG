@@ -1,7 +1,7 @@
 #include "BilateralUpsample.h"
 
-template<typename RenderContextType>
-typename BilateralUpsampleRenderPass<RenderContextType>::PassOutputType BilateralUpsampleRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto DepthTarget = Input.GetInputDescriptor<RDAG::DepthTarget>();
 	auto ColorTarget = Input.GetInputDescriptor<RDAG::HalfResInput>();
@@ -34,6 +34,3 @@ typename BilateralUpsampleRenderPass<RenderContextType>::PassOutputType Bilatera
 		})
 	)(Input);
 }
-template BilateralUpsampleRenderPass<RenderContext>::PassOutputType BilateralUpsampleRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template BilateralUpsampleRenderPass<ParallelRenderContext>::PassOutputType BilateralUpsampleRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template BilateralUpsampleRenderPass<VulkanRenderContext>::PassOutputType BilateralUpsampleRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

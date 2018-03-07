@@ -14,7 +14,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct AmbientOcclusionPass
 {
 	RESOURCE_TABLE

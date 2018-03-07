@@ -42,7 +42,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct DownsampleRenderPass
 {
 	RESOURCE_TABLE
@@ -54,18 +54,18 @@ struct DownsampleRenderPass
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
 
-template<typename RenderContextType, typename InputType, typename OutputType = InputType>
+template<typename InputType, typename OutputType = InputType>
 auto RunDownsamplePass(const RenderPassBuilder& Builder, int InputOffset = 0, int OutputOffset = 0)
 {
 	return Seq
 	(
 		Builder.MoveOutputToInputTableEntry<InputType, RDAG::DownsampleInput>(InputOffset, 0),
-		Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass<RenderContextType>::Build),
+		Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass::Build),
 		Builder.MoveOutputTableEntry<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
 	);
 }
 
-template<int Count, typename RenderContextType = RenderContext>
+template<int Count>
 struct PyramidDownSampleRenderPass
 {
 	RESOURCE_TABLE
@@ -85,7 +85,7 @@ struct PyramidDownSampleRenderPass
 			if (((DownSampleInfo.Width >> 1) == 0) || ((DownSampleInfo.Height >> 1) == 0))
 				break;
 
-			Output = RunDownsamplePass<RenderContextType, RDAG::DownsamplePyramid<Count>>(Builder, i - 1, i)(Output);
+			Output = RunDownsamplePass<RDAG::DownsamplePyramid<Count>>(Builder, i - 1, i)(Output);
 		}
 
 		auto DownSampleInfo = Output.template GetOutputDescriptor<RDAG::DownsamplePyramid<Count>>(i - 1);

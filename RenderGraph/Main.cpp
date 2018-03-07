@@ -86,9 +86,9 @@ int main(int argc, char* argv[])
 		(
 			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
 			Builder.MoveOutputTableEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16, RenderContext>::Build),
+			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
 			Builder.MoveOutputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
-			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass<RenderContext>::Build)
+			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 		)(Builder.GetEmptyResourceTable());
 	}
 
@@ -104,31 +104,12 @@ int main(int argc, char* argv[])
 			LinearReset();
 			Builder.Reset();
 
-			switch (BackendType)
-			{
-			default:
-			case ERenderBackend::Sequence:
-				Seq
-				(
-					Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
-					Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass<RenderContext>::Build)
-				)(Builder.GetEmptyResourceTable());
-				break;
-			case ERenderBackend::Parallel:
-				Seq
-				(
-					Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
-					Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass<ParallelRenderContext>::Build)
-				)(Builder.GetEmptyResourceTable());
-				break;
-			case ERenderBackend::Vulkan:
-				Seq
-				(
-					Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
-					Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass<VulkanRenderContext>::Build)
-				)(Builder.GetEmptyResourceTable());
-				break;
-			}
+			Seq
+			(
+				Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
+				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
+			)(Builder.GetEmptyResourceTable());
+
 			auto time = std::chrono::high_resolution_clock::now() - start;
 			minDuration = std::min(minDuration, time);
 		}

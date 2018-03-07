@@ -36,7 +36,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct TemporalAARenderPass
 {
 	RESOURCE_TABLE

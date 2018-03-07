@@ -1,7 +1,7 @@
 #include "DeferredLightingPass.h"
 
-template<typename RenderContextType>
-typename DeferredLightingPass<RenderContextType>::PassOutputType DeferredLightingPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto DepthInfo = Input.GetInputDescriptor<RDAG::DepthTarget>();
 	Texture2d::Descriptor LightingDescriptor;
@@ -43,6 +43,3 @@ typename DeferredLightingPass<RenderContextType>::PassOutputType DeferredLightin
 		})
 	)(Input);
 }
-template DeferredLightingPass<RenderContext>::PassOutputType DeferredLightingPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template DeferredLightingPass<ParallelRenderContext>::PassOutputType DeferredLightingPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template DeferredLightingPass<VulkanRenderContext>::PassOutputType DeferredLightingPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

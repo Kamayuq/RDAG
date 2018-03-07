@@ -13,7 +13,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct GbufferRenderPass
 {
 	RESOURCE_TABLE

@@ -1,7 +1,7 @@
 #include "GbufferPass.h"
 
-template<typename RenderContextType>
-typename GbufferRenderPass<RenderContextType>::PassOutputType GbufferRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	Texture2d::Descriptor GbufferDescriptors[RDAG::Gbuffer::ResourceCount];
 	for (U32 i = 0; i < RDAG::Gbuffer::ResourceCount; i++)
@@ -31,6 +31,3 @@ typename GbufferRenderPass<RenderContextType>::PassOutputType GbufferRenderPass<
 		})
 	)(Input);
 }
-template GbufferRenderPass<RenderContext>::PassOutputType GbufferRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template GbufferRenderPass<ParallelRenderContext>::PassOutputType GbufferRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template GbufferRenderPass<VulkanRenderContext>::PassOutputType GbufferRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

@@ -1,7 +1,7 @@
 #include "TemporalAA.h"
 
-template<typename RenderContextType>
-typename TemporalAARenderPass<RenderContextType>::PassOutputType TemporalAARenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	ExternalTexture2dResourceHandle::Descriptor OutputDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
 	ExternalTexture2dResourceHandle::Descriptor HistoryDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
@@ -58,6 +58,3 @@ typename TemporalAARenderPass<RenderContextType>::PassOutputType TemporalAARende
 		return Builder.MoveAllInputToOutputTableEntries<RDAG::TemporalAAInput, RDAG::TemporalAAOutput>()(Input);
 	}
 }
-template TemporalAARenderPass<RenderContext>::PassOutputType TemporalAARenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template TemporalAARenderPass<ParallelRenderContext>::PassOutputType TemporalAARenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template TemporalAARenderPass<VulkanRenderContext>::PassOutputType TemporalAARenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

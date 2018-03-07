@@ -1,7 +1,7 @@
 #include "DepthPass.h"
 
-template<typename RenderContextType>
-typename DepthRenderPass<RenderContextType>::PassOutputType DepthRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor DepthDescriptor;
@@ -24,6 +24,3 @@ typename DepthRenderPass<RenderContextType>::PassOutputType DepthRenderPass<Rend
 		})
 	)(Input);
 }
-template DepthRenderPass<RenderContext>::PassOutputType DepthRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template DepthRenderPass<ParallelRenderContext>::PassOutputType DepthRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template DepthRenderPass<VulkanRenderContext>::PassOutputType DepthRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

@@ -37,7 +37,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct ForwardRenderPass
 {
 	RESOURCE_TABLE

@@ -14,7 +14,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct VelocityRenderPass
 {
 	RESOURCE_TABLE

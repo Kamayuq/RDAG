@@ -1,7 +1,7 @@
 #include "ForwardPass.h"
 
-template<typename RenderContextType>
-typename ForwardRenderPass<RenderContextType>::PassOutputType ForwardRenderPass<RenderContextType>::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+
+typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto ForwardInfo = Input.GetInputHandle<RDAG::ForwardRender>();
 	(void)ForwardInfo;
@@ -23,6 +23,3 @@ typename ForwardRenderPass<RenderContextType>::PassOutputType ForwardRenderPass<
 		})
 	)(Input);
 }
-template ForwardRenderPass<RenderContext>::PassOutputType ForwardRenderPass<RenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template ForwardRenderPass<ParallelRenderContext>::PassOutputType ForwardRenderPass<ParallelRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);
-template ForwardRenderPass<VulkanRenderContext>::PassOutputType ForwardRenderPass<VulkanRenderContext>::Build(const RenderPassBuilder&, const PassInputType&);

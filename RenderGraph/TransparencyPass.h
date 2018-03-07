@@ -35,7 +35,7 @@ namespace RDAG
 	};
 }
 
-template<typename RenderContextType = RenderContext>
+
 struct HalfResTransparencyRenderPass
 {
 	RESOURCE_TABLE
@@ -47,7 +47,7 @@ struct HalfResTransparencyRenderPass
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
 
-template<typename RenderContextType = RenderContext>
+
 struct TransparencyRenderPass
 {
 	RESOURCE_TABLE
