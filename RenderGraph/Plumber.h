@@ -758,22 +758,21 @@ public:
 	}
 
 private:
-	template<typename RTT>
-	constexpr auto Populate() const
+	template<typename RTT, typename ITT = typename RTT::InputTableType, typename OTT = typename RTT::OutputTableType>
+	constexpr ResourceTable<ITT, OTT> Populate() const
 	{
 		RTT::CheckIntegrity();
-		typedef typename RTT::InputTableType ITT;
-		typedef typename RTT::OutputTableType OTT;
-
 		auto in = ITT::Collect(GetInputTable().Union(GetOutputTable()));
 		auto out = OTT::Collect(GetOutputTable());
 
-		constexpr bool assignable = std::is_same_v<decltype(in), ITT> && std::is_same_v<decltype(out), OTT>;
+		constexpr bool assignable = std::is_same_v<ResourceTable<ITT, OTT>, ResourceTable<decltype(in), decltype(out)>>;
 		if constexpr(!assignable)
 		{
+			using DiffTable = ResourceTable<decltype(in.Difference(std::declval<ITT>())), decltype(out.Difference(std::declval<OTT>()))>;
+			struct ErrorType {} Error;
+			DiffTable Table(Error);
 			static_assert(assignable, "missing resourcetable entry: cannot assign");
-			bool available = *this; (void)available;
-			bool requested = std::declval<RTT>(); (void)requested;
+			return Table;
 		}
 
 		return ResourceTable<ITT, OTT>(in, out);
