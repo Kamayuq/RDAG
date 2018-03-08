@@ -712,21 +712,6 @@ public:
 		return ResourceTable<decltype(in), decltype(out)>(in, out);
 	}
 
-	template<typename ITT, typename OTT>
-	constexpr auto Merge(const ResourceTable<ITT, OTT>& Parent) const
-	{
-		auto mergedOutput = Parent.GetOutputTable().Union(GetOutputTable());
-		return ResourceTable<ITT, decltype(mergedOutput)>(Parent.GetInputTable(), mergedOutput);
-	}
-
-	template<typename ITT, typename OTT>
-	constexpr auto MergeAndLink(const ResourceTable<ITT, OTT>& Parent) const
-	{
-		auto mergedOutput = Parent.GetOutputTable().Union(GetOutputTable());
-		mergedOutput.Link(GetOutputTable(), this);
-		return ResourceTable<ITT, decltype(mergedOutput)>(Parent.GetInputTable(), mergedOutput);
-	}
-
 	template<typename Handle>
 	constexpr bool IsValidInput(U32 i = 0) const
 	{
@@ -758,6 +743,21 @@ public:
 	}
 
 private:
+	template<typename ITT, typename OTT>
+	constexpr auto Merge(const ResourceTable<ITT, OTT>& Parent) const
+	{
+		auto mergedOutput = Parent.GetOutputTable().Union(GetOutputTable());
+		return ResourceTable<ITT, decltype(mergedOutput)>(Parent.GetInputTable(), mergedOutput);
+	}
+
+	template<typename ITT, typename OTT>
+	constexpr auto MergeAndLink(const ResourceTable<ITT, OTT>& Parent) const
+	{
+		auto mergedOutput = Parent.GetOutputTable().Union(GetOutputTable());
+		mergedOutput.Link(GetOutputTable(), this);
+		return ResourceTable<ITT, decltype(mergedOutput)>(Parent.GetInputTable(), mergedOutput);
+	}
+
 	template<typename RTT, typename ITT = typename RTT::InputTableType, typename OTT = typename RTT::OutputTableType>
 	constexpr ResourceTable<ITT, OTT> Populate() const
 	{
