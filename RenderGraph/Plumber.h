@@ -12,7 +12,7 @@
 template<typename Handle>
 class TransientResourceImpl;
 
-struct ResourceHandle
+struct ResourceHandleBase
 {
 	static constexpr const U32 ResourceCount = 1;
 	
@@ -31,6 +31,12 @@ struct ResourceHandle
 private:
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* Create(const typename Handle::DescriptorType& InDescriptor);
+};
+
+template<typename CRTP>
+struct ResourceHandle : ResourceHandleBase
+{
+	using CompatibleType = CRTP;
 };
 
 namespace EResourceFlags
@@ -100,7 +106,7 @@ public:
 };
 
 template <typename Handle>
-inline TransientResourceImpl<Handle>* ResourceHandle::Create(const typename Handle::DescriptorType& InDescriptor)
+inline TransientResourceImpl<Handle>* ResourceHandleBase::Create(const typename Handle::DescriptorType& InDescriptor)
 {
 	return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
 }
@@ -131,6 +137,7 @@ struct ResourceRevision
 template<typename Handle>
 struct Wrapped : private Handle
 {
+	using CompatibleType = typename Handle::CompatibleType;
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
 	static constexpr U32 ResourceCount = Handle::ResourceCount;
@@ -154,8 +161,10 @@ struct Wrapped : private Handle
 		}
 	}
 
-	constexpr void Link(const Wrapped<Handle>& Source, const IResourceTableInfo* Parent)
+	template<typename SourceType>
+	constexpr void Link(const Wrapped<SourceType>& Source, const IResourceTableInfo* Parent)
 	{
+		static_assert(std::is_same_v<typename SourceType::CompatibleType, CompatibleType>, "Incompatible Types during linking");
 		check(AllocContains(Parent));
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
@@ -430,8 +439,25 @@ private:
 	const IRenderPassAction* Action = nullptr;
 };
 
+template<int I, typename T>
+struct BaseTableElement : Wrapped<T>
+{
+	constexpr Index = I;
+	
+	BaseTableElement(const Wrapped<T>& x) : Wrapped<T>(x) {}
+};
+
+template<int Length, typename T, typename TS...> 
+struct BaseTableElementList : BaseTableElement<Length, T>, BaseTableElementList<Length+1, TS...>
+{
+	BaseTableElementList(const Wrapped<T>& x, const Wrapped<TS>&... xs) : BaseTableElement(x), BaseTableElementList(xs...) {}
+};
+
+template<int Length>
+struct BaseTableElementList<Length> {};
+
 template<template<typename...> class Derived, typename... TS>
-class BaseTable : Wrapped<TS>...
+class BaseTable : BaseTableElementList<0, TS...> //Wrapped<TS>...
 {
 	typedef BaseTable<Derived, TS...> ThisType;
 public:
@@ -449,33 +475,33 @@ public:
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
 
-	BaseTable(const Wrapped<TS>&... xs) : Wrapped<TS>(xs)... {}
+	BaseTable(const Wrapped<TS>&... xs) : BaseTableElementList<0, TS...>(xs...) {}
 
-	static constexpr auto GetSetType() { return Set::Type<TS...>(); };
+	static constexpr auto GetSetType() { return Set::Type<typename TS::CompatibleType...>(); };
 	static constexpr size_t GetSetSize() { return sizeof...(TS); };
 
 	template<typename C>
 	static constexpr bool Contains() 
 	{ 
-		return std::is_base_of_v<Wrapped<C>, ThisType>;
+		return GetSetType().template Contains<typename C::CompatibleType>();
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Union(const TableType<YS...>& Other) const
 	{
-		return MergeToLeft(Set::Union(GetSetType(), Set::Type<YS...>()), *this, Other);
+		return MergeToLeft(Set::Union(GetSetType(), Set::Type<typename YS::CompatibleType...>()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Intersect(const TableType<YS...>& Other) const
 	{
-		return MergeToLeft(Set::Intersect(GetSetType(), Set::Type<YS...>()), *this, Other);
+		return MergeToLeft(Set::Intersect(GetSetType(), Set::Type<typename YS::CompatibleType...>()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Difference(const TableType<YS...>& Other) const
 	{
-		return MergeToLeft(Set::Difference(GetSetType(), Set::Type<YS...>()), *this, Other);
+		return MergeToLeft(Set::Difference(GetSetType(), Set::Type<typename YS::CompatibleType...>()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
