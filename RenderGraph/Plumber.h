@@ -439,25 +439,8 @@ private:
 	const IRenderPassAction* Action = nullptr;
 };
 
-template<int I, typename T>
-struct BaseTableElement : Wrapped<T>
-{
-	constexpr Index = I;
-	
-	BaseTableElement(const Wrapped<T>& x) : Wrapped<T>(x) {}
-};
-
-template<int Length, typename T, typename TS...> 
-struct BaseTableElementList : BaseTableElement<Length, T>, BaseTableElementList<Length+1, TS...>
-{
-	BaseTableElementList(const Wrapped<T>& x, const Wrapped<TS>&... xs) : BaseTableElement(x), BaseTableElementList(xs...) {}
-};
-
-template<int Length>
-struct BaseTableElementList<Length> {};
-
 template<template<typename...> class Derived, typename... TS>
-class BaseTable : BaseTableElementList<0, TS...> //Wrapped<TS>...
+class BaseTable : Wrapped<TS>...
 {
 	typedef BaseTable<Derived, TS...> ThisType;
 public:
@@ -474,40 +457,44 @@ public:
 public:
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
+	
+	BaseTable(const Wrapped<TS>&... xs) : Wrapped<TS>(xs)... {}
 
-	BaseTable(const Wrapped<TS>&... xs) : BaseTableElementList<0, TS...>(xs...) {}
-
-	static constexpr auto GetSetType() { return Set::Type<typename TS::CompatibleType...>(); };
-	static constexpr size_t GetSetSize() { return sizeof...(TS); };
+	static constexpr auto GetCompatibleSetType() { return Set::Type<typename TS::CompatibleType...>(); }
+	static constexpr auto GetSetType() { return Set::Type<TS...>(); }
+	static constexpr size_t GetSetSize() { return sizeof...(TS); }
 
 	template<typename C>
 	static constexpr bool Contains() 
 	{ 
-		return GetSetType().template Contains<typename C::CompatibleType>();
+		return GetCompatibleSetType().template Contains<typename C::CompatibleType>();
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Union(const TableType<YS...>& Other) const
 	{
-		return MergeToLeft(Set::Union(GetSetType(), Set::Type<typename YS::CompatibleType...>()), *this, Other);
+		using OtherType = decltype(Other);
+		return MergeToLeft(Set::Union(GetCompatbleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Intersect(const TableType<YS...>& Other) const
 	{
-		return MergeToLeft(Set::Intersect(GetSetType(), Set::Type<typename YS::CompatibleType...>()), *this, Other);
+		using OtherType = decltype(Other);
+		return MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Difference(const TableType<YS...>& Other) const
 	{
-		return MergeToLeft(Set::Difference(GetSetType(), Set::Type<typename YS::CompatibleType...>()), *this, Other);
+		using OtherType = decltype(Other);
+		return MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	static constexpr auto Collect(const TableType<YS...>& Other)
 	{
-		return CollectInternal(GetSetType(), Other);
+		return CollectInternal(GetCompatibleSetType(), Other);
 	}
 
 	template<typename Handle>
@@ -521,10 +508,20 @@ private:
 	template<typename X, typename... XS, template<typename...> class TypeY, typename... YS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
 	static constexpr auto MergeToLeft(const Set::Type<X, XS...>&, const BaseTable<TypeY, YS...>& Lhs, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
 	{
-		if constexpr (BaseTable<TypeZ, ZS...>::template Contains<X>())
-			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Rhs.template GetWrapped<X>());
+		using Rtype = decltype(Rhs);
+		using Ltype = decltype(Lhs);
+		if constexpr (Rtype::template Contains<X>())
+		{
+			constexpr int TypeIndex = Rtype::GetCompatibleSetType().GetIndex<T>();
+			using RealType = decltype(Rtype::GetSetType().GetType<TypeIndex>());
+			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Rhs.template GetWrapped<RealType>());
+		}
 		else
-			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Lhs.template GetWrapped<X>());
+		{
+			constexpr int TypeIndex = Ltype::GetCompatibleSetType().GetIndex<T>();
+			using RealType = decltype(Ltype::GetSetType().GetType<TypeIndex>());
+			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Lhs.template GetWrapped<RealType>());
+		}
 	}
 
 	template<template<typename...> class TypeY, typename... YS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
@@ -536,10 +533,17 @@ private:
 	template<typename X, typename... XS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
 	static constexpr auto CollectInternal(const Set::Type<X, XS...>&, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
 	{
+		using Rtype = decltype(Rhs);
 		if constexpr (BaseTable<TypeZ, ZS...>::template Contains<X>())
-			return CollectInternal(Set::Type<XS...>(), Rhs, Args..., Rhs.template GetWrapped<X>());
+		{
+			constexpr int TypeIndex = Rtype::GetCompatibleSetType().GetIndex<T>();
+			using RealType = decltype(Rtype::GetSetType().GetType<TypeIndex>());
+			return CollectInternal(Set::Type<XS...>(), Rhs, Args..., Rhs.template GetWrapped<RealType>());
+		}
 		else
+		{
 			return CollectInternal(Set::Type<XS...>(), Rhs, Args...);
+		}
 	}
 
 	template<template<typename...> class TypeZ, typename... ZS, typename... ARGS>
