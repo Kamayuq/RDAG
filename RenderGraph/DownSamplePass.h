@@ -11,7 +11,7 @@ namespace RDAG
 	struct DownsampleInput;
 
 	template<int Count>
-	struct DownsamplePyramid : Texture2dResourceHandle
+	struct DownsamplePyramid : Texture2dResourceHandle<DownsamplePyramid<Count>>
 	{
 		static constexpr const U32 ResourceCount = Count;
 		static constexpr const char* Name = "DownsamplePyramid";
@@ -20,7 +20,7 @@ namespace RDAG
 		explicit DownsamplePyramid(const DownsampleInput&) {}
 	};
 
-	struct DownsampleResult : Texture2dResourceHandle
+	struct DownsampleResult : Texture2dResourceHandle<DownsampleResult>
 	{
 		static constexpr const char* Name = "DownsampleResult";
 		explicit DownsampleResult() {}
@@ -29,13 +29,14 @@ namespace RDAG
 		explicit DownsampleResult(const DownsamplePyramid<I>&) {}
 	};
 
-	struct DownsampleInput : Texture2dResourceHandle
+	struct DownsampleInput : Texture2dResourceHandle<DownsampleInput>
 	{
 		static constexpr const char* Name = "DownsampleInput";
 		explicit DownsampleInput() {}
 		//explicit DownsampleInput(const PostProcessingInput&) {}
 		//explicit DownsampleInput(const DepthTarget&) {}
-		explicit DownsampleInput(const Texture2dResourceHandle&) {}
+		template<typename CRTP>
+		explicit DownsampleInput(const Texture2dResourceHandle<CRTP>&) {}
 
 		template<int I>
 		explicit DownsampleInput(const DownsamplePyramid<I>&) {}

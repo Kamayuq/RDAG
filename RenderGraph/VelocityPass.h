@@ -7,7 +7,7 @@
 
 namespace RDAG
 {
-	struct VelocityVectors : Texture2dResourceHandle
+	struct VelocityVectors : Texture2dResourceHandle<VelocityVectors>
 	{
 		static constexpr const char* Name = "VelocityVectors";
 		explicit VelocityVectors() {}
@@ -19,7 +19,7 @@ struct VelocityRenderPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::DepthTarget>,
+		InputTable<RDAG::DepthTexture>,
 		OutputTable<RDAG::VelocityVectors>
 	);
 

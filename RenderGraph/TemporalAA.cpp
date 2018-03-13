@@ -3,8 +3,8 @@
 
 typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	ExternalTexture2dResourceHandle::Descriptor OutputDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
-	ExternalTexture2dResourceHandle::Descriptor HistoryDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
+	ExternalTexture2dDescriptor OutputDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
+	ExternalTexture2dDescriptor HistoryDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
 	for (U32 i = 0; i < RDAG::SceneViewInfo::TemporalAAResourceCount; i++)
 	{
 		HistoryDescriptors[i] = Input.GetInputDescriptor<RDAG::TemporalAAInput>();

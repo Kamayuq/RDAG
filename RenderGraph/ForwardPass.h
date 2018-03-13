@@ -25,7 +25,7 @@ namespace RDAG
 	struct TransparencyResult;
 	struct HalfResTransparencyResult; 
 
-	struct ForwardRender : Texture2dResourceHandle
+	struct ForwardRender : Texture2dResourceHandle<ForwardRender>
 	{
 		static constexpr const char* Name = "ForwardRender";
 		

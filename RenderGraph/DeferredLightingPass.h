@@ -8,7 +8,7 @@
 
 namespace RDAG
 {
-	struct LightingResult : Texture2dResourceHandle
+	struct LightingResult : Texture2dResourceHandle<LightingResult>
 	{
 		static constexpr const char* Name = "LightingResult";
 
@@ -21,7 +21,7 @@ struct DeferredLightingPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::DepthTarget, RDAG::Gbuffer, RDAG::AmbientOcclusionResult, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>,
+		InputTable<RDAG::DepthTexture, RDAG::Gbuffer, RDAG::AmbientOcclusionResult, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>,
 		OutputTable<RDAG::LightingResult>
 	);
 

@@ -58,7 +58,8 @@ struct Texture2d : MaterializedResource
 	}
 };
 
-struct Texture2dResourceHandle : ResourceHandle
+template<typename CRTP>
+struct Texture2dResourceHandle : ResourceHandle<CRTP>
 {
 	typedef Texture2d ResourceType;
 	typedef Texture2d::Descriptor DescriptorType;
@@ -69,21 +70,22 @@ struct Texture2dResourceHandle : ResourceHandle
 	}
 };
 
-struct ExternalTexture2dResourceHandle : Texture2dResourceHandle
+struct ExternalTexture2dDescriptor : Texture2d::Descriptor
 {
-	struct Descriptor : Texture2d::Descriptor
+	I32 Index = -1;
+public:
+	Descriptor & operator= (const Texture2d::Descriptor& Other)
 	{
-		I32 Index = -1;
-	public:
-		Descriptor& operator= (const Texture2d::Descriptor& Other)
-		{ 
-			(*static_cast<Texture2d::Descriptor*>(this)) = Other;
-			return *this; 
-		};
+		(*static_cast<Texture2d::Descriptor*>(this)) = Other;
+		return *this;
 	};
+};
 
+template<typename CRTP>
+struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
+{
 	typedef Texture2d ResourceType;
-	typedef Descriptor DescriptorType;
+	typedef ExternalTexture2dDescriptor DescriptorType;
 
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* CreateInput(const DescriptorType& InDescriptor)
@@ -91,7 +93,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle
 		TransientResourceImpl<Handle>* Ret = nullptr;
 		if (InDescriptor.Index != -1)
 		{
-			Ret = Texture2dResourceHandle::CreateInput<Handle>(InDescriptor);
+			Ret = Texture2dResourceHandle<CRTP>::template CreateInput<Handle>(InDescriptor);
 			Ret->Materialize();
 		}
 		return Ret;
@@ -103,7 +105,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle
 		TransientResourceImpl<Handle>* Ret = nullptr;
 		if (InDescriptor.Index != -1)
 		{
-			Ret = Texture2dResourceHandle::CreateOutput<Handle>(InDescriptor);
+			Ret = Texture2dResourceHandle<CRTP>::template CreateOutput<Handle>(InDescriptor);
 			Ret->Materialize();
 		}
 		return Ret;
@@ -139,7 +141,8 @@ struct CpuOnlyResource : MaterializedResource
 	}
 };
 
-struct CpuOnlyResourceHandle : ResourceHandle
+template<typename CRTP>
+struct CpuOnlyResourceHandle : ResourceHandle<CRTP>
 {
 	typedef CpuOnlyResource ResourceType;
 	typedef CpuOnlyResource::Descriptor DescriptorType;
@@ -147,7 +150,7 @@ struct CpuOnlyResourceHandle : ResourceHandle
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* CreateInput(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = ResourceHandle::CreateInput<Handle>(InDescriptor);
+		TransientResourceImpl<Handle>* Ret = ResourceHandleBase::CreateInput<Handle>(InDescriptor);
 		Ret->Materialize();
 		return Ret;
 	}

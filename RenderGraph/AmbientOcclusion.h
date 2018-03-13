@@ -6,7 +6,7 @@
 
 namespace RDAG
 {
-	struct AmbientOcclusionResult : Texture2dResourceHandle
+	struct AmbientOcclusionResult : Texture2dResourceHandle<AmbientOcclusionResult>
 	{
 		static constexpr const char* Name = "AmbientOcclusionResult";
 
@@ -19,7 +19,7 @@ struct AmbientOcclusionPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::SceneViewInfo, RDAG::Gbuffer, RDAG::DepthTarget>,
+		InputTable<RDAG::SceneViewInfo, RDAG::Gbuffer, RDAG::DepthTexture>,
 		OutputTable<RDAG::AmbientOcclusionResult>
 	);
 

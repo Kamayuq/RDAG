@@ -12,7 +12,7 @@ namespace EAmbientOcclusionType
 
 namespace RDAG
 {
-	struct SceneViewInfo : CpuOnlyResourceHandle
+	struct SceneViewInfo : CpuOnlyResourceHandle<SceneViewInfo>
 	{
 		static constexpr const char* Name = "SceneViewInfo";
 

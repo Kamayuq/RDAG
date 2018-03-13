@@ -127,7 +127,7 @@ struct PinStyle
 		PinDrawStyle.Print(fhp); fprintf(fhp, ", ");
 		PinColorStyle.Print(fhp); fprintf(fhp, ", ");
 		PinFontColorStyle.Print(fhp);
-		fprintf(fhp, R"(, label="%s\n%s")", TypeChart[EntryType], Entry.GetName());
+		fprintf(fhp, R"(, label="%s\n%s\nAccess: %d")", TypeChart[EntryType], Entry.GetName(), Entry.GetResourceAccess());
 		fprintf(fhp, R"(];)");
 	}
 

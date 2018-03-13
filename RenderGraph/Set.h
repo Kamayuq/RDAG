@@ -7,16 +7,45 @@ struct Set final
 	struct SetElement
 	{};
 
-	template<int Length, typename T, typename TS...>
-	struct SetElements : SetElements<Length+1, TS...>, SetElement<T&>
+	template<int Length, typename... TS>
+	struct SetElements;
+
+	template<int Length, typename T, typename... TS>
+	struct SetElements<Length, T, TS...> : SetElements<Length+1, TS...>, SetElement<T&>
 	{
 		using BaseType = SetElements<Length+1, TS...>;
-		constexpr int Index = Length;
+		static constexpr int Index = Length;
 	};
 	
+	template<int Length>
+	struct SetElements<Length>
+	{
+		static constexpr int Index = Length;
+	};
+
+	struct Internal
+	{
+		template<int I, typename E, typename... ES>
+		static constexpr auto GetTypeInternal(const SetElements<I, E, ES...>&)->E;
+
+		template<typename T, int I, typename E, typename... ES>
+		static constexpr int GetIndexInternal(const SetElements<I, E, ES...>& elems)
+		{
+			if constexpr(std::is_same_v<T, E>)
+			{
+				return I;
+			}
+			else
+			{
+				return Internal::GetIndexInternal<T>(static_cast<const typename SetElements<I, E, ES...>::BaseType&>(elems));
+			}
+		};
+	};
+
 	template<typename... TS>
 	struct Type final : SetElements<0, TS...>
 	{
+		using BaseType = SetElements<0, TS...>;
 		template<typename T>
 		static constexpr bool Contains()
 		{
@@ -28,37 +57,21 @@ struct Set final
 			return sizeof...(TS); 
 		};
 		
-		template<typename T>
-		static constexpr int GetIndex() const
-		{
-			static_assert(Contains<T>(), "Set does not contain this type");
-			return GetIndexInternal(Type());
-		}
-		
 		template<int I>
-		static constexpr auto GetType() -> decltype(GetTypeInternal<I>(Type()))
+		static constexpr auto GetType() -> decltype(Internal::GetTypeInternal<I>(BaseType()))
 		{
 			static_assert(I < GetSize(), "Set index out off bounds");
 			return {};
 		}
 		
-	private:
-		template<typename T, int I, typename E, typename ES...>
-		static constexpr int GetIndexInternal(const SetElements<I, E, ES...>& elems) const
+		template<typename T>
+		static constexpr int GetIndex()
 		{
-			if constexpr(std::is_same_v<T, E>)
-			{
-				return I;
-			}
-			else
-			{
-				return GetIndexInternal(static_cast<const typename SetElements<I, E, ES...>::Base&>(elems));
-			}
-		};
-		
-		typename<int I, typename E, typename ES...>
-		static constexpr auto GetTypeInternal(const SetElements<I, E, ES...>&) -> E;
-		
+			static_assert(Contains<T>(), "Set does not contain this type");
+			return Internal::GetIndexInternal<T>(BaseType());
+		}
+
+	private:
 		struct UniqueElementChecker : SetElement<TS&>... {};
 	};
 

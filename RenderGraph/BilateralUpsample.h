@@ -7,14 +7,14 @@ namespace RDAG
 	struct DepthTarget;
 	struct ForwardRender;
 
-	struct UpsampleResult : Texture2dResourceHandle
+	struct UpsampleResult : Texture2dResourceHandle<UpsampleResult>
 	{
 		static constexpr const char* Name = "UpsampleResult";
 
 		explicit UpsampleResult() {}
 	};
 
-	struct HalfResInput : Texture2dResourceHandle
+	struct HalfResInput : Texture2dResourceHandle<HalfResInput>
 	{
 		static constexpr const char* Name = "HalfResInput";
 
@@ -22,7 +22,7 @@ namespace RDAG
 		explicit HalfResInput(const ForwardRender&) {}
 	};
 
-	struct HalfResDepth : Texture2dResourceHandle
+	struct HalfResDepth : Texture2dResourceHandle<HalfResDepth>
 	{
 		static constexpr const char* Name = "HalfResDepth";
 
@@ -36,7 +36,7 @@ struct BilateralUpsampleRenderPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::HalfResInput, RDAG::HalfResDepth, RDAG::DepthTarget>,
+		InputTable<RDAG::HalfResInput, RDAG::HalfResDepth, RDAG::DepthTexture>,
 		OutputTable<RDAG::UpsampleResult>
 	);
 

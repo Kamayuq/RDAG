@@ -25,7 +25,7 @@ int ItterationCount = 10000;
 
 namespace RDAG
 {
-	struct SimpleResourceHandle : Texture2dResourceHandle
+	struct SimpleResourceHandle : Texture2dResourceHandle<SimpleResourceHandle>
 	{
 		static constexpr const char* Name = "SimpleResourceHandle";
 

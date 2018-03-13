@@ -9,7 +9,7 @@ namespace RDAG
 {
 	struct TransparencyResult;
 
-	struct TemporalAAHistory : ExternalTexture2dResourceHandle
+	struct TemporalAAHistory : ExternalTexture2dResourceHandle<TemporalAAHistory>
 	{
 		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
 		static constexpr const char* Name = "TemporalAAHistory";
@@ -17,7 +17,7 @@ namespace RDAG
 		explicit TemporalAAHistory() {}
 	};
 
-	struct TemporalAAInput : Texture2dResourceHandle
+	struct TemporalAAInput : Texture2dResourceHandle<TemporalAAInput>
 	{
 		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
 		static constexpr const char* Name = "TemporalAAInput";
@@ -26,7 +26,7 @@ namespace RDAG
 		explicit TemporalAAInput(const TransparencyResult&) {}
 	};
 
-	struct TemporalAAOutput : ExternalTexture2dResourceHandle
+	struct TemporalAAOutput : ExternalTexture2dResourceHandle<TemporalAAOutput>
 	{
 		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
 		static constexpr const char* Name = "TemporalAAOutput";
@@ -41,7 +41,7 @@ struct TemporalAARenderPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::TemporalAAInput, RDAG::DepthTarget, RDAG::VelocityVectors, RDAG::SceneViewInfo>,
+		InputTable<RDAG::TemporalAAInput, RDAG::DepthTexture, RDAG::VelocityVectors, RDAG::SceneViewInfo>,
 		OutputTable<RDAG::TemporalAAOutput>
 	);
 

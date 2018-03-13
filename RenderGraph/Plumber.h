@@ -9,13 +9,36 @@
 #include "Assert.h"
 #include "LinearAlloc.h"
 
+namespace EResourceAccess
+{
+	enum Type
+	{
+		None								= 0,
+		VertexOrConstantBuffer				= 1 << 0,
+		IndexBuffer							= 1 << 1,
+		ColorWrite							= 1 << 2,
+		UnorderedAccess						= 1 << 3,
+		UnorderedAccessWithComputeBarrier	= 1 << 4,
+		DepthWrite							= 1 << 5,
+		DepthRead							= 1 << 6,
+		PixelShaderShaderResource			= 1 << 7,
+		NonPixelShaderShaderResource		= 1 << 8,
+		IndirectArgument					= 1 << 9,
+		CopySource							= 1 << 10,
+		CopyDest							= 1 << 11,
+		Present								= 1 << 15,
+	};
+};
+
 template<typename Handle>
 class TransientResourceImpl;
 
 struct ResourceHandleBase
 {
-	static constexpr const U32 ResourceCount = 1;
-	
+	static constexpr const char* Name = nullptr;
+	static constexpr const EResourceAccess::Type ResourceAccess = EResourceAccess::None;
+	static constexpr const U32 ResourceCount = 0;
+
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* CreateInput(const typename Handle::DescriptorType& InDescriptor) 
 	{
@@ -36,6 +59,7 @@ private:
 template<typename CRTP>
 struct ResourceHandle : ResourceHandleBase
 {
+	static constexpr const U32 ResourceCount = 1;
 	using CompatibleType = CRTP;
 };
 
@@ -143,6 +167,9 @@ struct Wrapped : private Handle
 	static constexpr U32 ResourceCount = Handle::ResourceCount;
 	typedef ResourceRevision RevisionArray[ResourceCount];
 
+	template<typename>
+	friend struct Wrapped;
+
 	template<typename, int, typename...>
 	friend class ResourceTableIterator;
 
@@ -153,7 +180,7 @@ struct Wrapped : private Handle
 	Wrapped(const Handle& handle, const RevisionArray& InRevisions)
 		: Handle(handle)
 	{ 
-		static_assert(std::is_base_of_v<ResourceHandle, Handle>, "Handles must derive from ResourceHandle to work"); 
+		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work"); 
 
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
@@ -190,6 +217,11 @@ struct Wrapped : private Handle
 		return Revisions[i].ImaginaryResource != nullptr;
 	}
 
+	template<typename SourceType>
+	static constexpr Wrapped<Handle> ConvertFrom(const Wrapped<SourceType>& Source)
+	{
+		return { Handle(Source.GetHandle()), Source.Revisions };
+	}
 private:
 	RevisionArray Revisions;
 };
@@ -197,11 +229,12 @@ private:
 struct ResourceTableEntry
 {
 	ResourceTableEntry(const ResourceTableEntry& Entry)
-		: Revision(Entry.Revision), Owner(Entry.Owner), Name(Entry.Name)
+		: Revision(Entry.Revision), Owner(Entry.Owner), Name(Entry.Name), ResourceAccess(Entry.ResourceAccess)
 	{}
 
-	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const char* InName)
-		: Revision(InRevision), Owner(InOwner), Name(InName)
+	template<typename Handle>
+	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const Handle&)
+		: Revision(InRevision), Owner(InOwner), Name(Handle::Name), ResourceAccess(Handle::ResourceAccess)
 	{}
 
 	bool operator==(ResourceTableEntry Other) const
@@ -250,10 +283,16 @@ struct ResourceTableEntry
 		return Name;
 	}
 
+	EResourceAccess::Type GetResourceAccess() const
+	{
+		return ResourceAccess;
+	}
+
 private:
 	ResourceRevision Revision;
 	const IResourceTableInfo* Owner = nullptr;
 	const char* Name = nullptr;
+	EResourceAccess::Type ResourceAccess;
 
 public:
 	UintPtr ParentHash() const
@@ -321,7 +360,7 @@ class ResourceTableIterator<TableType, Index, X, XS...> : public IResourceTableI
 	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner)
 	{
 		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
-		return ResourceTableEntry(Wrap.Revisions[Index], Owner, X::Name);
+		return ResourceTableEntry(Wrap.Revisions[Index], Owner, Wrap.GetHandle());
 	}
 
 public:
@@ -350,7 +389,7 @@ class ResourceTableIterator<TableType, 0> : public IResourceTableIterator
 {
 	static ResourceTableEntry Get()
 	{
-		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, nullptr);
+		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, ResourceHandleBase());
 	}
 
 public:
@@ -473,28 +512,28 @@ public:
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Union(const TableType<YS...>& Other) const
 	{
-		using OtherType = decltype(Other);
-		return MergeToLeft(Set::Union(GetCompatbleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		using OtherType = TableType<YS...>;
+		return MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Intersect(const TableType<YS...>& Other) const
 	{
-		using OtherType = decltype(Other);
+		using OtherType = TableType<YS...>;
 		return MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	constexpr auto Difference(const TableType<YS...>& Other) const
 	{
-		using OtherType = decltype(Other);
+		using OtherType = TableType<YS...>;
 		return MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	template<template<typename...> class TableType, typename... YS>
 	static constexpr auto Collect(const TableType<YS...>& Other)
 	{
-		return CollectInternal(GetCompatibleSetType(), Other);
+		return CollectInternal(GetSetType(), Other);
 	}
 
 	template<typename Handle>
@@ -508,18 +547,18 @@ private:
 	template<typename X, typename... XS, template<typename...> class TypeY, typename... YS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
 	static constexpr auto MergeToLeft(const Set::Type<X, XS...>&, const BaseTable<TypeY, YS...>& Lhs, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
 	{
-		using Rtype = decltype(Rhs);
-		using Ltype = decltype(Lhs);
+		using Rtype = BaseTable<TypeZ, ZS...>;
+		using Ltype = BaseTable<TypeY, YS...>;
 		if constexpr (Rtype::template Contains<X>())
 		{
-			constexpr int TypeIndex = Rtype::GetCompatibleSetType().GetIndex<T>();
-			using RealType = decltype(Rtype::GetSetType().GetType<TypeIndex>());
+			constexpr int TypeIndex = decltype(Rtype::GetCompatibleSetType())::template GetIndex<X>();
+			using RealType = decltype(Rtype::GetSetType().template GetType<TypeIndex>());
 			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Rhs.template GetWrapped<RealType>());
 		}
 		else
 		{
-			constexpr int TypeIndex = Ltype::GetCompatibleSetType().GetIndex<T>();
-			using RealType = decltype(Ltype::GetSetType().GetType<TypeIndex>());
+			constexpr int TypeIndex = decltype(Ltype::GetCompatibleSetType())::template GetIndex<X>();
+			using RealType = decltype(Ltype::GetSetType().template GetType<TypeIndex>());
 			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Lhs.template GetWrapped<RealType>());
 		}
 	}
@@ -533,12 +572,13 @@ private:
 	template<typename X, typename... XS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
 	static constexpr auto CollectInternal(const Set::Type<X, XS...>&, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
 	{
-		using Rtype = decltype(Rhs);
+		using Rtype = BaseTable<TypeZ, ZS...>;
 		if constexpr (BaseTable<TypeZ, ZS...>::template Contains<X>())
 		{
-			constexpr int TypeIndex = Rtype::GetCompatibleSetType().GetIndex<T>();
-			using RealType = decltype(Rtype::GetSetType().GetType<TypeIndex>());
-			return CollectInternal(Set::Type<XS...>(), Rhs, Args..., Rhs.template GetWrapped<RealType>());
+			constexpr int TypeIndex = Rtype::GetCompatibleSetType().template GetIndex<typename X::CompatibleType>();
+			using RealType = decltype(Rtype::GetSetType().template GetType<TypeIndex>());
+			const Wrapped<RealType>& Element = Rhs.template GetWrapped<RealType>();
+			return CollectInternal(Set::Type<XS...>(), Rhs, Args..., Wrapped<X>::ConvertFrom(Element));
 		}
 		else
 		{
@@ -801,6 +841,8 @@ private:
 			using DiffTable = ResourceTable<decltype(in.Difference(std::declval<ITT>())), decltype(out.Difference(std::declval<OTT>()))>;
 			struct ErrorType {} Error;
 			DiffTable Table(Error);
+			ITT inTest = in; (void)inTest;
+			OTT outTest = out; (void)outTest;
 			static_assert(assignable, "missing resourcetable entry: cannot assign");
 			return Table;
 		}

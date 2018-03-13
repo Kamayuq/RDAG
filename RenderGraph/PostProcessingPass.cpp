@@ -6,7 +6,7 @@
 typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto PPfxInfo = Input.GetInputDescriptor<RDAG::PostProcessingInput>();
-	ExternalTexture2dResourceHandle::Descriptor ResultDescriptor;
+	ExternalTexture2dDescriptor ResultDescriptor;
 	ResultDescriptor.Index = 0x10;
 	ResultDescriptor.Name = "PostProcessingResult";
 	ResultDescriptor.Format = ERenderResourceFormat::ARGB8U;

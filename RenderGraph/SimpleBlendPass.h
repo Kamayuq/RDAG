@@ -23,14 +23,14 @@ namespace RDAG
 	struct TransparencyResult;
 	struct HalfResTransparencyResult;
 
-	struct BlendDest : Texture2dResourceHandle
+	struct BlendDest : Texture2dResourceHandle<BlendDest>
 	{
 		static constexpr const char* Name = "BlendDest";
 
 		explicit BlendDest() {}
 	};
 
-	struct BlendSource : Texture2dResourceHandle
+	struct BlendSource : Texture2dResourceHandle<BlendSource>
 	{
 		static constexpr const U32 ResourceCount = 2;
 		static constexpr const char* Name = "BlendSource";

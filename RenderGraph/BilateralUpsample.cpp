@@ -3,7 +3,7 @@
 
 typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DepthTarget = Input.GetInputDescriptor<RDAG::DepthTarget>();
+	auto DepthTarget = Input.GetInputDescriptor<RDAG::DepthTexture>();
 	auto ColorTarget = Input.GetInputDescriptor<RDAG::HalfResInput>();
 	Texture2d::Descriptor UpsampleDescriptor;
 	UpsampleDescriptor.Name = "UpsampleResult";

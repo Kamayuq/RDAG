@@ -10,7 +10,7 @@ namespace RDAG
 
 	struct TemporalAAOutput;
 
-	struct PostProcessingInput : Texture2dResourceHandle
+	struct PostProcessingInput : Texture2dResourceHandle<PostProcessingInput>
 	{
 		static constexpr const char* Name = "PostProcessingInput";
 
@@ -20,16 +20,18 @@ namespace RDAG
 		template<int I>
 		explicit PostProcessingInput(const DownsamplePyramid<I>&) {}
 
-		explicit PostProcessingInput(const Texture2dResourceHandle&) {}
+		template<typename CRTP>
+		explicit PostProcessingInput(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
-	struct PostProcessingResult : ExternalTexture2dResourceHandle
+	struct PostProcessingResult : ExternalTexture2dResourceHandle<PostProcessingResult>
 	{
 		static constexpr const char* Name = "PostProcessingResult";
 
 		explicit PostProcessingResult() {}
 
-		explicit PostProcessingResult(const Texture2dResourceHandle&) {}
+		template<typename CRTP>
+		explicit PostProcessingResult(const Texture2dResourceHandle<CRTP>&) {}
 	};
 }
 
