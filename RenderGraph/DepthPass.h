@@ -11,19 +11,27 @@ namespace RDAG
 
 	struct DepthTexture : Texture2dResourceHandle<DepthTexture>
 	{
-		static constexpr const EResourceAccess::Type ResourceAccess = EResourceAccess::DepthRead;
 		static constexpr const char* Name = "DepthTexture";
 		explicit DepthTexture() {}
-		explicit DepthTexture(const DepthTarget&) {}
+		explicit DepthTexture(const DepthTarget&) : ResourceTransition(EResourceTransition::DepthWriteToDepthRead) {}
+
+		void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource) const;
+
+	private:
+		EResourceTransition::Type ResourceTransition = EResourceTransition::None;
 	};
 
 	struct DepthTarget : DepthTexture 
 	{
-		static constexpr const EResourceAccess::Type ResourceAccess = EResourceAccess::DepthWrite;
 		static constexpr const char* Name = "DepthTarget";
 		explicit DepthTarget() {}
-		explicit DepthTarget(const DepthTexture&) {}
+		explicit DepthTarget(const DepthTexture&) : ResourceTransition(EResourceTransition::DepthReadToDepthWrite) {}
 		explicit DepthTarget(const DownsampleResult&) {}
+
+		void OnExecute(ImmediateRenderContext&, const DepthTarget::ResourceType& Resource) const;
+
+	private:
+		EResourceTransition::Type ResourceTransition = EResourceTransition::None;
 	};
 
 	struct HalfResDepthTarget : Texture2dResourceHandle<DepthTarget>

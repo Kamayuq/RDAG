@@ -25,7 +25,7 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 
 		typedef decltype(MergedTable) MergedTableType;
 
-		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContextType&, const MergedTableType&)
+		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext&, const MergedTableType&)
 		{
 			//auto DepthTarget = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
 			//(void)DepthTarget;

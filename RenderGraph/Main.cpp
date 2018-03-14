@@ -116,14 +116,6 @@ int main(int argc, char* argv[])
 		std::cout << "build time: " << (std::chrono::duration_cast<std::chrono::microseconds>(minDuration).count()) << "us\n";
 	}
 	
-	//*/
-	/*for (auto Action : ActionList)
-	{
-		for (auto& Entry : Action->GetRenderPassData()->AsOutputIterator())
-		{
-			Entry.Materialize();
-		}
-	}*/
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 
@@ -143,14 +135,13 @@ int main(int argc, char* argv[])
 
 	std::cin.get();
 
-/*	std::vector<const LeafRenderPass*> ScheduledPasses;
-	GPU.ScheduleGraphNodes(MainRenderPass, ScheduledPasses);
-	DispatchRenderpasses(BackendType, ScheduledPasses);
-
 	{
-		GraphvisWriter Writer("../test.dot", MainRenderPass);
+		GraphProcessor GPU;
+		ImmediateRenderContext RndCtx;
+		GPU.ScheduleGraphNodes(RndCtx, Builder.GetActionList());
 	}
-	*/
-	//std::cin.get();
+
+	std::cin.get();
+
 	return 0;
 }

@@ -13,7 +13,7 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::LightingResult>({ LightingDescriptor }),
-		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext&, const PassOutputType&)
 		{
 			//auto DepthTarget = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
 			//(void)DepthTarget;

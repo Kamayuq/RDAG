@@ -17,7 +17,7 @@ typename VelocityRenderPass::ReturnType VelocityRenderPass::Build(const RenderPa
 #endif
 	(
 		Builder.CreateOutputResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
-		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext&, const PassOutputType&)
 		{
 			//auto DepthTarget = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
 			//(void)DepthTarget;

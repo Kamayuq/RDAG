@@ -91,3 +91,107 @@ namespace Traits
 	template <typename RET, typename... ARGS>
 	struct function_traits<RET(*)(ARGS...)> : function_traits<RET(ARGS...)> {};
 };
+
+
+namespace EResourceTransition
+{
+	enum Type
+	{
+		None = 0,
+		DepthReadToDepthWrite = 1,
+		DepthWriteToDepthRead = 2,
+	};
+};
+
+namespace ERenderResourceFormat
+{
+	enum Enum
+	{
+		ARGB8U,
+		ARGB16F,
+		ARGB16U,
+		RG16F,
+		L8,
+		D16F,
+		D32F,
+		Structured,
+		Invalid,
+	};
+
+	struct Type : SafeEnum<Enum, Type>
+	{
+		Type() : SafeEnum(Invalid) {}
+		Type(const Enum& e) : SafeEnum(e) {}
+	};
+};
+
+namespace EResourceFlags
+{
+	enum Enum
+	{
+		Discard = 0,
+		Managed = 1 << 0,
+		External = 1 << 1,
+		Default = Managed,
+	};
+
+	struct Type : SafeEnum<Enum, Type>
+	{
+		Type() : SafeEnum(Default) {}
+		Type(const Enum& e) : SafeEnum(e) {}
+	};
+};
+
+class MaterializedResource
+{
+	EResourceFlags::Type ResourceFlags = EResourceFlags::Default;
+
+protected:
+	MaterializedResource(EResourceFlags::Type InResourceFlags) : ResourceFlags(InResourceFlags) {}
+
+public:
+	bool IsDiscardedResource() const { return ResourceFlags == EResourceFlags::Discard; };
+	bool IsManagedResource() const { return All(EResourceFlags::Managed, ResourceFlags); };
+	bool IsExternalResource() const { return All(EResourceFlags::External, ResourceFlags); };
+};
+
+struct Texture2d : MaterializedResource
+{
+	struct Descriptor
+	{
+		const char* Name = "Noname";
+		U32 Width = 0;
+		U32 Height = 0;
+		ERenderResourceFormat::Type Format = ERenderResourceFormat::Invalid;
+
+		bool operator==(const Descriptor& Other) const
+		{
+			if (Format != Other.Format)
+				return false;
+
+			if (Width != Other.Width)
+				return false;
+
+			if (Height != Other.Height)
+				return false;
+
+			if (strcmp(Name, Other.Name) != 0)
+				return false;
+
+			return true;
+		}
+	};
+
+	explicit Texture2d(const Descriptor& InDesc, EResourceFlags::Type InResourceFlags) : MaterializedResource(InResourceFlags), Desc(InDesc)
+	{
+
+	}
+
+	const char* GetName() const
+	{
+		return Desc.Name;
+	}
+
+private:
+	Descriptor Desc;
+};

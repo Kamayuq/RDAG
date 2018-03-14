@@ -16,7 +16,7 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
-		Builder.QueueRenderAction("ToneMappingAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext&, const PassOutputType&)
 		{
 			//auto ToneMapInput = FDataSet::GetStaticResource<RDAG::FPostProcessingInput>(RndCtx, Self->PassData);
 			//(void)ToneMapInput;

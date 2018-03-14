@@ -9,51 +9,25 @@
 #include "Assert.h"
 #include "LinearAlloc.h"
 
-namespace EResourceAccess
-{
-	enum Type
-	{
-		None								= 0,
-		VertexOrConstantBuffer				= 1 << 0,
-		IndexBuffer							= 1 << 1,
-		ColorWrite							= 1 << 2,
-		UnorderedAccess						= 1 << 3,
-		UnorderedAccessWithComputeBarrier	= 1 << 4,
-		DepthWrite							= 1 << 5,
-		DepthRead							= 1 << 6,
-		PixelShaderShaderResource			= 1 << 7,
-		NonPixelShaderShaderResource		= 1 << 8,
-		IndirectArgument					= 1 << 9,
-		CopySource							= 1 << 10,
-		CopyDest							= 1 << 11,
-		Present								= 1 << 15,
-	};
-};
-
 template<typename Handle>
 class TransientResourceImpl;
 
 struct ResourceHandleBase
 {
 	static constexpr const char* Name = nullptr;
-	static constexpr const EResourceAccess::Type ResourceAccess = EResourceAccess::None;
 	static constexpr const U32 ResourceCount = 0;
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* CreateInput(const typename Handle::DescriptorType& InDescriptor) 
+	static TransientResourceImpl<Handle>* OnCreateInput(const typename Handle::DescriptorType& InDescriptor) 
 	{
-		return Create<Handle>(InDescriptor);
+		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
 	}
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* CreateOutput(const typename Handle::DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreateOutput(const typename Handle::DescriptorType& InDescriptor)
 	{
-		return Create<Handle>(InDescriptor);
+		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
 	}
-
-private:
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* Create(const typename Handle::DescriptorType& InDescriptor);
 };
 
 template<typename CRTP>
@@ -61,36 +35,6 @@ struct ResourceHandle : ResourceHandleBase
 {
 	static constexpr const U32 ResourceCount = 1;
 	using CompatibleType = CRTP;
-};
-
-namespace EResourceFlags
-{
-	enum Enum
-	{
-		Discard  = 0,
-		Managed  = 1 << 0,
-		External = 1 << 1,
-		Default = Managed,
-	};
-
-	struct Type : SafeEnum<Enum, Type>
-	{
-		Type() : SafeEnum(Default) {}
-		Type(const Enum& e) : SafeEnum(e) {}
-	};
-};
-
-class MaterializedResource 
-{
-	EResourceFlags::Type ResourceFlags = EResourceFlags::Default;
-	
-protected:
-	MaterializedResource(EResourceFlags::Type InResourceFlags) : ResourceFlags(InResourceFlags) {}
-
-public:
-	bool IsDiscardedResource() const { return ResourceFlags == EResourceFlags::Discard; };
-	bool IsManagedResource() const { return All(EResourceFlags::Managed, ResourceFlags); };
-	bool IsExternalResource() const { return All(EResourceFlags::External, ResourceFlags); };
 };
 
 class TransientResource
@@ -121,19 +65,13 @@ public:
 	{
 		if (Resource == nullptr)
 		{
-			Resource = Handle::Materialize(Descriptor);
+			Resource = Handle::OnMaterialize(Descriptor);
 		}
 	}
 
 public:
 	TransientResourceImpl(const DescriptorType& InDescriptor) : Descriptor(InDescriptor) {}
 };
-
-template <typename Handle>
-inline TransientResourceImpl<Handle>* ResourceHandleBase::Create(const typename Handle::DescriptorType& InDescriptor)
-{
-	return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
-}
 
 class IResourceTableInfo;
 struct ResourceRevision
@@ -211,6 +149,17 @@ struct Wrapped : private Handle
 		return static_cast<const TransientResourceImpl<Handle>*>(Revisions[i].ImaginaryResource)->Descriptor;
 	}
 
+	void OnExecute(struct ImmediateRenderContext& RndCtx) const
+	{
+		for (U32 i = 0; i < ResourceCount; i++)
+		{
+			if (IsValid(i) && Revisions[i].ImaginaryResource->IsMaterialized())
+			{
+				Handle::OnExecute(RndCtx, GetResource(i));
+			}
+		}
+	}
+
 	constexpr bool IsValid(U32 i = 0) const
 	{
 		check(i < ResourceCount);
@@ -223,18 +172,24 @@ struct Wrapped : private Handle
 		return { Handle(Source.GetHandle()), Source.Revisions };
 	}
 private:
+	const ResourceType& GetResource(U32 i = 0) const
+	{
+		check(IsValid(i) && Revisions[i].ImaginaryResource->IsMaterialized());
+		return static_cast<const ResourceType&>(*Revisions[i].ImaginaryResource->GetResource());
+	}
+
 	RevisionArray Revisions;
 };
 
 struct ResourceTableEntry
 {
 	ResourceTableEntry(const ResourceTableEntry& Entry)
-		: Revision(Entry.Revision), Owner(Entry.Owner), Name(Entry.Name), ResourceAccess(Entry.ResourceAccess)
+		: Revision(Entry.Revision), Owner(Entry.Owner), Name(Entry.Name)
 	{}
 
 	template<typename Handle>
 	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const Handle&)
-		: Revision(InRevision), Owner(InOwner), Name(Handle::Name), ResourceAccess(Handle::ResourceAccess)
+		: Revision(InRevision), Owner(InOwner), Name(Handle::Name)
 	{}
 
 	bool operator==(ResourceTableEntry Other) const
@@ -283,16 +238,10 @@ struct ResourceTableEntry
 		return Name;
 	}
 
-	EResourceAccess::Type GetResourceAccess() const
-	{
-		return ResourceAccess;
-	}
-
 private:
 	ResourceRevision Revision;
 	const IResourceTableInfo* Owner = nullptr;
 	const char* Name = nullptr;
-	EResourceAccess::Type ResourceAccess;
 
 public:
 	UintPtr ParentHash() const
@@ -543,6 +492,11 @@ protected:
 	template<typename Handle>
 	Wrapped<Handle>& GetWrapped() { return static_cast<Wrapped<Handle>&>(*this); }
 
+	void OnExecute(struct ImmediateRenderContext& Ctx) const
+	{
+		(GetWrapped<TS>().OnExecute(Ctx), ...);
+	}
+
 private:
 	template<typename X, typename... XS, template<typename...> class TypeY, typename... YS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
 	static constexpr auto MergeToLeft(const Set::Type<X, XS...>&, const BaseTable<TypeY, YS...>& Lhs, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
@@ -614,6 +568,7 @@ public:
 	using BaseType::Difference;
 	using BaseType::Collect;
 	using BaseType::GetWrapped;
+	using BaseType::OnExecute;
 
 	static constexpr bool IsInputTable() { return true; }
 	static constexpr bool IsOutputTable() { return false; }
@@ -642,9 +597,7 @@ public:
 	using BaseType::Difference;
 	using BaseType::Collect;
 	using BaseType::GetWrapped;
-
-	static constexpr bool IsInputTable() { return false; }
-	static constexpr bool IsOutputTable() { return true; }
+	using BaseType::OnExecute;
 
 	template<typename... TS>
 	constexpr void Link(const OutputTable<TS...>& Source, const IResourceTableInfo* Parent)
@@ -652,6 +605,9 @@ public:
 		typedef decltype(Set::Intersect(Set::Type<XS...>(), Set::Type<TS...>())) IntersectionSet;
 		LinkInternal(IntersectionSet(), Source, Parent);
 	}
+
+	static constexpr bool IsInputTable() { return false; }
+	static constexpr bool IsOutputTable() { return true; }
 
 private:
 	OutputTable(const Wrapped<XS>&... xs) : BaseType(xs...) {}
@@ -881,6 +837,14 @@ private:
 public:
 	using PassOutputType = ThisType;
 	using PassInputType = decltype(ExtractInputOutputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
+
+private:
+
+	void OnExecute(struct ImmediateRenderContext& Ctx) const
+	{
+		GetOutputTable().OnExecute(Ctx);
+		GetInputTable().OnExecute(Ctx);
+	}
 };
 
 #define RESOURCE_TABLE(...)														\

@@ -8,7 +8,7 @@ typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const Render
 
 	return Seq
 	(
-		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext&, const PassOutputType&)
 		{
 			//(void)Config;
 			//auto DepthTarget = FDataSet::GetMutableResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);

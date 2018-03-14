@@ -3,70 +3,20 @@
 #include "Plumber.h"
 #include "LinearAlloc.h"
 
-namespace ERenderResourceFormat
-{
-	enum Enum
-	{
-		ARGB8U,
-		ARGB16F,
-		ARGB16U,
-		RG16F,
-		L8,
-		D16F,
-		D32F,
-		Structured,
-		Invalid,
-	};
-
-	struct Type : SafeEnum<Enum, Type>
-	{
-		Type() : SafeEnum(Invalid) {}
-		Type(const Enum& e) : SafeEnum(e) {}
-	};
-};
-
-struct Texture2d : MaterializedResource
-{
-	struct Descriptor
-	{
-		const char* Name = "Noname";
-		U32 Width = 0;
-		U32 Height = 0;
-		ERenderResourceFormat::Type Format = ERenderResourceFormat::Invalid;
-
-		bool operator==(const Descriptor& Other) const
-		{
-			if (Format != Other.Format)
-				return false;
-
-			if (Width != Other.Width)
-				return false;
-
-			if (Height != Other.Height)
-				return false;
-
-			if (strcmp(Name, Other.Name) != 0)
-				return false;
-
-			return true;
-		}
-	};
-
-	explicit Texture2d(const Descriptor&, EResourceFlags::Type InResourceFlags) : MaterializedResource(InResourceFlags)
-	{
-
-	}
-};
-
 template<typename CRTP>
 struct Texture2dResourceHandle : ResourceHandle<CRTP>
 {
 	typedef Texture2d ResourceType;
 	typedef Texture2d::Descriptor DescriptorType;
 
-	static ResourceType* Materialize(const DescriptorType& Descriptor)
+	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
 	{
 		return new (LinearAlloc<ResourceType>()) ResourceType(Descriptor, EResourceFlags::Managed);
+	}
+
+	void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource) const
+	{
+		Ctx.BindTexture(Resource);
 	}
 };
 
@@ -88,30 +38,30 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	typedef ExternalTexture2dDescriptor DescriptorType;
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* CreateInput(const DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreateInput(const DescriptorType& InDescriptor)
 	{
 		TransientResourceImpl<Handle>* Ret = nullptr;
 		if (InDescriptor.Index != -1)
 		{
-			Ret = Texture2dResourceHandle<CRTP>::template CreateInput<Handle>(InDescriptor);
+			Ret = Texture2dResourceHandle<CRTP>::template OnCreateInput<Handle>(InDescriptor);
 			Ret->Materialize();
 		}
 		return Ret;
 	}
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* CreateOutput(const DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreateOutput(const DescriptorType& InDescriptor)
 	{
 		TransientResourceImpl<Handle>* Ret = nullptr;
 		if (InDescriptor.Index != -1)
 		{
-			Ret = Texture2dResourceHandle<CRTP>::template CreateOutput<Handle>(InDescriptor);
+			Ret = Texture2dResourceHandle<CRTP>::template OnCreateOutput<Handle>(InDescriptor);
 			Ret->Materialize();
 		}
 		return Ret;
 	}
 
-	static ResourceType* Materialize(const DescriptorType& Descriptor)
+	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
 	{
 		static std::vector<ResourceType*> ExternalResourceMap;
 		check(Descriptor.Index >= 0);
@@ -148,22 +98,26 @@ struct CpuOnlyResourceHandle : ResourceHandle<CRTP>
 	typedef CpuOnlyResource::Descriptor DescriptorType;
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* CreateInput(const DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreateInput(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = ResourceHandleBase::CreateInput<Handle>(InDescriptor);
+		TransientResourceImpl<Handle>* Ret = ResourceHandleBase::OnCreateInput<Handle>(InDescriptor);
 		Ret->Materialize();
 		return Ret;
 	}
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* CreateOutput(const DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreateOutput(const DescriptorType& InDescriptor)
 	{
 		check(false && "Not valid Use Case");
 		return nullptr;
 	}
 
-	static ResourceType* Materialize(const DescriptorType&)
+	static ResourceType* OnMaterialize(const DescriptorType&)
 	{
 		return nullptr;
+	}
+
+	void OnExecute(struct ImmediateRenderContext&, const ResourceType&) const
+	{
 	}
 };

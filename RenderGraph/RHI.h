@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include "Assert.h"
+#include "Types.h"
 
 namespace ERenderBackend
 {
@@ -21,65 +22,24 @@ protected:
 	//RenderPassBase* RenderPass = nullptr;
 
 public:
-	void BindStatic(const char* /*TypeName*/, U32 /*Offset*/, const RenderResourceBase* /*Resource*/)
+	void TransitionResource(const struct Texture2d& Tex, EResourceTransition::Type Transition)
 	{
-		//check(RenderPass != nullptr);
-		//printf("DefaultContext: %s Setting Static: %s (Last Modified by: %s) in Slot %s%i \n", RenderPass->GetName(), Resource->GetName(), Resource->LastModifiedBy, TypeName, Offset);
+		printf("TransitionTexture: %s to: %d \n", Tex.GetName(), Transition);
 	}
 
-	void BindMutable(const char* /*TypeName*/, U32 /*Offset*/, const RenderResourceBase* /*Resource*/)
+	void BindTexture(const struct Texture2d& Tex)
 	{
-		//check(RenderPass != nullptr);
-		//printf("DefaultContext: %s Setting Mutable: %s (Last Modified by: %s) in Slot %s%i \n", RenderPass->GetName(), Resource->GetName(), Resource->LastModifiedBy, TypeName, Offset);
-		//Resource->LastModifiedBy = RenderPass->GetName();
-	}
-
-	void SetRenderPass(RenderPassBase* /*LocalRenderPass*/)
-	{
-		//if (LocalRenderPass != nullptr)
-		//{
-		//	check(RenderPass == nullptr);
-		//	std::cout << ">>>Begin rendering Pass: " << LocalRenderPass->GetName() << std::endl;
-		//} 
-		//else
-		//{
-		//	check(RenderPass != nullptr);
-		//	std::cout << "<<<<<End rendering Pass: " << RenderPass->GetName() << std::endl << std::endl;
-		//}
-		//RenderPass = LocalRenderPass;
+		printf("BindTexture: %s \n", Tex.GetName());
 	}
 };
 
-struct RenderContext final : private RenderContextBase
+struct RenderContext : protected RenderContextBase
 {
-	using RenderContextBase::BindMutable;
-	using RenderContextBase::BindStatic;
-	using RenderContextBase::SetRenderPass;
+	using RenderContextBase::BindTexture;
 };
 
-struct ParallelRenderContext final : private RenderContextBase
+struct ImmediateRenderContext final : public RenderContext
 {
-	using RenderContextBase::BindMutable;
-	using RenderContextBase::BindStatic;
-	using RenderContextBase::SetRenderPass;
+	using RenderContextBase::TransitionResource;
+	using RenderContextBase::BindTexture;
 };
-
-struct VulkanRenderContext final : private RenderContextBase
-{
-	using RenderContextBase::SetRenderPass;
-
-	void BindStatic(const char* /*TypeName*/, U32 /*Offset*/, const RenderResourceBase* /*Resource*/)
-	{
-		//check(RenderPass != nullptr);
-		//printf("VulkanContext: %s Setting Static: %s (Last Modified by: %s) in Slot %s%i \n", RenderPass->GetName(), Resource->GetName(), Resource->LastModifiedBy, TypeName, Offset);
-	}
-
-	void BindMutable(const char* /*TypeName*/, U32 /*Offset*/, const RenderResourceBase* /*Resource*/)
-	{
-		//check(RenderPass != nullptr);
-		//printf("VulkanContext: %s Setting Mutable: %s (Last Modified by: %s) in Slot %s%i \n", RenderPass->GetName(), Resource->GetName(), Resource->LastModifiedBy, TypeName, Offset);
-		//Resource->LastModifiedBy = RenderPass->GetName();
-	}
-};
-
-using RenderContextType = RenderContext;

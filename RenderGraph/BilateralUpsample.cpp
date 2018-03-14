@@ -14,7 +14,7 @@ typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::UpsampleResult>({ UpsampleDescriptor }),
-		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext&, const PassOutputType&)
 		{
 			//auto UpsampleInput = FDataSet::GetStaticResource<RDAG::FHalfResInput>(RndCtx, Self->PassData);
 			//(void)UpsampleInput;

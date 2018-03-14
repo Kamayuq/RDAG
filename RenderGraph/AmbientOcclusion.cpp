@@ -19,7 +19,7 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			return Seq
 			(
 				Builder.CreateOutputResource<RDAG::AmbientOcclusionResult>({ AoDescriptor }),
-				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContextType&, const DFAOTable&)
+				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext&, const DFAOTable&)
 				{
 					//auto AmbientOcclusionResult = FDataSet::GetMutableResource<RDAG::FAmbientOcclusionResult>(RndCtx, Self->PassData);
 					//(void)AmbientOcclusionResult;
@@ -40,7 +40,7 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			return Seq
 			(
 				Builder.CreateOutputResource<RDAG::AmbientOcclusionResult>({ AoDescriptor }),
-				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContextType&, const HBAOTable&)
+				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext&, const HBAOTable&)
 				{
 					//auto DepthBuffer = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
 					//(void)DepthBuffer;

@@ -13,7 +13,7 @@ typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const 
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::DownsampleResult>({ DownsampleDescriptor }),
-		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContext&, const PassOutputType&)
 		{
 			//auto DownsampleInput = FDataSet::GetStaticResource<RDAG::FDownsampleInput>(RndCtx, Self->PassData);
 			//(void)DownsampleInput;

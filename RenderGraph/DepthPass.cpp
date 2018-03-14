@@ -1,5 +1,20 @@
 #include "DepthPass.h"
+#include "RHI.h"
 
+namespace RDAG
+{
+	void DepthTexture::OnExecute(ImmediateRenderContext& Ctx, const DepthTexture::ResourceType& Resource) const
+	{
+		Ctx.TransitionResource(Resource, ResourceTransition);
+		Texture2dResourceHandle<DepthTexture>::OnExecute(Ctx, Resource);
+	}
+
+	void DepthTarget::OnExecute(ImmediateRenderContext& Ctx, const DepthTarget::ResourceType& Resource) const
+	{
+		Ctx.TransitionResource(Resource, ResourceTransition);
+		Texture2dResourceHandle<DepthTexture>::OnExecute(Ctx, Resource);
+	}
+}
 
 typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
@@ -13,7 +28,7 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::DepthTarget>({ DepthDescriptor }),
-		Builder.QueueRenderAction("DepthRenderAction", [](RenderContextType&, const PassOutputType&)
+		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext&, const PassOutputType&)
 		{
 			//auto DepthTarget = FDataSet::GetMutableResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
 			//(void)DepthTarget;

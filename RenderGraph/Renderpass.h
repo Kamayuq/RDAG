@@ -14,9 +14,7 @@ struct IRenderPassAction
 
 	virtual ~IRenderPassAction() {}
 	virtual const class IResourceTableInfo* GetRenderPassData() const = 0;
-	virtual void Execute(struct RenderContext&) const {};
-	virtual void Execute(struct ParallelRenderContext&) const {};
-	virtual void Execute(struct VulkanRenderContext&) const {};
+	virtual void Execute(struct ImmediateRenderContext&) const {};
 
 	const char* GetName() const { return Name; };
 	void SetColor(U32 InColor) const { Color = InColor; }
@@ -281,7 +279,7 @@ public:
 		ResourceRevision Revisions[Handle::ResourceCount];
 		for (U32 i = 0; i < Handle::ResourceCount; i++)
 		{
-			Revisions[i].ImaginaryResource = Handle::template CreateInput<Handle>(InDescriptors[i]);
+			Revisions[i].ImaginaryResource = Handle::template OnCreateInput<Handle>(InDescriptors[i]);
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
@@ -299,7 +297,7 @@ public:
 		ResourceRevision Revisions[Handle::ResourceCount];
 		for (U32 i = 0; i < Handle::ResourceCount; i++)
 		{
-			Revisions[i].ImaginaryResource = Handle::template CreateOutput<Handle>(InDescriptors[i]);
+			Revisions[i].ImaginaryResource = Handle::template OnCreateOutput<Handle>(InDescriptors[i]);
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
@@ -353,9 +351,10 @@ private:
 			return &RenderPassData;
 		}
 
-		void Execute(ContextType& RndCtx) const override final
+		void Execute(ImmediateRenderContext& RndCtx) const override final
 		{
-			Task(RndCtx, RenderPassData);
+			RenderPassData.OnExecute(RndCtx);
+			Task(checked_cast<ContextType&>(RndCtx), RenderPassData);
 		}
 
 		RenderPassDataType RenderPassData;
