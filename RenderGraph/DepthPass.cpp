@@ -6,7 +6,7 @@ namespace RDAG
 	void DepthTexture::OnExecute(ImmediateRenderContext& Ctx, const DepthTexture::ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthRead);
-		Texture2dResourceHandle<DepthTexture>::OnExecute(Ctx, Resource);
+		Ctx.BindTexture(Resource);
 	}
 
 	void DepthTarget::OnExecute(ImmediateRenderContext& Ctx, const DepthTarget::ResourceType& Resource) const

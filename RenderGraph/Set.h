@@ -27,19 +27,6 @@ struct Set final
 	{
 		template<int I, typename E, typename... ES>
 		static constexpr auto GetTypeInternal(const SetElements<I, E, ES...>&)->E;
-
-		template<typename T, int I, typename E, typename... ES>
-		static constexpr int GetIndexInternal(const SetElements<I, E, ES...>& elems)
-		{
-			if constexpr(std::is_same_v<T, E>)
-			{
-				return I;
-			}
-			else
-			{
-				return Internal::GetIndexInternal<T>(static_cast<const typename SetElements<I, E, ES...>::BaseType&>(elems));
-			}
-		};
 	};
 
 	template<typename... TS>
@@ -62,13 +49,6 @@ struct Set final
 		{
 			static_assert(I < GetSize(), "Set index out off bounds");
 			return {};
-		}
-		
-		template<typename T>
-		static constexpr int GetIndex()
-		{
-			static_assert(Contains<T>(), "Set does not contain this type");
-			return Internal::GetIndexInternal<T>(BaseType());
 		}
 
 	private:

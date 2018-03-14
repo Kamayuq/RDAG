@@ -505,14 +505,12 @@ private:
 		using Ltype = BaseTable<TypeY, YS...>;
 		if constexpr (Rtype::template Contains<X>())
 		{
-			constexpr int TypeIndex = decltype(Rtype::GetCompatibleSetType())::template GetIndex<X>();
-			using RealType = decltype(Rtype::GetSetType().template GetType<TypeIndex>());
+			using RealType = decltype(Rtype::template GetOriginalType<typename X::CompatibleType>());
 			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Rhs.template GetWrapped<RealType>());
 		}
 		else
 		{
-			constexpr int TypeIndex = decltype(Ltype::GetCompatibleSetType())::template GetIndex<X>();
-			using RealType = decltype(Ltype::GetSetType().template GetType<TypeIndex>());
+			using RealType = decltype(Ltype::template GetOriginalType<typename X::CompatibleType>());
 			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Lhs.template GetWrapped<RealType>());
 		}
 	}
@@ -529,8 +527,7 @@ private:
 		using Rtype = BaseTable<TypeZ, ZS...>;
 		if constexpr (BaseTable<TypeZ, ZS...>::template Contains<X>())
 		{
-			constexpr int TypeIndex = Rtype::GetCompatibleSetType().template GetIndex<typename X::CompatibleType>();
-			using RealType = decltype(Rtype::GetSetType().template GetType<TypeIndex>());
+			using RealType = decltype(Rtype::template GetOriginalType<typename X::CompatibleType>());
 			const Wrapped<RealType>& Element = Rhs.template GetWrapped<RealType>();
 			return CollectInternal(Set::Type<XS...>(), Rhs, Args..., Wrapped<X>::ConvertFrom(Element));
 		}
@@ -546,6 +543,17 @@ private:
 		//static_assert(std::is_same_v<Derived<TS...>, Derived<ARGS...>>, "could not collect all parameters");
 		return Derived<ARGS...>(Args...);
 	}
+
+	template<typename SetType, typename CompatibleType>
+	struct CompatiblePair {};
+	
+	struct CompatiblePairList : CompatiblePair<TS, typename TS::CompatibleType>... {};
+
+	template<typename CompatibleType, typename SetType>
+	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<SetType, CompatibleType>&)->SetType;
+
+	template<typename CompatibleType>
+	static constexpr auto GetOriginalType() -> decltype(ThisType::template GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
 };
 
 template<typename... XS>
