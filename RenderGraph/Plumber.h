@@ -550,7 +550,7 @@ private:
 	struct CompatiblePairList : CompatiblePair<TS, typename TS::CompatibleType>... {};
 
 	template<typename CompatibleType, typename SetType>
-	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<SetType, CompatibleType>&)->SetType;
+	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<SetType, CompatibleType>&) -> SetType;
 
 	template<typename CompatibleType>
 	static constexpr auto GetOriginalType() -> decltype(ThisType::template GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
