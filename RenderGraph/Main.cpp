@@ -13,8 +13,6 @@
 #include "DownSamplePass.h"
 #include "PostprocessingPass.h"
 
-volatile ERenderBackend::Type BackendType = ERenderBackend::Vulkan;
-
 volatile bool TransparencyEnabled = true;
 volatile bool TransparencySeperateEnabled = true;
 volatile bool TemporalAaEnabled = true;
@@ -50,8 +48,6 @@ int main(int argc, char* argv[])
 		{
 			ViewInfoPtr[i] = (char)rand();
 		}
-
-		BackendType = (ERenderBackend::Type)rand();
 	}
 
 	RenderPassBuilder Builder;

@@ -3,33 +3,29 @@
 #include "Assert.h"
 #include "Types.h"
 
-namespace ERenderBackend
-{
-	enum Type
-	{
-		Sequence,
-		Parallel,
-		Vulkan,
-	};
-};
-
 struct RenderResourceBase;
 struct RenderPassBase;
 
 struct RenderContextBase
 {
-protected:
-	//RenderPassBase* RenderPass = nullptr;
+private:
+	static constexpr const char* FromStr[] = { "None", "DepthRead", "DepthWrite" };
+	static constexpr const char* ToStr[] = { "None", "DepthWrite",  "DepthRead" };
 
 public:
 	void TransitionResource(const struct Texture2d& Tex, EResourceTransition::Type Transition)
 	{
-		printf("TransitionTexture: %s to: %d \n", Tex.GetName(), Transition);
+		printf("TransitionTexture: %s from %s to: %s \n", Tex.GetName(), FromStr[Transition], ToStr[Transition]);
 	}
 
 	void BindTexture(const struct Texture2d& Tex)
 	{
 		printf("BindTexture: %s \n", Tex.GetName());
+	}
+
+	void BindRenderTarget(const struct Texture2d& Tex)
+	{
+		printf("BindRenderTarget: %s \n", Tex.GetName());
 	}
 };
 
@@ -41,5 +37,6 @@ struct RenderContext : protected RenderContextBase
 struct ImmediateRenderContext final : public RenderContext
 {
 	using RenderContextBase::TransitionResource;
+	using RenderContextBase::BindRenderTarget;
 	using RenderContextBase::BindTexture;
 };

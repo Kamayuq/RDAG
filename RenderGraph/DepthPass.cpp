@@ -12,7 +12,7 @@ namespace RDAG
 	void DepthTarget::OnExecute(ImmediateRenderContext& Ctx, const DepthTarget::ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, ResourceTransition);
-		Texture2dResourceHandle<DepthTexture>::OnExecute(Ctx, Resource);
+		Ctx.BindRenderTarget(Resource);
 	}
 }
 
