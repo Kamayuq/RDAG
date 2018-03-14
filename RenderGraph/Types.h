@@ -97,9 +97,9 @@ namespace EResourceTransition
 {
 	enum Type
 	{
-		None = 0,
-		DepthReadToDepthWrite = 1,
-		DepthWriteToDepthRead = 2,
+		Common		= 0,
+		DepthRead	= 1,
+		DepthWrite	= 2,
 	};
 };
 
@@ -192,6 +192,18 @@ struct Texture2d : MaterializedResource
 		return Desc.Name;
 	}
 
+	bool RequiresTransition(EResourceTransition::Type& OldState, EResourceTransition::Type NewState) const
+	{
+		if (NewState != CurrentState)
+		{
+			OldState = CurrentState;
+			CurrentState = NewState;
+			return true;
+		}
+		return false;
+	}
+
 private:
 	Descriptor Desc;
+	mutable EResourceTransition::Type CurrentState = EResourceTransition::Common;
 };

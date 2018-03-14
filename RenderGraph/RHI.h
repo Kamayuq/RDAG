@@ -9,13 +9,16 @@ struct RenderPassBase;
 struct RenderContextBase
 {
 private:
-	static constexpr const char* FromStr[] = { "None", "DepthRead", "DepthWrite" };
-	static constexpr const char* ToStr[] = { "None", "DepthWrite",  "DepthRead" };
+	static constexpr const char* TransitionStr[] = { "Common", "DepthRead", "DepthWrite" };
 
 public:
 	void TransitionResource(const struct Texture2d& Tex, EResourceTransition::Type Transition)
 	{
-		printf("TransitionTexture: %s from %s to: %s \n", Tex.GetName(), FromStr[Transition], ToStr[Transition]);
+		EResourceTransition::Type OldState;
+		if (Tex.RequiresTransition(OldState, Transition))
+		{
+			printf("TransitionTexture: %s from %s to: %s \n", Tex.GetName(), TransitionStr[OldState], TransitionStr[Transition]);
+		}
 	}
 
 	void BindTexture(const struct Texture2d& Tex)
