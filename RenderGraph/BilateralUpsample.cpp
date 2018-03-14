@@ -14,23 +14,9 @@ typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::UpsampleResult>({ UpsampleDescriptor }),
-		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext&, const PassOutputType&)
+		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
-			//auto UpsampleInput = FDataSet::GetStaticResource<RDAG::FHalfResInput>(RndCtx, Self->PassData);
-			//(void)UpsampleInput;
-			//auto UpsampleInputHalfResDepth = FDataSet::GetStaticResource<RDAG::FHalfResDepth>(RndCtx, Self->PassData);
-			//(void)UpsampleInputHalfResDepth;
-			//auto UpsampleInputDepth = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-			//(void)UpsampleInputDepth;
-			//auto DownsampleOutput = FDataSet::GetMutableResource<RDAG::FUpsampleResult>(RndCtx, Self->PassData);
-			//(void)DownsampleOutput;
-		
-			//RndCtx.SetRenderPass(Self);
-			//RndCtx.BindStatic(UpsampleInput);
-			//RndCtx.BindStatic(UpsampleInputHalfResDepth);
-			//RndCtx.BindStatic(UpsampleInputDepth);
-			//RndCtx.BindMutable(DownsampleOutput);
-			//RndCtx.SetRenderPass(nullptr);
+			Ctx.Draw("BilateralUpsampleAction");
 		})
 	)(Input);
 }

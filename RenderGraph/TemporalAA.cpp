@@ -25,32 +25,9 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 
 		typedef decltype(MergedTable) MergedTableType;
 
-		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext&, const MergedTableType&)
+		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext& Ctx, const MergedTableType&)
 		{
-			//auto DepthTarget = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-			//(void)DepthTarget;
-			//auto VelocityBuffer = FDataSet::GetStaticResource<RDAG::FVelocityVectors>(RndCtx, Self->PassData);
-			//(void)VelocityBuffer;
-
-			//RndCtx.SetRenderPass(Self);
-			//RndCtx.BindStatic(DepthTarget);
-			//RndCtx.BindStatic(VelocityBuffer);
-			//
-			//for (U32 i = 0; i < RDAG::FTemporalAAHistory::ResourceCount; i++)
-			//{
-			//	if (Self->PassData.template IsValidStatic<RDAG::FTemporalAAHistory>(i))
-			//	{
-			//		auto History = FDataSet::GetStaticResource<RDAG::FTemporalAAHistory>(RndCtx, Self->PassData, i);
-			//		RndCtx.BindStatic(History);
-			//
-			//		auto Input = FDataSet::GetStaticResource<RDAG::FTemporalAAInput>(RndCtx, Self->PassData, i);
-			//		RndCtx.BindStatic(Input);
-			//
-			//		auto Output = FDataSet::GetMutableResource<RDAG::FTemporalAAOutput>(RndCtx, Self->PassData, i);
-			//		RndCtx.BindMutable(Output);
-			//	}
-			//}
-			//RndCtx.SetRenderPass(nullptr);
+			Ctx.Draw("TemporalAAAction");
 		})(MergedTable);
 	}
 	else

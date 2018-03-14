@@ -27,16 +27,21 @@ public:
 	{
 		printf("BindRenderTarget: %s \n", Tex.GetName());
 	}
+
+	void Draw(const char* RenderPass)
+	{
+		printf("Drawing Renderpass: %s \n", RenderPass);
+	}
 };
 
 struct RenderContext : protected RenderContextBase
 {
 	using RenderContextBase::BindTexture;
+	using RenderContextBase::Draw;
 };
 
 struct ImmediateRenderContext final : public RenderContext
 {
 	using RenderContextBase::TransitionResource;
 	using RenderContextBase::BindRenderTarget;
-	using RenderContextBase::BindTexture;
 };

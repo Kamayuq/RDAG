@@ -72,8 +72,7 @@ int main(int argc, char* argv[])
 				Builder.CreateOutputResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
 				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 				{
-					(void)Ctx;
-					//Ctx.draw();
+					Ctx.Draw("SimpleRenderAction");
 				})
 			)(Input);
 		};

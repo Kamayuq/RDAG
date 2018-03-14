@@ -13,22 +13,9 @@ typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPass
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::BlendDest>({ BlendDstDescriptor }),
-		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext&, const PassOutputType&)
+		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
-			//(void)Config;
-			//auto BlendInput0 = FDataSet::GetStaticResource<RDAG::FBlendSource>(RndCtx, Self->PassData, 0);
-			//(void)BlendInput0;
-			//auto BlendInput1 = FDataSet::GetStaticResource<RDAG::FBlendSource>(RndCtx, Self->PassData, 1);
-			//(void)BlendInput1;
-			//auto BlendOutput = FDataSet::GetMutableResource<RDAG::FBlendDest>(RndCtx, Self->PassData);
-			//(void)BlendOutput;
-
-			//RndCtx.SetRenderPass(Self);
-			////SetBlendMode 
-			//RndCtx.BindStatic(BlendInput0);
-			//RndCtx.BindStatic(BlendInput1);
-			//RndCtx.BindMutable(BlendOutput);
-			//RndCtx.SetRenderPass(nullptr);
+			Ctx.Draw("SimpleBlendAction");
 		})
 	)(Input);
 }

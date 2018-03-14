@@ -14,20 +14,9 @@ typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const Render
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::Gbuffer>(GbufferDescriptors),
-		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext&, const PassOutputType&)
+		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
-			//auto DepthTarget = FDataSet::GetMutableResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-			//(void)DepthTarget;
-			//auto GbufferA = FDataSet::GetMutableResource<RDAG::FGbuffer>(RndCtx, Self->PassData, 0);
-			//(void)GbufferA;
-			//auto GbufferB = FDataSet::GetMutableResource<RDAG::FGbuffer>(RndCtx, Self->PassData, 1);
-			//(void)GbufferB;
-
-			//RndCtx.SetRenderPass(Self);
-			//RndCtx.BindMutable(DepthTarget);
-			//RndCtx.BindMutable(GbufferA);
-			//RndCtx.BindMutable(GbufferB);
-			//RndCtx.SetRenderPass(nullptr);
+			Ctx.Draw("GbufferRenderAction");
 		})
 	)(Input);
 }

@@ -17,17 +17,9 @@ typename VelocityRenderPass::ReturnType VelocityRenderPass::Build(const RenderPa
 #endif
 	(
 		Builder.CreateOutputResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
-		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext&, const PassOutputType&)
+		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
-			//auto DepthTarget = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-			//(void)DepthTarget;
-			//auto ForwardTarget = FDataSet::GetMutableResource<RDAG::FVelocityVectors>(RndCtx, Self->PassData);
-			//(void)ForwardTarget;
-
-			//RndCtx.SetRenderPass(Self);
-			//RndCtx.BindMutable(DepthTarget);
-			//RndCtx.BindMutable(ForwardTarget);
-			//RndCtx.SetRenderPass(nullptr);
+			Ctx.Draw("VelocityRenderAction");
 		})
 	)(Input);
 }

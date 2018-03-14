@@ -28,14 +28,9 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::DepthTarget>({ DepthDescriptor }),
-		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext&, const PassOutputType&)
+		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
-			//auto DepthTarget = FDataSet::GetMutableResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-			//(void)DepthTarget;
-
-			//RndCtx.SetRenderPass(Self);
-			//RndCtx.BindMutable(DepthTarget);
-			//RndCtx.SetRenderPass(nullptr);
+			Ctx.Draw("DepthRenderAction");
 		})
 	)(Input);
 }

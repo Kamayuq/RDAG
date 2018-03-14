@@ -19,14 +19,9 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			return Seq
 			(
 				Builder.CreateOutputResource<RDAG::AmbientOcclusionResult>({ AoDescriptor }),
-				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext&, const DFAOTable&)
+				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable&)
 				{
-					//auto AmbientOcclusionResult = FDataSet::GetMutableResource<RDAG::FAmbientOcclusionResult>(RndCtx, Self->PassData);
-					//(void)AmbientOcclusionResult;
-
-					//RndCtx.SetRenderPass(Self);
-					//RndCtx.BindMutable(AmbientOcclusionResult);
-					//RndCtx.SetRenderPass(nullptr);
+					Ctx.Draw("DistancefieldAOAction");
 				})
 			)(Input);
 		}
@@ -35,25 +30,14 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::HorizonBased:
 		{
 			AoDescriptor.Name = "HorizonBasedAoTarget";
-			using HBAOTable = ResourceTable<InputTable<RDAG::Gbuffer, RDAG::DepthTarget>, OutputTable<RDAG::AmbientOcclusionResult>>;
+			using HBAOTable = ResourceTable<InputTable<RDAG::Gbuffer, RDAG::DepthTexture>, OutputTable<RDAG::AmbientOcclusionResult>>;
 
 			return Seq
 			(
 				Builder.CreateOutputResource<RDAG::AmbientOcclusionResult>({ AoDescriptor }),
-				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext&, const HBAOTable&)
+				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable&)
 				{
-					//auto DepthBuffer = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-					//(void)DepthBuffer;
-					//auto GbufferB = FDataSet::GetStaticResource<RDAG::FGbuffer>(RndCtx, Self->PassData, 1);
-					//(void)GbufferB;
-					//auto AmbientOcclusionResult = FDataSet::GetMutableResource<RDAG::FAmbientOcclusionResult>(RndCtx, Self->PassData);
-					//(void)AmbientOcclusionResult;
-
-					//RndCtx.SetRenderPass(Self);
-					//RndCtx.BindStatic(DepthBuffer);
-					//RndCtx.BindStatic(GbufferB);
-					//RndCtx.BindMutable(AmbientOcclusionResult);
-					//RndCtx.SetRenderPass(nullptr);
+					Ctx.Draw("HorizonBasedAOAction");
 				})
 			)(Input);
 		}

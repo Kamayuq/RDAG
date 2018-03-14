@@ -13,33 +13,9 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	return Seq
 	(
 		Builder.CreateOutputResource<RDAG::LightingResult>({ LightingDescriptor }),
-		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext&, const PassOutputType&)
+		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
-			//auto DepthTarget = FDataSet::GetStaticResource<RDAG::FDepthTarget>(RndCtx, Self->PassData);
-			//(void)DepthTarget;
-			//auto GbufferA = FDataSet::GetStaticResource<RDAG::FGbuffer>(RndCtx, Self->PassData, 0);
-			//(void)GbufferA;
-			//auto GbufferB = FDataSet::GetStaticResource<RDAG::FGbuffer>(RndCtx, Self->PassData, 1);
-			//(void)GbufferB;
-			//auto AOBuffer = FDataSet::GetStaticResource<RDAG::FAmbientOcclusionResult>(RndCtx, Self->PassData);
-			//(void)AOBuffer;
-			//auto LightingResult = FDataSet::GetMutableResource<RDAG::FLightingResult>(RndCtx, Self->PassData);
-			//(void)LightingResult;
-
-			/*
-			RndCtx.SetRenderPass(Self);
-			RndCtx.BindStatic(DepthTarget);
-			RndCtx.BindStatic(GbufferA);
-			RndCtx.BindStatic(GbufferB);
-			RndCtx.BindStatic(AOBuffer);
-			for (U32 Index = 0; Index < Config.ShadowConfig.NumCascades; Index++)
-			{
-			auto ShadowMap = FDataSet::GetStaticResource<RDAG::FShadowMapTextureArray>(RndCtx, Self->PassData, Index);
-			RndCtx.BindStatic(ShadowMap);
-			}
-			RndCtx.BindMutable(LightingResult);
-			RndCtx.SetRenderPass(nullptr);
-			*/
+			Ctx.Draw("DeferredLightingAction");
 		})
 	)(Input);
 }
