@@ -2,6 +2,7 @@
 #include "Plumber.h"
 #include "Renderpass.h"
 #include "ResourceTypes.h"
+#include "VelocityPass.h"
 
 namespace RDAG
 {
@@ -52,7 +53,7 @@ struct PostProcessingPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::PostProcessingInput>,
+		InputTable<RDAG::SceneViewInfo, RDAG::PostProcessingInput, RDAG::DepthTexture, RDAG::VelocityVectors>,
 		OutputTable<RDAG::PostProcessingResult>
 	);
 

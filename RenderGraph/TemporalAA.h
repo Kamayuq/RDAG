@@ -24,6 +24,9 @@ namespace RDAG
 
 		explicit TemporalAAInput() {}
 		explicit TemporalAAInput(const TransparencyResult&) {}
+
+		template<typename CRTP>
+		explicit TemporalAAInput(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
 	struct TemporalAAOutput : ExternalTexture2dResourceHandle<TemporalAAOutput>

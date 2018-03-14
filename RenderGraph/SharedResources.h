@@ -12,6 +12,16 @@ namespace EAmbientOcclusionType
 
 namespace RDAG
 {
+	struct DepthOfFieldSettings
+	{
+		bool EnabledForegroundLayer = true;
+		bool EnabledBackgroundLayer = true;
+		bool BokehShapeIsCircle = false;
+		bool GatherForeground = true;
+		bool EnablePostfilterMethod = true;
+		U32 RecombineQuality = 3;
+	};
+
 	struct SceneViewInfo : CpuOnlyResourceHandle<SceneViewInfo>
 	{
 		static constexpr const char* Name = "SceneViewInfo";
@@ -46,5 +56,7 @@ namespace RDAG
 		bool TransparencySeperateEnabled = true;
 
 		EAmbientOcclusionType::Enum AmbientOcclusionType = EAmbientOcclusionType::HorizonBased;
+		
+		DepthOfFieldSettings DofSettings;
 	};
 }

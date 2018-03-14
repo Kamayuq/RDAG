@@ -105,6 +105,7 @@
     <ClInclude Include="BilateralUpsample.h" />
     <ClInclude Include="Concepts.h" />
     <ClInclude Include="Continuation.h" />
+    <ClInclude Include="DepthOfField.h" />
     <ClInclude Include="LinearAlloc.h" />
     <ClInclude Include="DeferredLightingPass.h" />
     <ClInclude Include="DeferredRenderingPass.h" />
@@ -134,6 +135,7 @@
     <ClCompile Include="BilateralUpsample.cpp" />
     <ClCompile Include="DeferredLightingPass.cpp" />
     <ClCompile Include="DeferredRenderingPass.cpp" />
+    <ClCompile Include="DepthOfField.cpp" />
     <ClCompile Include="DepthPass.cpp" />
     <ClCompile Include="DownSamplePass.cpp" />
     <ClCompile Include="ForwardPass.cpp" />

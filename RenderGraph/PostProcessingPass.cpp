@@ -1,6 +1,7 @@
 #include "PostprocessingPass.h"
 #include "DownSamplePass.h"
 #include "TemporalAA.h"
+#include "DepthOfField.h"
 
 
 typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
@@ -29,7 +30,9 @@ typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const Rend
 	(
 		Builder.MoveInputTableEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
 		Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
-		Builder.MoveOutputToInputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(4, 0),
+		Builder.MoveOutputToInputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
+		Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
+		Builder.MoveOutputToInputTableEntry<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>(),
 		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 	)(Input);
 }

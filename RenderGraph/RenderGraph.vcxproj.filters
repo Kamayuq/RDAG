@@ -102,6 +102,9 @@
     <ClInclude Include="Concepts.h">
       <Filter>Core\Plumber</Filter>
     </ClInclude>
+    <ClInclude Include="DepthOfField.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -160,6 +163,9 @@
     </ClCompile>
     <ClCompile Include="GraphCulling.cpp">
       <Filter>Core\Tool</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthOfField.cpp">
+      <Filter>Lego</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
