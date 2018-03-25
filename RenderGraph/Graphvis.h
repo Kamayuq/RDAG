@@ -222,10 +222,9 @@ struct ActionStyle
 		{	
 			label="%s";
 			color="grey";
+			style="solid";
 			fillcolor="litegrey"
 			)", LocalActionIndex, RenderPassAction->GetName());
-		PrintName(fhp);
-		fprintf(fhp, R"([style = "invis"])");
 		
 		PrintPins(fhp, InputPins, "same");
 		PrintPins(fhp, OutputPins, "same");
