@@ -222,8 +222,8 @@ struct ActionStyle
 		{	
 			label="%s";
 			color="grey";
-			style="solid";
-			fillcolor="litegrey"
+			style="filled";
+			fillcolor="grey99"
 			)", LocalActionIndex, RenderPassAction->GetName());
 		
 		PrintPins(fhp, InputPins, "same");
@@ -279,9 +279,9 @@ digraph G
 {
 	graph[remincross = true, compound = true, concentrate = false, rankdir = TB];
 	//newrank = true;
-	pack = true;			
-	packMode = "clust";	
-	clusterrank="local"	
+	//pack = true;			
+	//packMode = "clust";	
+	//clusterrank="local"	
 	outputorder="breadthfirst")");
 
 		for (const IRenderPassAction* Action : InAllActions)
