@@ -840,18 +840,22 @@ private:
 	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&) -> ResourceTable<InputTable<XS...>, OutputTable<YS...>>;
 
 	template<typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
-	static constexpr auto ExtractInputOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets(InputSet(), InputOutputSet()));
+	static constexpr auto ExtractInputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets(InputSet(), InputOutputSet()));
  
+	template<typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::LeftDifference(InputSet(), OutputSet()))>
+	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets(InputOutputSet(), OutputSet()));
+
 public:
-	using PassOutputType = ThisType;
-	using PassInputType = decltype(ExtractInputOutputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
+	using PassOutputType = decltype(ExtractOutputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
+	using PassInputType = decltype(ExtractInputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
 
 private:
 
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		GetOutputTable().OnExecute(Ctx);
-		GetInputTable().OnExecute(Ctx);
+		PassOutputType Table = *this;
+		Table.GetInputTable().OnExecute(Ctx);
+		Table.GetOutputTable().OnExecute(Ctx);
 	}
 };
 

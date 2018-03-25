@@ -3,8 +3,8 @@
 
 typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	Texture2d::Descriptor GbufferDescriptors[RDAG::Gbuffer::ResourceCount];
-	for (U32 i = 0; i < RDAG::Gbuffer::ResourceCount; i++)
+	Texture2d::Descriptor GbufferDescriptors[RDAG::GbufferTarget::ResourceCount];
+	for (U32 i = 0; i < RDAG::GbufferTarget::ResourceCount; i++)
 	{
 		GbufferDescriptors[i] = Input.GetInputDescriptor<RDAG::DepthTarget>();
 		GbufferDescriptors[i].Name = "GbufferTarget";
@@ -13,7 +13,7 @@ typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const Render
 
 	return Seq
 	(
-		Builder.CreateOutputResource<RDAG::Gbuffer>(GbufferDescriptors),
+		Builder.CreateOutputResource<RDAG::GbufferTarget>(GbufferDescriptors),
 		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("GbufferRenderAction");

@@ -4,12 +4,18 @@
 
 namespace RDAG
 {
-	struct Gbuffer : Texture2dResourceHandle<Gbuffer>
+	struct GbufferTarget : Texture2dResourceHandle<GbufferTarget>
 	{
 		static constexpr const U32 ResourceCount = 4;
-		static constexpr const char* Name = "Gbuffer";
+		static constexpr const char* Name = "GbufferTarget";
 
-		explicit Gbuffer() {}
+		explicit GbufferTarget() {}
+
+		void OnExecute(ImmediateRenderContext& Ctx, const GbufferTarget::ResourceType& Resource) const
+		{
+			Ctx.TransitionResource(Resource, EResourceTransition::Target);
+			Ctx.BindRenderTarget(Resource);
+		}
 	};
 }
 
@@ -19,7 +25,7 @@ struct GbufferRenderPass
 	RESOURCE_TABLE
 	(
 		InputTable<RDAG::DepthTarget>,
-		OutputTable<RDAG::DepthTarget, RDAG::Gbuffer>
+		OutputTable<RDAG::DepthTarget, RDAG::GbufferTarget>
 	);
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);

@@ -9,11 +9,12 @@ struct RenderPassBase;
 struct RenderContextBase
 {
 private:
-	static constexpr const char* TransitionStr[] = { "Common", "DepthRead", "DepthWrite" };
+	static constexpr const char* TransitionStr[] = { "Texture", "Target", "UAV", "DepthTexture", "DepthTarget", "Undefined" };
 
 public:
 	void TransitionResource(const struct Texture2d& Tex, EResourceTransition::Type Transition)
 	{
+		static_assert(sizeofArray(TransitionStr) == EResourceTransition::Undefined + 1, "Array out of bounds check failed");
 		EResourceTransition::Type OldState;
 		if (Tex.RequiresTransition(OldState, Transition))
 		{
@@ -34,6 +35,7 @@ public:
 	void Draw(const char* RenderPass)
 	{
 		printf("Drawing Renderpass: %s \n", RenderPass);
+		printf("/********************************/ \n");
 	}
 };
 

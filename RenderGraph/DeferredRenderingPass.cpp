@@ -33,7 +33,7 @@ auto RunTransparencyPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
 	(
-		Builder.MoveOutputToInputTableEntry<RDAG::LightingResult, RDAG::TransparencyInput>(),
+		Builder.MoveOutputToInputTableEntry<RDAG::LightingUAV, RDAG::TransparencyInput>(),
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build)
 	);
 }

@@ -3,7 +3,7 @@
 
 typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto ForwardInfo = Input.GetInputHandle<RDAG::ForwardRender>();
+	auto ForwardInfo = Input.GetInputHandle<RDAG::ForwardRenderTarget>();
 	(void)ForwardInfo;
 
 	return Seq

@@ -6,16 +6,11 @@
 
 namespace RDAG
 {
-	struct LightingResult;
-	struct UpsampleResult;
-	struct ForwardRender;
-	struct BlendDest;
-
 	struct TransparencyInput : Texture2dResourceHandle<TransparencyInput>
 	{
 		static constexpr const char* Name = "TransparencyInput";
 		explicit TransparencyInput() {}
-		explicit TransparencyInput(const LightingResult&) {}
+		explicit TransparencyInput(const struct LightingUAV&) {}
 	};
 
 	struct TransparencyResult : Texture2dResourceHandle<TransparencyResult>
@@ -23,15 +18,15 @@ namespace RDAG
 		static constexpr const char* Name = "TransparencyResult";
 		explicit TransparencyResult() {}
 		explicit TransparencyResult(const TransparencyInput&) {}
-		explicit TransparencyResult(const ForwardRender&) {}
-		explicit TransparencyResult(const BlendDest&) {}
+		explicit TransparencyResult(const struct ForwardRenderTarget&) {}
+		explicit TransparencyResult(const struct BlendDest&) {}
 	};
 
 	struct HalfResTransparencyResult : Texture2dResourceHandle<HalfResTransparencyResult>
 	{
 		static constexpr const char* Name = "HalfResTransparencyResult";
 		explicit HalfResTransparencyResult() {}
-		explicit HalfResTransparencyResult(const UpsampleResult&) {}
+		explicit HalfResTransparencyResult(const struct UpsampleResult&) {}
 	};
 }
 

@@ -25,14 +25,20 @@ namespace RDAG
 	struct TransparencyResult;
 	struct HalfResTransparencyResult; 
 
-	struct ForwardRender : Texture2dResourceHandle<ForwardRender>
+	struct ForwardRenderTarget : Texture2dResourceHandle<ForwardRenderTarget>
 	{
-		static constexpr const char* Name = "ForwardRender";
+		static constexpr const char* Name = "ForwardRenderTarget";
 		
-		explicit ForwardRender(ESortOrder::Type InSortOrder) : SortOrder(InSortOrder) {}
-		explicit ForwardRender(const HalfResTransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
-		explicit ForwardRender(const TransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
+		explicit ForwardRenderTarget(ESortOrder::Type InSortOrder) : SortOrder(InSortOrder) {}
+		explicit ForwardRenderTarget(const HalfResTransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
+		explicit ForwardRenderTarget(const TransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
 		
+		void OnExecute(ImmediateRenderContext& Ctx, const ForwardRenderTarget::ResourceType& Resource) const
+		{
+			Ctx.TransitionResource(Resource, EResourceTransition::Target);
+			Ctx.BindRenderTarget(Resource);
+		}
+
 		ESortOrder::Type SortOrder;
 	};
 }
@@ -42,8 +48,8 @@ struct ForwardRenderPass
 {
 	RESOURCE_TABLE
 	(
-		InputTable<RDAG::DepthTarget, RDAG::ForwardRender>,
-		OutputTable<RDAG::DepthTarget, RDAG::ForwardRender>
+		InputTable<RDAG::DepthTarget, RDAG::ForwardRenderTarget>,
+		OutputTable<RDAG::DepthTarget, RDAG::ForwardRenderTarget>
 	);
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);

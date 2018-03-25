@@ -21,10 +21,10 @@ typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRender
 			Builder.MoveInputTableEntry<RDAG::DepthTarget, RDAG::DownsampleInput>(),
 			Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
 			Builder.MoveOutputTableEntry<RDAG::DownsampleResult, RDAG::DepthTarget>(),
-			Builder.MoveOutputTableEntry<RDAG::HalfResTransparencyResult, RDAG::ForwardRender>(),
+			Builder.MoveOutputTableEntry<RDAG::HalfResTransparencyResult, RDAG::ForwardRenderTarget>(),
 			Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
 			Builder.MoveOutputToInputTableEntry<RDAG::DepthTarget, RDAG::HalfResDepth>(),
-			Builder.MoveOutputToInputTableEntry<RDAG::ForwardRender, RDAG::HalfResInput>()
+			Builder.MoveOutputToInputTableEntry<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()
 		),
 		Builder.MoveInputToOutputTableEntry<RDAG::DepthTarget, RDAG::DepthTarget>(), //restore original depth from before the forward pass
 		Builder.BuildRenderPass("HalfResTransparency_BilateralUpsampleRenderPass", BilateralUpsampleRenderPass::Build),
@@ -42,9 +42,9 @@ typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(co
 	{
 		Output = Seq
 		(
-			Builder.MoveOutputTableEntry<RDAG::TransparencyResult, RDAG::ForwardRender>(),
+			Builder.MoveOutputTableEntry<RDAG::TransparencyResult, RDAG::ForwardRenderTarget>(),
 			Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build),
-			Builder.MoveOutputTableEntry<RDAG::ForwardRender, RDAG::TransparencyResult>()
+			Builder.MoveOutputTableEntry<RDAG::ForwardRenderTarget, RDAG::TransparencyResult>()
 		)(Output);
 	}
 

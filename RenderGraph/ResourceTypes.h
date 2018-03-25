@@ -16,6 +16,7 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 
 	void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource) const
 	{
+		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
 		Ctx.BindTexture(Resource);
 	}
 };

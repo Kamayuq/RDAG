@@ -12,7 +12,7 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 
 	return Seq
 	(
-		Builder.CreateOutputResource<RDAG::LightingResult>({ LightingDescriptor }),
+		Builder.CreateOutputResource<RDAG::LightingUAV>({ LightingDescriptor }),
 		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("DeferredLightingAction");

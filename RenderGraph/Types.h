@@ -97,9 +97,12 @@ namespace EResourceTransition
 {
 	enum Type
 	{
-		Common		= 0,
-		DepthRead	= 1,
-		DepthWrite	= 2,
+		Texture			= 0,
+		Target			= 1,
+		UAV				= 2,
+		DepthTexture	= 3,
+		DepthTarget		= 4,
+		Undefined //keep last
 	};
 };
 
@@ -182,7 +185,8 @@ struct Texture2d : MaterializedResource
 		}
 	};
 
-	explicit Texture2d(const Descriptor& InDesc, EResourceFlags::Type InResourceFlags) : MaterializedResource(InResourceFlags), Desc(InDesc)
+	explicit Texture2d(const Descriptor& InDesc, EResourceFlags::Type InResourceFlags) 
+		: MaterializedResource(InResourceFlags), Desc(InDesc)
 	{
 
 	}
@@ -205,5 +209,5 @@ struct Texture2d : MaterializedResource
 
 private:
 	Descriptor Desc;
-	mutable EResourceTransition::Type CurrentState = EResourceTransition::Common;
+	mutable EResourceTransition::Type CurrentState = EResourceTransition::Undefined;
 };
