@@ -13,13 +13,7 @@
 #include "DownSamplePass.h"
 #include "PostprocessingPass.h"
 
-volatile bool TransparencyEnabled = true;
-volatile bool TransparencySeperateEnabled = true;
-volatile bool TemporalAaEnabled = true;
-volatile EAmbientOcclusionType::Enum AmbientOcclusionType = EAmbientOcclusionType::HorizonBased;
-
 int ItterationCount = 10000;
-
 
 namespace RDAG
 {
@@ -34,14 +28,21 @@ namespace RDAG
 int main(int argc, char* argv[])
 {	
 	RDAG::SceneViewInfo ViewInfo;
-	ViewInfo.AmbientOcclusionType = AmbientOcclusionType;
-	ViewInfo.TransparencyEnabled = TransparencyEnabled;
-	ViewInfo.TransparencySeperateEnabled = TransparencySeperateEnabled;
-	ViewInfo.TemporalAaEnabled = TemporalAaEnabled;
+	//ViewInfo.AmbientOcclusionType = EAmbientOcclusionType::DistanceField;
+	//ViewInfo.TransparencyEnabled = false;
+	//ViewInfo.TransparencySeperateEnabled = false;
+	//ViewInfo.TemporalAaEnabled = false;
+
+	//ViewInfo.DofSettings.EnabledForegroundLayer = false;
+	//ViewInfo.DofSettings.EnabledBackgroundLayer = false;
+	//ViewInfo.DofSettings.BokehShapeIsCircle = true;
+	//ViewInfo.DofSettings.GatherForeground = false;
+	//ViewInfo.DofSettings.EnablePostfilterMethod = false;
+	//ViewInfo.DofSettings.RecombineQuality = 0;
 
 	if (argc > 200)
 	{
-		//check(0);
+		check(0);
 		char* ViewInfoPtr = (char*)&ViewInfo;
 		srand(argv[1][0]);
 		for (int i = 0; i < (int)sizeof(RDAG::SceneViewInfo); i++)

@@ -86,7 +86,7 @@
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <AdditionalOptions>/std:c++latest  -mllvm -force-vector-width=4  -mllvm -vectorize-slp %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/std:c++latest -mllvm -vectorize-slp %(AdditionalOptions)</AdditionalOptions>
       <PositionIndependentCode>false</PositionIndependentCode>
       <MSCompatibility>true</MSCompatibility>
       <WholeProgramOptimization>false</WholeProgramOptimization>

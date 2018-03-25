@@ -29,18 +29,7 @@ namespace RDAG
 		static constexpr const U32 TemporalAAResourceCount = 4;
 
 		explicit SceneViewInfo() {}
-		SceneViewInfo(const SceneViewInfo& InViewInfo)
-			: DepthFormat(InViewInfo.DepthFormat)
-			, SceneWidth(InViewInfo.SceneWidth)
-			, SceneHeight(InViewInfo.SceneHeight)
-			, ShadowFormat(InViewInfo.ShadowFormat)
-			, ShadowCascades(InViewInfo.ShadowCascades)
-			, ShadowResolution(InViewInfo.ShadowResolution)
-			, TemporalAaEnabled(InViewInfo.TemporalAaEnabled)
-			, TransparencyEnabled(InViewInfo.TransparencyEnabled)
-			, TransparencySeperateEnabled(InViewInfo.TransparencySeperateEnabled)
-			, AmbientOcclusionType(InViewInfo.AmbientOcclusionType)
-		{}
+		SceneViewInfo(const SceneViewInfo& InViewInfo) = default;
 
 		ERenderResourceFormat::Type DepthFormat = ERenderResourceFormat::D32F;
 		U32 SceneWidth = 1920;

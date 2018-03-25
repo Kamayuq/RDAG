@@ -167,83 +167,29 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder)
 	});
 }
 
-
 typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	Texture2d::Descriptor OutputDesc = Input.GetInputDescriptor<RDAG::DepthOfFieldInput>();
-	OutputDesc.Name = "DepthOfFieldOutput";
-
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor FullresColorDesc;
 	FullresColorDesc.Name = "FullresColorSetup";
 	FullresColorDesc.Format = ERenderResourceFormat::RG16F;
 	FullresColorDesc.Height = ViewInfo.SceneHeight;
 	FullresColorDesc.Width = ViewInfo.SceneWidth;
-
 	Texture2d::Descriptor GatherColorDesc;
 	GatherColorDesc.Name = "GatherColorSetup";
 	GatherColorDesc.Format = ERenderResourceFormat::RG16F;
 	GatherColorDesc.Height = ViewInfo.SceneHeight >> 1;
 	GatherColorDesc.Width = ViewInfo.SceneWidth >> 1;
-
-	Texture2d::Descriptor CocTileDesc = GatherColorDesc;
-	GatherColorDesc.Name = "CocTileOutput";
-
-	Texture2d::Descriptor ForegroundScatterCompilationDesc = GatherColorDesc;
-	ForegroundScatterCompilationDesc.Name = "ForegroundScatterCompilation";
-
-	Texture2d::Descriptor BackgroundScatterCompilationDesc = GatherColorDesc;
-	BackgroundScatterCompilationDesc.Name = "BackgroundScatterCompilation";
-
-	Texture2d::Descriptor PrefilterOutputDesc = GatherColorDesc;
-	PrefilterOutputDesc.Name = "PrefilterOutputDesc";
-
-	Texture2d::Descriptor ScatteringBokehLUTOutputDesc = GatherColorDesc;
-	ScatteringBokehLUTOutputDesc.Name = "ScatteringBokehLUTOutput";
-
-	Texture2d::Descriptor GatheringBokehLUTOutputDesc = GatherColorDesc;
-	GatheringBokehLUTOutputDesc.Name = "GatheringBokehLUTOutputDesc";
-
-	Texture2d::Descriptor ForegroundConvolutionOutputDesc = GatherColorDesc;
-	ForegroundConvolutionOutputDesc.Name = "ForegroundConvolutionOutput";
-	
-	Texture2d::Descriptor BackgroundConvolutionOutputDesc[2];
-	BackgroundConvolutionOutputDesc[0] = GatherColorDesc;
-	BackgroundConvolutionOutputDesc[0].Name = "BackgroundConvolutionOutput0";
-	BackgroundConvolutionOutputDesc[1] = GatherColorDesc;
-	BackgroundConvolutionOutputDesc[1].Name = "BackgroundConvolutionOutput1";
-
-	Texture2d::Descriptor SlightOutOfFocusConvolutionDesc = GatherColorDesc;
-	SlightOutOfFocusConvolutionDesc.Name = "SlightOutOfFocusConvolution";
-	
-
 	using DofSetupPassData = ResourceTable<InputTable<RDAG::DepthOfFieldInput, RDAG::VelocityVectors>, OutputTable<RDAG::FullresColorSetup, RDAG::GatherColorSetup>>;
 	auto Output = Seq
 	(
-		Builder.CreateOutputResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
 		Builder.CreateOutputResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
 		Builder.CreateOutputResource<RDAG::GatherColorSetup>({ GatherColorDesc }),
-		Builder.CreateOutputResource<RDAG::CocTileOutput>({ CocTileDesc }),
-		Builder.CreateOutputResource<RDAG::PrefilterOutput>({ PrefilterOutputDesc }),
-		Builder.CreateOutputResource<RDAG::ScatteringBokehLUTOutput>({ ScatteringBokehLUTOutputDesc }),
-		Builder.CreateOutputResource<RDAG::GatheringBokehLUTOutput>({ GatheringBokehLUTOutputDesc }),
-		Builder.CreateOutputResource<RDAG::ForegroundConvolutionOutput>({ ForegroundConvolutionOutputDesc }),
-		Builder.CreateOutputResource<RDAG::BackgroundConvolutionOutput>(BackgroundConvolutionOutputDesc),
-		Builder.CreateOutputResource<RDAG::SlightOutOfFocusConvolutionOutput>({ SlightOutOfFocusConvolutionDesc }),
 		Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData&)
 		{
 			Ctx.Draw("DOFSetupAction");
 		})
 	)(Input);
-
-	if (!ViewInfo.DofSettings.BokehShapeIsCircle)
-	{
-		Output = Seq
-		(
-			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
-			BuildBokehLut<RDAG::GatheringBokehLUTOutput>(Builder)
-		)(Output);
-	}
 
 	if (ViewInfo.TemporalAaEnabled)
 	{
@@ -255,74 +201,112 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		)(Output);
 	}
 
-	{
-		using CocDilateData = ResourceTable<InputTable<RDAG::GatherColorSetup>, OutputTable<RDAG::CocTileOutput>>;
-		Output = Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
+	Texture2d::Descriptor CocTileDesc = GatherColorDesc;
+	GatherColorDesc.Name = "CocTileOutput";
+	using CocDilateData = ResourceTable<InputTable<RDAG::GatherColorSetup>, OutputTable<RDAG::CocTileOutput>>;
+	auto Output0 = Seq
+	(
+		Builder.CreateOutputResource<RDAG::CocTileOutput>({ CocTileDesc }), 
+		Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
 		{
 			Ctx.Draw("CocDilateAction");
-		})(Output);
-	}
+		})
+	)(Output);
 
-	{
-		using PreFilterData = ResourceTable<InputTable<RDAG::GatherColorSetup>, OutputTable<RDAG::PrefilterOutput>>;
-		Output = Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
+	Texture2d::Descriptor PrefilterOutputDesc = GatherColorDesc;
+	PrefilterOutputDesc.Name = "PrefilterOutputDesc";
+	using PreFilterData = ResourceTable<InputTable<RDAG::GatherColorSetup>, OutputTable<RDAG::PrefilterOutput>>;
+	auto Output1 = Seq
+	(
+		Builder.CreateOutputResource<RDAG::PrefilterOutput>({ PrefilterOutputDesc }),
+		Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
 		{
 			Ctx.Draw("PreFilterAction");
-		})(Output);
-	}
+		})
+	)(Output0);
 
-	if (ViewInfo.DofSettings.GatherForeground)
+	Texture2d::Descriptor ScatteringBokehLUTOutputDesc = GatherColorDesc;
+	ScatteringBokehLUTOutputDesc.Name = "ScatteringBokehLUTOutput";
+	Texture2d::Descriptor GatheringBokehLUTOutputDesc = GatherColorDesc;
+	GatheringBokehLUTOutputDesc.Name = "GatheringBokehLUTOutputDesc";
+	auto Output2 = Seq
+	(
+		Builder.CreateOutputResource<RDAG::ScatteringBokehLUTOutput>({ ScatteringBokehLUTOutputDesc }),
+		Builder.CreateOutputResource<RDAG::GatheringBokehLUTOutput>({ GatheringBokehLUTOutputDesc })
+	)(Output1);
+
+	if (!ViewInfo.DofSettings.BokehShapeIsCircle)
 	{
-		Output = ConvolutionGatherPass<RDAG::ForegroundConvolutionOutput>(Builder)(Output);
+		Output2 = Seq
+		(
+			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
+			BuildBokehLut<RDAG::GatheringBokehLUTOutput>(Builder)
+		)(Output2);
 	}
 
+	Texture2d::Descriptor BackgroundConvolutionOutputDesc[2];
+	BackgroundConvolutionOutputDesc[0] = GatherColorDesc;
+	BackgroundConvolutionOutputDesc[0].Name = "BackgroundConvolutionOutput0";
+	BackgroundConvolutionOutputDesc[1] = GatherColorDesc;
+	BackgroundConvolutionOutputDesc[1].Name = "BackgroundConvolutionOutput1";
+	auto Output3 = Builder.CreateOutputResource<RDAG::BackgroundConvolutionOutput>(BackgroundConvolutionOutputDesc)(Output2);
 	for (U32 i = 0; i < RDAG::BackgroundConvolutionOutput::ResourceCount; i++)
 	{
-		Output = ConvolutionGatherPass<RDAG::BackgroundConvolutionOutput>(Builder, i)(Output);
+		Output3 = ConvolutionGatherPass<RDAG::BackgroundConvolutionOutput>(Builder, i)(Output3);
 	}
 
-	if (ViewInfo.DofSettings.RecombineQuality > 0)
+	Texture2d::Descriptor ForegroundConvolutionOutputDesc = GatherColorDesc;
+	ForegroundConvolutionOutputDesc.Name = "ForegroundConvolutionOutput";
+	auto Output4 = Builder.CreateOutputResource<RDAG::ForegroundConvolutionOutput>({ ForegroundConvolutionOutputDesc })(Output3);
+	if (ViewInfo.DofSettings.GatherForeground)
 	{
-		using GatherPassData = ResourceTable<InputTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::ScatteringBokehLUTOutput>, OutputTable<RDAG::SlightOutOfFocusConvolutionOutput>>;
-		Output = Builder.QueueRenderAction("GatherPassAction", [](RenderContext& Ctx, const GatherPassData&)
-		{
-			Ctx.Draw("GatherPassAction");
-		})(Output);
+		Output4 = ConvolutionGatherPass<RDAG::ForegroundConvolutionOutput>(Builder)(Output4);
 	}
 
 	if (ViewInfo.DofSettings.EnablePostfilterMethod)
 	{
-		if (ViewInfo.DofSettings.GatherForeground)
+		if (!ViewInfo.DofSettings.GatherForeground)
 		{
-			Output = DofPostfilterPass<RDAG::BackgroundConvolutionOutput>(Builder)(Output);
+			Output4 = DofPostfilterPass<RDAG::BackgroundConvolutionOutput>(Builder)(Output4);
 		}
 		else
 		{
-			Output = DofPostfilterPass<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Builder)(Output);
+			Output4 = DofPostfilterPass<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Builder)(Output4);
 		}
 	}
 
 	if (ViewInfo.DofSettings.EnabledForegroundLayer)
 	{
-		Output = HybridScatteringLayerProcessing< RDAG::ForegroundConvolutionOutput>(Builder, GatherColorDesc)(Output);
+		Output4 = HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, GatherColorDesc)(Output4);
 	}
 
 	if (ViewInfo.DofSettings.EnabledBackgroundLayer)
 	{
-		Output = HybridScatteringLayerProcessing< RDAG::BackgroundConvolutionOutput>(Builder, GatherColorDesc)(Output);
+		Output4 = HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, GatherColorDesc)(Output4);
 	}
 
+	Texture2d::Descriptor SlightOutOfFocusConvolutionDesc = GatherColorDesc;
+	SlightOutOfFocusConvolutionDesc.Name = "SlightOutOfFocusConvolution";
+	auto Output5 = Builder.CreateOutputResource<RDAG::SlightOutOfFocusConvolutionOutput>({ SlightOutOfFocusConvolutionDesc })(Output4);
+	if (ViewInfo.DofSettings.RecombineQuality > 0)
 	{
-		using RecombineData = ResourceTable<InputTable<RDAG::FullresColorSetup, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ScatteringBokehLUTOutput>, OutputTable<RDAG::DepthOfFieldOutput>>;
-		Output = Seq
-		(
-			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
-			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
-			{
-				Ctx.Draw("RecombineAction");
-			})
-		)(Output);
+		using GatherPassData = ResourceTable<InputTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::ScatteringBokehLUTOutput>, OutputTable<RDAG::SlightOutOfFocusConvolutionOutput>>;
+		Output5 = Builder.QueueRenderAction("GatherPassAction", [](RenderContext& Ctx, const GatherPassData&)
+		{
+			Ctx.Draw("GatherPassAction");
+		})(Output5);
 	}
 
-	return Output;
+	Texture2d::Descriptor OutputDesc = Input.GetInputDescriptor<RDAG::DepthOfFieldInput>();
+	OutputDesc.Name = "DepthOfFieldOutput";
+	using RecombineData = ResourceTable<InputTable<RDAG::FullresColorSetup, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ScatteringBokehLUTOutput>, OutputTable<RDAG::DepthOfFieldOutput>>;
+	return Seq
+	(
+		BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
+		Builder.CreateOutputResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
+		Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
+		{
+			Ctx.Draw("RecombineAction");
+		})
+	)(Output5);
 }
