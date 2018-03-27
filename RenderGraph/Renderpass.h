@@ -43,7 +43,7 @@ public:
 		typedef ReturnType NestedOutputTableType;
 
 		const RenderPassBuilder* Self = this;
-		return [Self, &Promise, BuildFunction, Name](const auto& s)
+		return MakeSequence([Self, &Promise, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			InputTableType input = s;
@@ -54,18 +54,18 @@ public:
 			Promise.Run(NestedRenderPassData, Name);
 
 			return s;
-		};
+		});
 	}
 
 	template<typename ReturnType>
 	auto SynchronizeAsyncRenderPass(Promise<ReturnType>& Promise) const
 	{
-		return [&Promise](const auto& s)
+		return MakeSequence([&Promise](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//TODO reinstatiate builder and merge actionlist
 			return Promise.Get().Merge(s);
-		};
+		});
 	}
 
 	template<typename FunctionType>
@@ -80,14 +80,14 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
 
 		const RenderPassBuilder* Self = this;
-		return [Self, BuildFunction, Name](const auto& s)
+		return MakeSequence([Self, BuildFunction, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			InputTableType input = s;
 
 			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input), Name, nullptr);
 			return NestedRenderPassData.Merge(s);
-		};
+		});
 	}
 
 	template<typename FunctionType>
@@ -103,7 +103,7 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
 
 		auto& LocalActionList = ActionList;
-		return [&LocalActionList, QueuedTask, Name](const auto& s)
+		return MakeSequence([&LocalActionList, QueuedTask, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
@@ -118,13 +118,13 @@ public:
 				LocalActionList.push_back(NewRenderAction);
 			}
 			return NewRenderAction->RenderPassData.MergeAndLink(s);
-		};
+		});
 	}
 
 	template<typename From, typename To>
 	auto MoveOutputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return [FromIndex, ToIndex](const auto& s)
+		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -144,13 +144,13 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		};
+		});
 	}
 
 	template<typename From, typename To>
 	auto MoveInputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return [FromIndex, ToIndex](const auto& s)
+		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -168,13 +168,13 @@ public:
 			ToInput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
 			return s.Union(DestTable);
-		};
+		});
 	}
 
 	template<typename From, typename To>
 	auto MoveInputToOutputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return [FromIndex, ToIndex](const auto& s)
+		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -194,13 +194,13 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		};
+		});
 	}
 
 	template<typename From, typename To>
 	auto MoveOutputToInputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return [FromIndex, ToIndex](const auto& s)
+		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -220,14 +220,14 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		};
+		});
 	}
 
 	template<typename From, typename To>
 	auto MoveAllInputToOutputTableEntries() const
 	{
 		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
-		return [](const auto& s)
+		return MakeSequence([](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -250,27 +250,27 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		};
+		});
 	}
 
 	template<typename ResourceTableType>
 	auto ExtractResourceTableEntries() const
 	{
-		return [](const auto& s) -> ResourceTableType
+		return MakeSequence([](const auto& s) -> ResourceTableType
 		{
 			CheckIsResourceTable(s);
 			return s;
-		};
+		});
 	}
 
 	template<typename TInputTableType, typename TOutputTableType>
 	auto ReplaceResourceTableEntries(const ResourceTable<TInputTableType, TOutputTableType>& table) const
 	{
-		return [table](const auto& s)
+		return MakeSequence([table](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			return table;
-		};
+		});
 	}
 
 	template<typename Handle, typename... ARGS>
@@ -283,12 +283,12 @@ public:
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
-		return [WrappedResource](const auto& s)
+		return MakeSequence([WrappedResource](const auto& s)
 		{	
 			CheckIsResourceTable(s);
 			auto NewResourceTable = InputTableType<Handle>(InputTable<Handle>(WrappedResource), OutputTable<>());
 			return s.Union(NewResourceTable);
-		};
+		});
 	}
 
 	template<typename Handle, typename... ARGS>
@@ -301,12 +301,12 @@ public:
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
-		return [WrappedResource](const auto& s)
+		return MakeSequence([WrappedResource](const auto& s)
 		{	
 			CheckIsResourceTable(s);
 			auto NewResourceTable = OutputTableType<Handle>(InputTable<>(), OutputTable<Handle>(WrappedResource));
 			return s.Union(NewResourceTable);
-		};
+		});
 	}
 
 	static inline auto GetEmptyResourceTable()

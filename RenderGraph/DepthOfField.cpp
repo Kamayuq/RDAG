@@ -101,7 +101,7 @@ namespace RDAG
 template<typename ConvolutionOutputType>
 auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, Texture2d::Descriptor& GatherColorDesc, bool Enabled)
 {
-	return [&Builder, GatherColorDesc, Enabled](const auto& s)
+	return MakeSequence([&Builder, GatherColorDesc, Enabled](const auto& s)
 	{
 		Texture2d::Descriptor ScatteringReduceDesc = GatherColorDesc;
 		ScatteringReduceDesc.Name = "ScatteringReduce";
@@ -148,13 +148,13 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, Texture2d
 			)(Result);
 		}
 		return Result;
-	};
+	});
 }
 
 template<typename BokehLUTType>
 auto BuildBokehLut(const RenderPassBuilder& Builder, const typename BokehLUTType::DescriptorType& Descriptor, bool Enabled = true)
 {
-	return [&Builder, &Descriptor, Enabled](const auto& s)
+	return MakeSequence([&Builder, &Descriptor, Enabled](const auto& s)
 	{
 		typename BokehLUTType::DescriptorType LutOutputDesc[BokehLUTType::ResourceCount];
 		for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
@@ -184,13 +184,13 @@ auto BuildBokehLut(const RenderPassBuilder& Builder, const typename BokehLUTType
 			}
 		}
 		return LutOutputTable;
-	};
+	});
 }
 
 template<typename ConvolutionGatherType>
 auto ConvolutionGatherPass(const RenderPassBuilder& Builder, const typename ConvolutionGatherType::DescriptorType& Descriptor, bool Enabled = true)
 {
-	return [&Builder, &Descriptor, Enabled](const auto& s)
+	return MakeSequence([&Builder, &Descriptor, Enabled](const auto& s)
 	{
 		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ConvolutionGatherType::ResourceCount];
 		for (U32 i = 0; i < ConvolutionGatherType::ResourceCount; i++)
@@ -221,7 +221,7 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, const typename Conv
 			}
 		}
 		return ConvolutionOutputTable;
-	};
+	});
 }
 
 template<typename... DofPostfilterElems>
@@ -233,7 +233,7 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool Enabled)
 		OutputTable<DofPostfilterElems...>
 	>;
 
-	return [&Builder, Enabled](const auto& s)
+	return MakeSequence([&Builder, Enabled](const auto& s)
 	{
 		using ResourceTableType = std::decay_t<decltype(s)>;
 		ResourceTableType Result = s;
@@ -245,12 +245,12 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool Enabled)
 			})(Result);
 		}
 		return Result;
-	};
+	});
 }
 
 auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder, const typename Texture2d::Descriptor& Descriptor, bool Enabled)
 {
-	return [&Builder, &Descriptor, Enabled](const auto& s)
+	return MakeSequence([&Builder, &Descriptor, Enabled](const auto& s)
 	{
 		Texture2d::Descriptor SlightOutOfFocusConvolutionDesc = Descriptor;
 		SlightOutOfFocusConvolutionDesc.Name = "SlightOutOfFocusConvolution";
@@ -266,7 +266,7 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder, const typename Tex
 		}
 
 		return SlightlyOutOfFocusTable;
-	};
+	});
 };
 
 typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
@@ -313,7 +313,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		OutputTable<RDAG::DepthOfFieldOutput>
 	>;
 
-	return Seq
+	auto Result = Seq
 	(
 		Builder.CreateOutputResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
 		Builder.CreateOutputResource<RDAG::GatherColorSetup>({ GatherColorDesc }),
@@ -349,5 +349,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		{
 			Ctx.Draw("RecombineAction");
 		})
-	)(Input);
+	);
+
+	return Result(Input);
 }
