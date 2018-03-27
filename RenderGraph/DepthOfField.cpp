@@ -99,16 +99,23 @@ namespace RDAG
 };
 
 template<typename ConvolutionOutputType>
-auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, Texture2d::Descriptor& GatherColorDesc, bool Enabled)
+auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enabled)
 {
-	return MakeSequence([&Builder, GatherColorDesc, Enabled](const auto& s)
+	return MakeSequence([&Builder, Enabled](const auto& s)
 	{
-		Texture2d::Descriptor ScatteringReduceDesc = GatherColorDesc;
+		const RDAG::SceneViewInfo& ViewInfo = s.template GetInputHandle<RDAG::SceneViewInfo>();
+		Texture2d::Descriptor ScatteringReduceDesc;
 		ScatteringReduceDesc.Name = "ScatteringReduce";
-
-		Texture2d::Descriptor ScatterCompilationDesc = GatherColorDesc;
+		ScatteringReduceDesc.Format = ERenderResourceFormat::ARGB16F;
+		ScatteringReduceDesc.Height = ViewInfo.SceneHeight;
+		ScatteringReduceDesc.Width = ViewInfo.SceneWidth;
+		
+		Texture2d::Descriptor ScatterCompilationDesc;
 		ScatterCompilationDesc.Name = "ScatterCompilation";
-
+		ScatterCompilationDesc.Format = ERenderResourceFormat::ARGB16F;
+		ScatterCompilationDesc.Height = ViewInfo.SceneHeight;
+		ScatterCompilationDesc.Width = ViewInfo.SceneWidth;
+		
 		using ScatteringReduceData = ResourceTable
 		<
 			InputTable<RDAG::GatherColorSetup>,
@@ -286,13 +293,13 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor FullresColorDesc;
 	FullresColorDesc.Name = "FullresColorSetup";
-	FullresColorDesc.Format = ERenderResourceFormat::RG16F;
+	FullresColorDesc.Format = ERenderResourceFormat::ARGB16F;
 	FullresColorDesc.Height = ViewInfo.SceneHeight;
 	FullresColorDesc.Width = ViewInfo.SceneWidth;
 
 	Texture2d::Descriptor GatherColorDesc;
 	GatherColorDesc.Name = "GatherColorSetup";
-	GatherColorDesc.Format = ERenderResourceFormat::RG16F;
+	GatherColorDesc.Format = ERenderResourceFormat::ARGB16F;
 	GatherColorDesc.Height = ViewInfo.SceneHeight >> 1;
 	GatherColorDesc.Width = ViewInfo.SceneWidth >> 1;
 	using DofSetupPassData = ResourceTable
@@ -352,8 +359,8 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		ConvolutionGatherPass<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
 		DofPostfilterPass<RDAG::BackgroundConvolutionOutput>(Builder, !ViewInfo.DofSettings.GatherForeground),
 		DofPostfilterPass<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
-		HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, GatherColorDesc, ViewInfo.DofSettings.EnabledForegroundLayer),
-		HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, GatherColorDesc, ViewInfo.DofSettings.EnabledBackgroundLayer),
+		HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
+		HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
 		SlightlyOutOfFocusPass(Builder),
 		BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
 		Builder.CreateOutputResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
