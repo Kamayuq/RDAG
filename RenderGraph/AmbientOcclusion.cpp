@@ -8,10 +8,11 @@ namespace RDAG
 		Ctx.BindTexture(Resource);
 	}
 
-	struct AmbientOcclusionUAV : AmbientOcclusionTexture
+	struct AmbientOcclusionUAV : Texture2dResourceHandle<AmbientOcclusionTexture>
 	{
 		static constexpr const char* Name = "AmbientOcclusionUAV";
 		explicit AmbientOcclusionUAV() {}
+		explicit AmbientOcclusionUAV(const AmbientOcclusionTexture&) {}
 
 		void OnExecute(ImmediateRenderContext& Ctx, const AmbientOcclusionUAV::ResourceType& Resource) const
 		{

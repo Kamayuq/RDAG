@@ -11,6 +11,7 @@ namespace RDAG
 		static constexpr const char* Name = "AmbientOcclusionTexture";
 
 		explicit AmbientOcclusionTexture() {}
+		explicit AmbientOcclusionTexture(const struct AmbientOcclusionUAV&) {}
 
 		void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource) const;
 	};
