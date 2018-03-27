@@ -91,13 +91,13 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
 
 		const RenderPassBuilder* Self = this;
-		return MakeSequence([Self, BuildFunction, Name](const auto& s)
+		return MakeSequence([&, Self, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			InputTableType input = s;
 			
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
-			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input, Args), Name, nullptr);
+			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input, Args...), Name, nullptr);
 			return NestedRenderPassData.Merge(s);
 		});
 	}
@@ -151,6 +151,15 @@ public:
 			
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToOutput(To(FromOutput.GetHandle()), {});
+			if constexpr (s.template ContainsOutput<To>())
+			{
+				//copy over the old revisions to not loose entries
+				const auto& Destination = s.template GetWrappedOutput<To>();
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					ToOutput.Revisions[i] = Destination.Revisions[i];
+				}
+			}
 
 			ToOutput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
 			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
@@ -175,6 +184,15 @@ public:
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToInput(To(FromInput.GetHandle()), {});
+			if constexpr (s.template ContainsInput<To>())
+			{
+				//copy over the old revisions to not loose entries
+				const auto& Destination = s.template GetWrappedInput<To>();
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					ToInput.Revisions[i] = Destination.Revisions[i];
+				}
+			}
 
 			ToInput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
@@ -198,7 +216,16 @@ public:
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToOutput(To(FromInput.GetHandle()), {});
-			
+			if constexpr (s.template ContainsOutput<To>())
+			{
+				//copy over the old revisions to not loose entries
+				const auto& Destination = s.template GetWrappedOutput<To>();
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					ToOutput.Revisions[i] = Destination.Revisions[i];
+				}
+			}
+
 			ToOutput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
 			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
 
@@ -222,6 +249,15 @@ public:
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToInput(To(FromOutput.GetHandle()), {});
+			if constexpr (s.template ContainsInput<To>())
+			{
+				//copy over the old revisions to not loose entries
+				const auto& Destination = s.template GetWrappedInput<To>();
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					ToInput.Revisions[i] = Destination.Revisions[i];
+				}
+			}
 
 			ToInput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };

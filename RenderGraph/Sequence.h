@@ -29,9 +29,14 @@ constexpr auto Seq(const Sequence<X>& x, const Sequence<XS>&... xs)
 
 /* Wrapper for a Sequence in a class template */
 template<typename... ARGS>
-struct Seq2
+class Seq2
 {
-	Seq2(const Sequence<ARGS>... Args) : Sequence(Seq(Args...)) {}
+	/* infer the type of the Seq Lambda */
+	using SequenceType = std::decay_t<decltype(Seq(std::declval<Sequence<ARGS>>()...))>;
+	SequenceType Sequence;
+
+public:
+	Seq2(const ::Sequence<ARGS>... Args) : Sequence(Seq(Args...)) {}
 
 	/* execute the sequence given an input */
 	template<typename TableType>
@@ -41,10 +46,5 @@ struct Seq2
 	}
 	
 	/* wrap the Sequence object back to a base Sequence*/
-	operator Sequence<SequenceType>() const { return MakeSequence(Sequence); }
-
-private:
-	/* infer the type of the Seq Lambda */
-	using SequenceType = std::decay_t<decltype(Seq(std::declval<Sequence<ARGS>>()...))>;
-	SequenceType Sequence;
+	operator ::Sequence<SequenceType>() const { return MakeSequence(Sequence); }
 };
