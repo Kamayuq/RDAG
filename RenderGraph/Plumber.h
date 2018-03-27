@@ -862,4 +862,4 @@ private:
 #define RESOURCE_TABLE(...)														\
 	using ResourceTableType	= ResourceTable< __VA_ARGS__ >;						\
 	using PassInputType		= typename ResourceTableType::PassInputType;		\
-	using PassOutputType	= typename ResourceTableType::PassOutputType;		
+	using PassOutputType	= ResourceTableType;		
