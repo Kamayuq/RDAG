@@ -56,6 +56,7 @@ public:
 
 namespace Traits
 {
+	/* function traits are useful to extract the signature of a function when passed as a template argument */
 	template <typename T>
 	struct function_traits;
 
@@ -132,9 +133,9 @@ namespace EResourceFlags
 {
 	enum Enum
 	{
-		Discard = 0,
-		Managed = 1 << 0,
-		External = 1 << 1,
+		Discard = 0,		//RDAG does ignore those
+		Managed = 1 << 0,	//RDAG does manage them
+		External = 1 << 1,	//these are materialized from an external source and the user has to provide an implementation
 		Default = Managed,
 	};
 
@@ -145,6 +146,7 @@ namespace EResourceFlags
 	};
 };
 
+/* the base class of all materialized resources */
 class MaterializedResource
 {
 	EResourceFlags::Type ResourceFlags = EResourceFlags::Default;
@@ -158,6 +160,7 @@ public:
 	bool IsExternalResource() const { return All(EResourceFlags::External, ResourceFlags); };
 };
 
+/* example Texture2d implementation */
 struct Texture2d : MaterializedResource
 {
 	struct Descriptor
