@@ -38,13 +38,13 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			using DFAOTable = ResourceTable<InputTable<RDAG::SceneViewInfo>, OutputTable<RDAG::AmbientOcclusionUAV>>;
 
 			return Seq
-			(
+			{
 				Builder.CreateOutputResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
 				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable&)
 				{
 					Ctx.Draw("DistancefieldAOAction");
 				})
-			)(Input);
+			}(Input);
 		}
 
 		default:
@@ -54,13 +54,13 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			using HBAOTable = ResourceTable<InputTable<RDAG::GbufferTarget, RDAG::DepthTexture>, OutputTable<RDAG::AmbientOcclusionUAV>>;
 
 			return Seq
-			(
+			{
 				Builder.CreateOutputResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
 				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable&)
 				{
 					Ctx.Draw("HorizonBasedAOAction");
 				})
-			)(Input);
+			}(Input);
 		}
 	}
 }

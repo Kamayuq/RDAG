@@ -3,7 +3,7 @@
 #include "ResourceTypes.h"
 #include "DepthPass.h"
 
-#define ASYNC_VELOCITY 1
+#define ASYNC_VELOCITY 0
 
 namespace RDAG
 {

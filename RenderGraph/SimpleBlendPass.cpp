@@ -11,11 +11,11 @@ typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPass
 	BlendDstDescriptor.Width = BlendSrcInfo.Width;
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::BlendDest>({ BlendDstDescriptor }),
 		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("SimpleBlendAction");
 		})
-	)(Input);
+	}(Input);
 }

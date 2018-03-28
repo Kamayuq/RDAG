@@ -15,11 +15,11 @@ typename VelocityRenderPass::ReturnType VelocityRenderPass::Build(const RenderPa
 #else
 	return Seq
 #endif
-	(
+	{
 		Builder.CreateOutputResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
 		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("VelocityRenderAction");
 		})
-	)(Input);
+	}(Input);
 }

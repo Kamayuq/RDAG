@@ -26,11 +26,11 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 	DepthDescriptor.Width = ViewInfo.SceneWidth;
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::DepthTarget>({ DepthDescriptor }),
 		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("DepthRenderAction");
 		})
-	)(Input);
+	}(Input);
 }

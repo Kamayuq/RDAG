@@ -13,40 +13,40 @@
 auto RunGbufferPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
-	(
+	{
 		Builder.BuildRenderPass("DepthRenderPass", DepthRenderPass::Build),
 		Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass::Build)
-	);
+	};
 }
 
 auto RunShadowAndLightingPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
-	(
+	{
 		Builder.BuildRenderPass("AmbientOcclusionPass", AmbientOcclusionPass::Build),
 		Builder.BuildRenderPass("ShadowMapRenderPass", ShadowMapRenderPass::Build),
 		Builder.BuildRenderPass("DeferredLightingPass", DeferredLightingPass::Build)
-	);
+	};
 }
 
 auto RunTransparencyPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
-	(
+	{
 		Builder.MoveOutputToInputTableEntry<RDAG::LightingUAV, RDAG::TransparencyInput>(),
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build)
-	);
+	};
 }
 
 auto RunPostprocessingPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
-	(
+	{
 		Builder.MoveOutputToInputTableEntry<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
 		Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
 		Builder.MoveOutputToInputTableEntry<RDAG::TemporalAAOutput, RDAG::PostProcessingInput>(),
 		Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build)
-	);
+	};
 }
 
 typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
@@ -55,7 +55,7 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 	Promise<typename VelocityRenderPass::PassOutputType> VelocityPassPromise;
 #endif
 	return Seq
-	(
+	{
 		RunGbufferPasses(Builder),
 #if ASYNC_VELOCITY
 		Builder.BuildAsyncRenderPass("VelocityRenderPass", VelocityRenderPass::Build, VelocityPassPromise),
@@ -68,5 +68,5 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 		Builder.SynchronizeAsyncRenderPass(VelocityPassPromise),
 #endif
 		RunPostprocessingPasses(Builder)
-	)(Input);
+	}(Input);
 }

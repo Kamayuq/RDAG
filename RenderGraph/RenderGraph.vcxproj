@@ -53,16 +53,19 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>Sync</ExceptionHandling>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <CallingConvention>Cdecl</CallingConvention>
+      <CallingConvention>StdCall</CallingConvention>
       <CompileAs>CompileAsCpp</CompileAs>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>
+      </MinimalRebuild>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
-      <AdditionalOptions> /Bt %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/std:c++latest %(AdditionalOptions)</AdditionalOptions>
+      <OmitFramePointers>false</OmitFramePointers>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

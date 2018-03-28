@@ -109,14 +109,27 @@ typename PromiseImpl<L>::BaseType MakePromise(const L& l)
 	return static_cast<typename PromiseImpl<L>::BaseType&&>(PromiseImpl<L>(l));
 }
 
-template<typename X, typename... XS>
-constexpr auto Async(const X& x, const XS&... xs)
+namespace Internal
 {
-	return [=](const auto& s) constexpr 
-	{ 
-		return MakePromise([=]()
+	template<typename X, typename... XS>
+	constexpr auto Async(const X& x, const XS&... xs)
+	{
+		return MakeSequence([=](const auto& s) constexpr
 		{
-			return Seq(x, xs...)(s);
+			return MakePromise([=]()
+			{
+				return Seq( x, xs... )(s);
+			});
 		});
-	};
+	}
 }
+
+/* Wrapper for a Sequence in a class template */
+template<typename... ARGS>
+struct Async : Sequence<std::decay_t<decltype(Internal::Async(std::declval<Sequence<ARGS>>()...))>>
+{
+	Async(const Sequence<ARGS>&... Args) : Sequence<std::decay_t<decltype(Internal::Async(std::declval<Sequence<ARGS>>()...))>>(Internal::Async(Args...)) {}
+};
+
+template<typename... ARGS>
+Async(const ARGS&... Args) -> Async<typename ARGS::LambdaType...>;

@@ -12,11 +12,11 @@ typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass
 	UpsampleDescriptor.Width = DepthTarget.Width;
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::UpsampleResult>({ UpsampleDescriptor }),
 		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("BilateralUpsampleAction");
 		})
-	)(Input);
+	}(Input);
 }

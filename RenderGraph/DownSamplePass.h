@@ -59,11 +59,11 @@ template<typename InputType, typename OutputType = InputType>
 auto RunDownsamplePass(const RenderPassBuilder& Builder, int InputOffset = 0, int OutputOffset = 0)
 {
 	return Seq
-	(
+	{
 		Builder.MoveOutputToInputTableEntry<InputType, RDAG::DownsampleInput>(InputOffset, 0),
 		Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass::Build),
 		Builder.MoveOutputTableEntry<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
-	);
+	};
 }
 
 template<int Count>

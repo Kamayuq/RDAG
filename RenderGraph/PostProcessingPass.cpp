@@ -15,24 +15,24 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	ResultDescriptor.Width = PPfxInfo.Width;
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
 		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("ToneMappingAction");
 		})
-	)(Input);
+	}(Input);
 }
 
 typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	return Seq
-	(
+	{
 		Builder.MoveInputTableEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
 		Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
 		Builder.MoveOutputToInputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
 		Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
 		Builder.MoveOutputToInputTableEntry<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>(),
 		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
-	)(Input);
+	}(Input);
 }

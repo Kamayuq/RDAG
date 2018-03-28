@@ -11,11 +11,11 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	LightingDescriptor.Width = DepthInfo.Width;
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::LightingUAV>({ LightingDescriptor }),
 		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("DeferredLightingAction");
 		})
-	)(Input);
+	}(Input);
 }

@@ -12,11 +12,11 @@ typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const Render
 	}
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::GbufferTarget>(GbufferDescriptors),
 		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("GbufferRenderAction");
 		})
-	)(Input);
+	}(Input);
 }

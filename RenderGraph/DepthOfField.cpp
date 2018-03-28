@@ -137,7 +137,7 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 		if(Enabled)
 		{		
 			Result = Seq
-			(
+			{
 				Builder.CreateOutputResource<RDAG::ScatteringReduce>({ ScatteringReduceDesc }),
 				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData&)
 				{
@@ -152,7 +152,7 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 				{
 					Ctx.Draw("DOFHybridScatterAction");
 				})
-			)(Result);
+			}(Result);
 		}
 		return Result;
 	});
@@ -185,12 +185,12 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 			for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
 			{
 				LutOutputTable = Seq
-				(
+				{
 					Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
 					{
 						Ctx.Draw("BuildBokehLUTAction");
 					})
-				)(LutOutputTable);
+				}(LutOutputTable);
 			}
 		}
 		return LutOutputTable;
@@ -223,14 +223,14 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			for (U32 i = 0; i < ConvolutionGatherType::ResourceCount; i++)
 			{
 				ConvolutionOutputTable = Seq
-				(
+				{
 					Builder.MoveOutputTableEntry<ConvolutionGatherType, RDAG::ConvolutionOutput>(i, 0),
 					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData&)
 					{
 						Ctx.Draw("GatherPassDataAction");
 					}),
 					Builder.MoveOutputTableEntry<RDAG::ConvolutionOutput, ConvolutionGatherType>(0, i)
-				)(ConvolutionOutputTable);
+				}(ConvolutionOutputTable);
 			}
 		}
 		return ConvolutionOutputTable;
@@ -332,8 +332,8 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		OutputTable<RDAG::DepthOfFieldOutput>
 	>;
 
-	auto Result = Seq
-	(
+	return Seq
+	{
 		Builder.CreateOutputResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
 		Builder.CreateOutputResource<RDAG::GatherColorSetup>({ GatherColorDesc }),
 		Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData&)
@@ -368,7 +368,5 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		{
 			Ctx.Draw("RecombineAction");
 		})
-	);
-
-	return Result(Input);
+	}(Input);
 }

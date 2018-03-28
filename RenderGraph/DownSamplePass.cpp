@@ -11,11 +11,11 @@ typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const 
 	DownsampleDescriptor.Width = DownSampleInfo.Width >> 1;
 
 	return Seq
-	(
+	{
 		Builder.CreateOutputResource<RDAG::DownsampleResult>({ DownsampleDescriptor }),
 		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("DownsampleRenderAction");
 		})
-	)(Input);
+	}(Input);
 }

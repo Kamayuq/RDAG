@@ -18,10 +18,10 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 	if (ViewInfo.TemporalAaEnabled)
 	{
 		auto MergedTable = Seq
-		(
+		{
 			Builder.CreateOutputResource<RDAG::TemporalAAOutput>(OutputDescriptors),
 			Builder.CreateInputResource<RDAG::TemporalAAHistory>(HistoryDescriptors)
-		)(Input);
+		}(Input);
 
 		typedef decltype(MergedTable) MergedTableType;
 

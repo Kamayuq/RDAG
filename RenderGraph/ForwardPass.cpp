@@ -7,10 +7,10 @@ typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const Render
 	(void)ForwardInfo;
 
 	return Seq
-	(
+	{
 		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 		{
 			Ctx.Draw("ForwardRenderAction");
 		})
-	)(Input);
+	}(Input);
 }
