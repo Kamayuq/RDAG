@@ -69,23 +69,23 @@ int main(int argc, char* argv[])
 			TargetDescriptor.Width = 32;
 
 			return Seq
-			(
+			{
 				Builder.CreateOutputResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
 				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 				{
 					Ctx.Draw("SimpleRenderAction");
 				})
-			)(Input);
+			}(Input);
 		};
 
-		Seq
-		(
+		auto val = Seq
+		{
 			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
 			Builder.MoveOutputTableEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
 			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
 			Builder.MoveOutputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
 			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
-		)(Builder.GetEmptyResourceTable());
+		}(Builder.GetEmptyResourceTable());
 	}
 
 	
@@ -100,11 +100,11 @@ int main(int argc, char* argv[])
 			LinearReset();
 			Builder.Reset();
 
-			Seq
-			(
+			auto val = Seq
+			{
 				Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
 				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
-			)(Builder.GetEmptyResourceTable());
+			}(Builder.GetEmptyResourceTable());
 
 			auto time = std::chrono::high_resolution_clock::now() - start;
 			minDuration = std::min(minDuration, time);
