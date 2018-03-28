@@ -460,18 +460,46 @@ public:
 	class Iteratable
 	{
 	public:
-		virtual IResourceTableInfo::Iterator begin() const = 0;
-		virtual IResourceTableInfo::Iterator end() const = 0;
+		Iteratable() = default;
+
+		Iteratable(const Iteratable& Other) 
+		{ 
+			check(Other.ResourceTable); //slicing is wanted, static_assert is in place
+			memcpy(static_cast<void*>(this), static_cast<const void*>(&Other), sizeof(Iteratable));
+		};
+
+		Iteratable& operator= (const Iteratable& Other) 
+		{ 
+			check(Other.ResourceTable); //slicing is wanted, static_assert is in place
+			memcpy(static_cast<void*>(this), static_cast<const void*>(&Other), sizeof(Iteratable));
+			return *this;
+		}
+
+		virtual IResourceTableInfo::Iterator begin() const 
+		{ 
+			check(0);
+			return {};
+		};
+
+		virtual IResourceTableInfo::Iterator end() const 
+		{
+			check(0);
+			return {};
+		};
+
+	protected:
+		Iteratable(const IResourceTableInfo* InResourceTable) : ResourceTable(InResourceTable) {}
+		const IResourceTableInfo* ResourceTable = nullptr;
 	};
 
 	IResourceTableInfo(const char* InName, const IRenderPassAction* InAction) : Name(InName), Action(InAction) {}
 	virtual ~IResourceTableInfo() {}
 	
 	/* request to itterate over inputs */
-	virtual const Iteratable& AsInputIterator() const = 0;
+	virtual const Iteratable AsInputIterator() const = 0;
 	
 	/* request to itterate over outputs */
-	virtual const Iteratable& AsOutputIterator() const = 0;
+	virtual const Iteratable AsOutputIterator() const = 0;
 
 	/* Name of the Subpass or Action */
 	const char* GetName() const
@@ -749,18 +777,19 @@ public:
 	typedef TOutputTableType OutputTableType;
 	typedef ResourceTable<InputTableType, OutputTableType> ThisType;
 
-private:
-	
-	/* an itterator implementation T where is either Input- or OutputTable */
+private:	
+	/* an itterator implementation T where is either Input- or OutputTable and RT is this Resourcetable*/
 	template<typename T>
 	class IteratableImpl : public IResourceTableInfo::Iteratable
 	{
 		template<typename, typename>
 		friend class ResourceTable;
 
-		ThisType* ResourceTable;
 	public:
-		IteratableImpl(ThisType* InResourceTable) : ResourceTable(InResourceTable) {}
+		IteratableImpl(const ThisType* InResourceTable) : IResourceTableInfo::Iteratable(InResourceTable) 
+		{
+			static_assert(sizeof(IteratableImpl) == sizeof(IResourceTableInfo::Iteratable), "Sizes must match for safe slicing");
+		}
 
 		IteratableImpl& operator= (const IteratableImpl& Other)
 		{
@@ -771,34 +800,30 @@ private:
 
 		virtual IResourceTableInfo::Iterator begin() const
 		{
-			return static_cast<const T&>(*ResourceTable).begin(ResourceTable);
+			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).begin(ResourceTable);
 		}
 
 		virtual IResourceTableInfo::Iterator end() const
 		{
-			return static_cast<const T&>(*ResourceTable).end();
+			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).end();
 		}
 	};
 
-	//the input itterator
-	IteratableImpl<InputTableType> InputIterator;
-	
-	//the output itterator
-	IteratableImpl<OutputTableType> OutputIterator;
-
 public:
 	// Get the input itterator
-	const IResourceTableInfo::Iteratable& AsInputIterator() const override
+	const IResourceTableInfo::Iteratable AsInputIterator() const override
 	{
-		check(InputIterator.ResourceTable == this);
-		return InputIterator;
+		IResourceTableInfo::Iteratable Ret; //slice the type
+		new (&Ret) IteratableImpl<InputTableType>(this);
+		return Ret;
 	}
 
 	// Get the output itterator
-	const IResourceTableInfo::Iteratable& AsOutputIterator() const override
+	const IResourceTableInfo::Iteratable AsOutputIterator() const override
 	{
-		check(OutputIterator.ResourceTable == this);
-		return OutputIterator;
+		IResourceTableInfo::Iteratable Ret; //slice the type
+		new (&Ret) IteratableImpl<OutputTableType>(this);
+		return Ret;
 	}
 
 public:
@@ -812,8 +837,6 @@ public:
 		: InputTableType(IT)
 		, OutputTableType(OT) 
 		, IResourceTableInfo(Name, InAction)
-		, InputIterator(this)
-		, OutputIterator(this)
 	{ 
 		CheckIntegrity(); 
 	};
