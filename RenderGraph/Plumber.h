@@ -675,6 +675,7 @@ private:
 	template<typename CompatibleType, typename SetType>
 	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<SetType, CompatibleType>&) -> SetType;
 
+public:
 	/* Helper declaration which plumbs in the List into the extracting function returning the OriginalType given a CompatibleType */
 	template<typename CompatibleType>
 	static constexpr auto GetOriginalType() -> decltype(ThisType::template GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
@@ -694,6 +695,8 @@ public:
 	using BaseType::begin;
 	using BaseType::end;
 	using BaseType::GetSetType;
+	using BaseType::GetCompatibleSetType;
+	using BaseType::GetOriginalType;
 	using BaseType::GetSetSize;
 	using BaseType::Contains;
 	using BaseType::Union;
@@ -724,6 +727,8 @@ public:
 	using BaseType::begin;
 	using BaseType::end;
 	using BaseType::GetSetType;
+	using BaseType::GetCompatibleSetType;
+	using BaseType::GetOriginalType;
 	using BaseType::GetSetSize;
 	using BaseType::Contains;
 	using BaseType::Union;
@@ -980,31 +985,37 @@ private:
 	}
 
 	/* Given two Sets extract their handles and give us a ResourceTable with all those Handles */
-	template<typename... XS, typename... YS>
-	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&) -> ResourceTable<InputTable<XS...>, OutputTable<YS...>>;
+	template<typename InTableType, typename OutTableType, typename... XS, typename... YS>
+	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&) -> ResourceTable
+	<
+		InputTable<decltype(InTableType::template GetOriginalType<XS>())...>, 
+		OutputTable<decltype(OutTableType::template GetOriginalType<YS>())...>
+	>;
 
 	/* Compute the input Intersection e.g keep the Handles in the OutputSet that are also Inputs */
-	template<typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
-	static constexpr auto ExtractInputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets(InputSet(), InputOutputSet()));
+	template<typename InTableType, typename OutTableType, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
+	static constexpr auto ExtractInputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InTableType, OutTableType>(InputSet(), InputOutputSet()));
  
  	/* Remove the Inputs that are also in the OutputSet */
-	template<typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::LeftDifference(InputSet(), OutputSet()))>
-	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets(InputOutputSet(), OutputSet()));
+	template<typename InTableType, typename OutTableType, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::LeftDifference(InputSet(), OutputSet()))>
+	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InTableType, OutTableType>(InputOutputSet(), OutputSet()));
 
 public:
-	using PassOutputType = decltype(ExtractOutputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
-	using PassInputType = decltype(ExtractInputTableType(InputTableType::GetSetType(), OutputTableType::GetSetType()));
+	using PassOutputType = decltype(ExtractOutputTableType<InputTableType, OutputTableType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
+	using PassInputType = decltype(ExtractInputTableType<InputTableType, OutputTableType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
 
 private:
-
 	/* Entry point for OnExecute callbacks */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		//first remove the outputs that are also inputs from the inputs
-		PassOutputType Table = *this;
-		
-		Table.GetInputTable().OnExecute(Ctx);
-		Table.GetOutputTable().OnExecute(Ctx);
+		//first transition and execute the inputs
+		GetInputTable().OnExecute(Ctx);
+		//than transition and execute the outputs 
+		GetOutputTable().OnExecute(Ctx);
+		//this way if a compatible type was input bound as Texture
+		//and the output type was UAV and previous state was UAV
+		//and UAV to texture to UAV barrier will be issued
+		//otherwise if UAV was input and output no barrier will be issued
 	}
 };
 
