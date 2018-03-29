@@ -40,6 +40,7 @@ namespace RDAG
 		U32 ShadowCascades = 4;
 		U32 ShadowResolution = 1024;
 
+		bool DepthOfFieldEnabled = true;
 		bool TemporalAaEnabled = true;
 		bool TransparencyEnabled = true;
 		bool TransparencySeperateEnabled = true;

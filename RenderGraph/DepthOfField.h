@@ -22,6 +22,7 @@ namespace RDAG
 		static constexpr const char* Name = "DepthOfFieldOutput";
 
 		explicit DepthOfFieldOutput() {}
+		explicit DepthOfFieldOutput(const DepthOfFieldInput&) {}
 	};
 }
 
