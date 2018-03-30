@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 	//ViewInfo.DofSettings.BokehShapeIsCircle = true;
 	//ViewInfo.DofSettings.GatherForeground = false;
 	//ViewInfo.DofSettings.EnablePostfilterMethod = false;
-	//ViewInfo.DofSettings.RecombineQuality = 0;
+	ViewInfo.DofSettings.RecombineQuality = 0;
 
 	if (argc > 200)
 	{
@@ -82,9 +82,9 @@ int main(int argc, char* argv[])
 		auto val = Seq
 		{
 			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
-			Builder.MoveOutputTableEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
+			Builder.RenameOutputToOutput<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
 			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
-			Builder.MoveOutputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
+			Builder.RenameOutputToOutput<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
 			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 		}(Builder.GetEmptyResourceTable());
 	}

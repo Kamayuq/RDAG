@@ -197,6 +197,13 @@ struct Wrapped : private Handle
 		return Revisions[i].ImaginaryResource != nullptr;
 	}
 
+	/* Handles can get undefined when they never have been written to */
+	constexpr bool IsUndefined(U32 i = 0) const
+	{
+		check(i < ResourceCount);
+		return Revisions[i].ImaginaryResource == nullptr || Revisions[i].Parent == nullptr;
+	}
+
 	/* Convert Handles between each other */
 	template<typename SourceType>
 	static constexpr Wrapped<Handle> ConvertFrom(const Wrapped<SourceType>& Source)
@@ -222,8 +229,8 @@ struct ResourceTableEntry
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
 
 	template<typename Handle> // only the static data of the Handle can be stored
-	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const Handle&)
-		: Revision(InRevision), Owner(InOwner), Name(Handle::Name)
+	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, bool InIsInputTable, const Handle&)
+		: Revision(InRevision), Owner(InOwner), Name(Handle::Name), IsInputTable(InIsInputTable)
 	{}
 
 	bool operator==(const ResourceTableEntry& Other) const
@@ -256,6 +263,11 @@ struct ResourceTableEntry
 		return Revision.ImaginaryResource != nullptr;
 	}
 	
+	bool IsUndefined() const
+	{
+		return Revision.ImaginaryResource == nullptr || (IsInputTable && Revision.Parent == nullptr);
+	}
+
 	bool IsMaterialized() const
 	{
 		return Revision.ImaginaryResource && Revision.ImaginaryResource->IsMaterialized();
@@ -280,6 +292,8 @@ private:
 	const IResourceTableInfo* Owner = nullptr;
 	//the name as given by the constexpr value of the Handle
 	const char* Name = nullptr;
+
+	bool IsInputTable = false;
 
 public:
 	UintPtr ParentHash() const
@@ -355,7 +369,7 @@ class ResourceTableIterator<TableType, Index, X, XS...> : public IResourceTableI
 	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner)
 	{
 		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
-		return ResourceTableEntry(Wrap.Revisions[Index], Owner, Wrap.GetHandle());
+		return ResourceTableEntry(Wrap.Revisions[Index], Owner, TableType::IsInputTable(), Wrap.GetHandle());
 	}
 
 public:
@@ -392,7 +406,7 @@ class ResourceTableIterator<TableType, 0> : public IResourceTableIterator
 	/* helper function to build an empty ResourceTableEntry for the base class */
 	static ResourceTableEntry Get()
 	{
-		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, ResourceHandleBase());
+		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, false, ResourceHandleBase());
 	}
 
 public:
@@ -527,13 +541,13 @@ public:
 	/* create an itterator and point to the start of the table */
 	IResourceTableInfo::Iterator begin(const IResourceTableInfo* Owner) const
 	{
-		return IResourceTableInfo::Iterator::MakeIterator<ThisType, TS...>(this, Owner);
+		return IResourceTableInfo::Iterator::MakeIterator<Derived<TS...>, TS...>(static_cast<const Derived<TS...>*>(this), Owner);
 	};
 
 	/* returning the empty itterator */
 	IResourceTableInfo::Iterator end() const
 	{
-		return IResourceTableInfo::Iterator::MakeIterator<ThisType>(this, nullptr);
+		return IResourceTableInfo::Iterator::MakeIterator<Derived<TS...>>(static_cast<const Derived<TS...>*>(this), nullptr);
 	};
 
 public:
@@ -755,16 +769,11 @@ private:
 	OutputTable(const Wrapped<XS>&... xs) : BaseType(xs...) {}
 
 	/* incrementally link all the Handles from the intersecting set*/
-	template<typename T, typename... TS, typename... YS>
-	constexpr void LinkInternal(const Set::Type<T, TS...>&, const OutputTable<YS...>& Source, const IResourceTableInfo* Parent)
+	template<typename... TS, typename... YS>
+	constexpr void LinkInternal(const Set::Type<TS...>&, const OutputTable<YS...>& Source, const IResourceTableInfo* Parent)
 	{
-		this->template GetWrapped<T>().Link(Source.template GetWrapped<T>(), Parent);
-		LinkInternal(Set::Type<TS...>(), Source, Parent);
+		(this->template GetWrapped<TS>().Link(Source.template GetWrapped<TS>(), Parent), ...);
 	}
-
-	/* until the List is empty */
-	template<typename... ZS>
-	constexpr void LinkInternal(const Set::Type<>&, const OutputTable<ZS...>&, const IResourceTableInfo*) {}
 };
 
 /* ResourceTables are the main payload of the graph implementation */
@@ -898,6 +907,12 @@ public:
 	constexpr bool IsValidOutput(U32 i = 0) const
 	{
 		return GetWrappedOutput<Handle>().IsValid(i);
+	}
+
+	template<typename Handle>
+	constexpr bool IsUndefinedInput(U32 i = 0) const
+	{
+		return GetWrappedInput<Handle>().IsUndefined(i);
 	}
 
 	template<typename Handle>

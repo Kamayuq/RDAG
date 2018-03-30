@@ -60,9 +60,9 @@ auto RunDownsamplePass(const RenderPassBuilder& Builder, int InputOffset = 0, in
 {
 	return Seq
 	{
-		Builder.MoveOutputToInputTableEntry<InputType, RDAG::DownsampleInput>(InputOffset, 0),
+		Builder.RenameOutputToInput<InputType, RDAG::DownsampleInput>(InputOffset, 0),
 		Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass::Build),
-		Builder.MoveOutputTableEntry<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
+		Builder.RenameOutputToOutput<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
 	};
 }
 
@@ -77,7 +77,7 @@ struct PyramidDownSampleRenderPass
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 	{
-		PassOutputType Output = Builder.MoveInputToOutputTableEntry<RDAG::DownsampleInput, RDAG::DownsamplePyramid<Count>>(0, 0)(Input);
+		PassOutputType Output = Builder.RenameInputToOutput<RDAG::DownsampleInput, RDAG::DownsamplePyramid<Count>>(0, 0)(Input);
 		
 		U32 i = 1;
 		for (; i < RDAG::DownsamplePyramid<Count>::ResourceCount; i++)

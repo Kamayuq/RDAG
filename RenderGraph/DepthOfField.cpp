@@ -224,12 +224,12 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			{
 				ConvolutionOutputTable = Seq
 				{
-					Builder.MoveOutputTableEntry<ConvolutionGatherType, RDAG::ConvolutionOutput>(i, 0),
+					Builder.RenameOutputToOutput<ConvolutionGatherType, RDAG::ConvolutionOutput>(i, 0),
 					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData&)
 					{
 						Ctx.Draw("GatherPassDataAction");
 					}),
-					Builder.MoveOutputTableEntry<RDAG::ConvolutionOutput, ConvolutionGatherType>(0, i)
+					Builder.RenameOutputToOutput<RDAG::ConvolutionOutput, ConvolutionGatherType>(0, i)
 				}(ConvolutionOutputTable);
 			}
 		}
@@ -342,9 +342,9 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			{
 				Ctx.Draw("DOFSetupAction");
 			}),
-			Builder.MoveOutputToInputTableEntry<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
+			Builder.RenameOutputToInput<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
 			Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-			Builder.MoveOutputTableEntry<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>(),
+			Builder.RenameOutputToOutput<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>(),
 			Builder.CreateOutputResource<RDAG::CocTileOutput>({ CocTileDesc }),
 			Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
 			{
@@ -374,6 +374,6 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 	}
 	else
 	{
-		return Builder.MoveInputToOutputTableEntry<RDAG::DepthOfFieldInput, RDAG::DepthOfFieldOutput>()(Input);
+		return Builder.RenameInputToOutput<RDAG::DepthOfFieldInput, RDAG::DepthOfFieldOutput>()(Input);
 	}
 }

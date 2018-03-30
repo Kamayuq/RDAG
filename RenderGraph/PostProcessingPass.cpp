@@ -28,11 +28,11 @@ typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const Rend
 {
 	return Seq
 	{
-		Builder.MoveInputTableEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
+		Builder.RenameInputToInput<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
 		Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
-		Builder.MoveOutputToInputTableEntry<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
+		Builder.RenameOutputToInput<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
 		Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
-		Builder.MoveOutputToInputTableEntry<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>(),
+		Builder.RenameOutputToInput<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>(),
 		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 	}(Input);
 }

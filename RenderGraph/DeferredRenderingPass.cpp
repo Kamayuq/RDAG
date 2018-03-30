@@ -33,7 +33,7 @@ auto RunTransparencyPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
 	{
-		Builder.MoveOutputToInputTableEntry<RDAG::LightingUAV, RDAG::TransparencyInput>(),
+		Builder.RenameOutputToInput<RDAG::LightingUAV, RDAG::TransparencyInput>(),
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build)
 	};
 }
@@ -42,9 +42,9 @@ auto RunPostprocessingPasses(const RenderPassBuilder& Builder)
 {
 	return Seq
 	{
-		Builder.MoveOutputToInputTableEntry<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
+		Builder.RenameOutputToInput<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
 		Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-		Builder.MoveOutputToInputTableEntry<RDAG::TemporalAAOutput, RDAG::PostProcessingInput>(),
+		Builder.RenameOutputToInput<RDAG::TemporalAAOutput, RDAG::PostProcessingInput>(),
 		Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build)
 	};
 }

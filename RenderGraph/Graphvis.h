@@ -100,7 +100,7 @@ struct PinStyle
 		{
 			PinDrawStyle = DrawStyle(DrawStyle::Hexagon, DrawStyle::Solid);
 		}
-		else if (EntryType == Input && Entry.GetParent() == nullptr)
+		else if (Entry.IsUndefined())
 		{
 			PinDrawStyle = DrawStyle(DrawStyle::Ellipse, DrawStyle::Dotted);
 		}

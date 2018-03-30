@@ -138,7 +138,7 @@ public:
 
 	/* this function moves a Handle between the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto MoveOutputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
+	auto RenameOutputToOutput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
 		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
@@ -171,7 +171,7 @@ public:
 
 	/* this function moves a Handle between the InputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto MoveInputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
+	auto RenameInputToInput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
 		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
@@ -203,7 +203,7 @@ public:
 	// TODO usage of this function might be unsafe, use with care 
 	/* this function moves a Handle from the InputList into the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto MoveInputToOutputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
+	auto RenameInputToOutput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
 		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
@@ -236,7 +236,7 @@ public:
 
 	/* this function moves a Handle from the OutputList into the InputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto MoveOutputToInputTableEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
+	auto RenameOutputToInput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
 		return MakeSequence([FromIndex, ToIndex](const auto& s)
 		{
@@ -269,7 +269,7 @@ public:
 
 	/* this function moves all Handles from the InputList into the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto MoveAllInputToOutputTableEntries() const
+	auto RenameEntireInputsToOutputs() const
 	{
 		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
 		return MakeSequence([](const auto& s)

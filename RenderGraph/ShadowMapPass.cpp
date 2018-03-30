@@ -17,7 +17,7 @@ typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const Re
 		Output = Seq
 		{
 			Builder.BuildRenderPass("ShadowMap_DepthRenderPass", DepthRenderPass::Build),
-			Builder.MoveOutputTableEntry<RDAG::DepthTarget, RDAG::ShadowMapTextureArray>(0, i)
+			Builder.RenameOutputToOutput<RDAG::DepthTarget, RDAG::ShadowMapTextureArray>(0, i)
 		}(Output);
 	}
 	return Output;
