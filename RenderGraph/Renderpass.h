@@ -160,9 +160,19 @@ public:
 					ToOutput.Revisions[i] = Destination.Revisions[i];
 				}
 			}
+			else
+			{
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					if (i != ToIndex)
+					{
+						//create undefined dummy resources with the same descriptor
+						ToOutput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromOutput.GetDescriptor(FromIndex));
+					}
+				}
+			}
 
-			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromOutput);
-			ToOutput.Revisions[ToIndex] = FromOutput.Revisions[AdjustedIndex];
+			ToOutput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
 			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
 
 			//remove the old output and copy it into the new destination
@@ -194,9 +204,19 @@ public:
 					ToInput.Revisions[i] = Destination.Revisions[i];
 				}
 			}
+			else
+			{
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					if (i != ToIndex)
+					{
+						//create undefined dummy resources with the same descriptor
+						ToInput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromInput.GetDescriptor(FromIndex));
+					}
+				}
+			}
 
-			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromInput);
-			ToInput.Revisions[ToIndex] = FromInput.Revisions[AdjustedIndex];
+			ToInput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
 			return s.Union(DestTable);
 		});
@@ -227,9 +247,19 @@ public:
 					ToOutput.Revisions[i] = Destination.Revisions[i];
 				}
 			}
+			else
+			{
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					if (i != ToIndex)
+					{
+						//create undefined dummy resources with the same descriptor
+						ToOutput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromInput.GetDescriptor(FromIndex));
+					}
+				}
+			}
 
-			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromInput);
-			ToOutput.Revisions[ToIndex] = FromInput.Revisions[AdjustedIndex];
+			ToOutput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
 			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
 
 			//remove the old output and copy it into the new destination
@@ -261,12 +291,19 @@ public:
 					ToInput.Revisions[i] = Destination.Revisions[i];
 				}
 			}
+			else
+			{
+				for (U32 i = 0; i < To::ResourceCount; i++)
+				{
+					if (i != ToIndex)
+					{
+						//create undefined dummy resources with the same descriptor
+						ToInput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromOutput.GetDescriptor(FromIndex));
+					}
+				}
+			}
 
-			// In case the user does access an invalid handle 
-			// we try to find the closest valid one 
-			// there should always be one valid index
-			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromOutput);
-			ToInput.Revisions[ToIndex] = FromOutput.Revisions[AdjustedIndex];
+			ToInput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
 
 			//remove the old output and copy it into the new destination

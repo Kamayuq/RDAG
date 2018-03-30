@@ -26,7 +26,7 @@ namespace RDAG
 	{
 		static constexpr const char* Name = "SceneViewInfo";
 
-		static constexpr const U32 TemporalAAResourceCount = 4;
+		static constexpr const U32 TemporalAAResourceCount = 2;
 
 		explicit SceneViewInfo() {}
 		SceneViewInfo(const SceneViewInfo& InViewInfo) = default;
