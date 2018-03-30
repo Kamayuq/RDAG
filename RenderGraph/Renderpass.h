@@ -161,7 +161,8 @@ public:
 				}
 			}
 
-			ToOutput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
+			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromOutput);
+			ToOutput.Revisions[ToIndex] = FromOutput.Revisions[AdjustedIndex];
 			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
 
 			//remove the old output and copy it into the new destination
@@ -194,7 +195,8 @@ public:
 				}
 			}
 
-			ToInput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
+			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromInput);
+			ToInput.Revisions[ToIndex] = FromInput.Revisions[AdjustedIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
 			return s.Union(DestTable);
 		});
@@ -226,7 +228,8 @@ public:
 				}
 			}
 
-			ToOutput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
+			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromInput);
+			ToOutput.Revisions[ToIndex] = FromInput.Revisions[AdjustedIndex];
 			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
 
 			//remove the old output and copy it into the new destination
@@ -259,7 +262,11 @@ public:
 				}
 			}
 
-			ToInput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
+			// In case the user does access an invalid handle 
+			// we try to find the closest valid one 
+			// there should always be one valid index
+			U32 AdjustedIndex = AdjustToNearestValidIndex(FromIndex, FromOutput);
+			ToInput.Revisions[ToIndex] = FromOutput.Revisions[AdjustedIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
 
 			//remove the old output and copy it into the new destination
@@ -381,6 +388,26 @@ private:
 
 	static void CheckIsResourceTable(const IResourceTableInfo&)
 	{
+	}
+
+	template<typename Handle>
+	static U32 AdjustToNearestValidIndex(U32 Index, const Wrapped<Handle>& Wrap)
+	{
+		for (U32 j = 0; j < Handle::ResourceCount; j++)
+		{
+			U32 TestIndex = (Index + Handle::ResourceCount - j) % Handle::ResourceCount;
+			if (Wrap.IsValid(TestIndex))
+			{
+				return TestIndex;
+			}
+
+#ifdef _DEBUG
+			check(0 && "Valid index adjustments are only used in non debugbuilds to prevent a hard crash and feed the subsequent passes some valid input");
+#endif // DEBUG
+		}
+
+		check(0 && "No valid Index found, this should not be possible");
+		return Index;
 	}
 
 	template<typename ContextType, typename RenderPassDataType, typename FunctionType>
