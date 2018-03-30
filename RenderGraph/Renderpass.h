@@ -427,26 +427,6 @@ private:
 	{
 	}
 
-	template<typename Handle>
-	static U32 AdjustToNearestValidIndex(U32 Index, const Wrapped<Handle>& Wrap)
-	{
-		for (U32 j = 0; j < Handle::ResourceCount; j++)
-		{
-			U32 TestIndex = (Index + Handle::ResourceCount - j) % Handle::ResourceCount;
-			if (Wrap.IsValid(TestIndex))
-			{
-				return TestIndex;
-			}
-
-#ifdef _DEBUG
-			check(0 && "Valid index adjustments are only used in non debugbuilds to prevent a hard crash and feed the subsequent passes some valid input");
-#endif // DEBUG
-		}
-
-		check(0 && "No valid Index found, this should not be possible");
-		return Index;
-	}
-
 	template<typename ContextType, typename RenderPassDataType, typename FunctionType>
 	struct TRenderPassAction final : IRenderPassAction
 	{
