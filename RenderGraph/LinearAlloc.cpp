@@ -1,10 +1,12 @@
 #include "LinearAlloc.h"
-#include <atomic>
 #include <malloc.h>
 #include "Assert.h"
 
 
-#define USE_ATOMICS 1
+#define USE_ATOMICS 0
+#if USE_ATOMICS
+#include <atomic>
+#endif
 
 struct SimpleLinearAllocator
 {

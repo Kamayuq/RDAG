@@ -1,13 +1,11 @@
 #pragma once
 #include "Set.h"
-
-#include <memory>
-#include <vector>
-#include <utility>
 #include "Concepts.h"
 #include "Types.h"
 #include "Assert.h"
 #include "LinearAlloc.h"
+
+#include <iterator>
 
 /* Specialized Transient resource Implementation */
 /* Handle is of ResourceHandle Type */

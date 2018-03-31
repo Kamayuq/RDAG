@@ -4,6 +4,8 @@
 #include "Plumber.h"
 #include "RHI.h"
 
+#include <vector>
+
 /* Base class of all actions which can contain dispatches or draws */
 struct IRenderPassAction
 {
