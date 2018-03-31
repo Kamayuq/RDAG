@@ -32,11 +32,11 @@ namespace Internal
 }
 
 /* Wrapper for a Sequence in a class template */
-template<typename... ARGS>
-struct Seq : Sequence<std::decay_t<decltype(Internal::Seq(std::declval<Sequence<ARGS>>()...))>>
+template<typename SequenceType, typename... ARGS>
+struct Seq : Sequence<SequenceType>
 {
-	Seq(const Sequence<ARGS>&... Args) : Sequence<std::decay_t<decltype(Internal::Seq(std::declval<Sequence<ARGS>>()...))>>(Internal::Seq(Args...)) {}
+	Seq(const Sequence<ARGS>&... Args) : Sequence<SequenceType>(Internal::Seq(Args...)) {}
 };
 
 template<typename... ARGS>
-Seq(const ARGS&... Args) -> Seq<typename ARGS::LambdaType...>;
+Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<Sequence<typename ARGS::LambdaType>>()...)), typename ARGS::LambdaType...>;
