@@ -8,39 +8,10 @@ struct Set final
 	struct SetElement
 	{};
 	
-	/* Type List of Elements each anotated with its index to be able to retrieve the element */
-	template<int Length, typename... TS>
-	struct SetElements;
-
-	/* The non empty List */
-	template<int Length, typename T, typename... TS>
-	struct SetElements<Length, T, TS...> : SetElements<Length+1, TS...>, SetElement<T&>
-	{
-		using BaseType = SetElements<Length+1, TS...>;
-		static constexpr int Index = Length;
-	};
-	
-	/* The empty List */
-	template<int Length>
-	struct SetElements<Length>
-	{
-		static constexpr int Index = Length;
-	};
-
-	struct Internal
-	{
-		/* providing an I the compiler chooses the closest match during overload resultion */
-		/* as the I's are unique we can extract the type E the compiler will infer for us this way */ 
-		template<int I, typename E, typename... ES>
-		static constexpr auto GetTypeInternal(const SetElements<I, E, ES...>&)->E;
-	};
-
 	/* The type representing a compile time set */
 	template<typename... TS>
-	struct Type final : SetElements<0, TS...>
+	struct Type final : SetElement<TS&>...
 	{
-		using BaseType = SetElements<0, TS...>;
-		
 		/* Does this Set contain this type? */
 		template<typename T>
 		static constexpr bool Contains()
@@ -53,18 +24,6 @@ struct Set final
 		{ 
 			return sizeof...(TS); 
 		};
-		
-		/* Given an I what Type is stored at this Index */
-		template<int I>
-		static constexpr auto GetType() -> decltype(Internal::GetTypeInternal<I>(BaseType()))
-		{
-			static_assert(I < GetSize(), "Set index out off bounds");
-			return {};
-		}
-
-	private:
-		/* Use the compiler to check if each Type is Unique (Multiple inheritance from the same type is not allowed) */
-		struct UniqueElementChecker : SetElement<TS&>... {};
 	};
 
 	/* The Union of two Sets */
