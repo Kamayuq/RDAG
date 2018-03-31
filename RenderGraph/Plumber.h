@@ -134,6 +134,9 @@ struct Wrapped : private Handle
 
 	friend struct RenderPassBuilder;
 
+	template<typename, typename>
+	friend class ResourceTable;
+
 	Wrapped() = default;
 
 	/* Wrapped resources need a handle and a resource array (which they could copy or compose from other handles) */
@@ -216,6 +219,16 @@ private:
 	{
 		check(IsValid(i) && Revisions[i].ImaginaryResource->IsMaterialized());
 		return static_cast<const ResourceType&>(*Revisions[i].ImaginaryResource->GetResource());
+	}
+
+	template<bool B>
+	static void Test()
+	{
+		static_assert(B, "ResourceHandleType could not be matched");
+		if constexpr(!B)
+		{
+			bool fail = Handle(); (void)fail;
+		}
 	}
 
 	RevisionArray Revisions;
@@ -532,7 +545,7 @@ private:
 
 /* Common interface for Table operations */
 template<template<typename...> class Derived, typename... TS>
-class BaseTable : Wrapped<TS>...
+class BaseTable : protected Wrapped<TS>...
 {
 	typedef BaseTable<Derived, TS...> ThisType;
 public:
@@ -695,7 +708,7 @@ public:
 
 /* An interface for InputTables */
 template<typename... XS>
-class InputTable : private BaseTable<InputTable, XS...>
+class InputTable : protected BaseTable<InputTable, XS...>
 {
 public:
 	typedef BaseTable<::InputTable, XS...> BaseType;
@@ -727,7 +740,7 @@ private:
 
 /* An interface for OutputTables */
 template<typename... XS>
-class OutputTable : private BaseTable<OutputTable, XS...>
+class OutputTable : protected BaseTable<OutputTable, XS...>
 {
 public:
 	typedef BaseTable<::OutputTable, XS...> BaseType;
@@ -978,12 +991,16 @@ private:
 	template<typename Handle>
 	const auto& GetWrappedInput() const
 	{
+		constexpr bool contains = InputTableType::template Contains<Handle>();
+		Wrapped<Handle>::template Test<contains>();
 		return GetInputTable().template GetWrapped<Handle>();
 	}
 
 	template<typename Handle>
 	const auto& GetWrappedOutput() const
 	{
+		constexpr bool contains = OutputTableType::template Contains<Handle>();
+		Wrapped<Handle>::template Test<contains>();
 		return GetOutputTable().template GetWrapped<Handle>();
 	}
 
