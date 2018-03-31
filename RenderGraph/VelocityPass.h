@@ -3,8 +3,6 @@
 #include "ResourceTypes.h"
 #include "DepthPass.h"
 
-#define ASYNC_VELOCITY 0
-
 namespace RDAG
 {
 	struct VelocityVectors : Texture2dResourceHandle<VelocityVectors>
@@ -23,12 +21,5 @@ struct VelocityRenderPass
 		OutputTable<RDAG::VelocityVectors>
 	);
 
-#if ASYNC_VELOCITY
-	typedef Promise<PassOutputType> PromiseType;
-	using ReturnType=PromiseType;
-#else
-	using ReturnType=PassOutputType;
-#endif
-
-	static ReturnType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

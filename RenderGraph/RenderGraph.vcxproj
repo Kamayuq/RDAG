@@ -107,7 +107,6 @@
     <ClInclude Include="Assert.h" />
     <ClInclude Include="BilateralUpsample.h" />
     <ClInclude Include="Concepts.h" />
-    <ClInclude Include="Continuation.h" />
     <ClInclude Include="DepthOfField.h" />
     <ClInclude Include="LinearAlloc.h" />
     <ClInclude Include="DeferredLightingPass.h" />

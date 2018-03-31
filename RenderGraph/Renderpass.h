@@ -1,12 +1,8 @@
 #pragma once
-#include <mutex>
 #include "LinearAlloc.h"
-#include "Continuation.h"
 #include "Sequence.h"
 #include "Plumber.h"
 #include "RHI.h"
-
-extern std::mutex ActionListMutex;
 
 /* Base class of all actions which can contain dispatches or draws */
 struct IRenderPassAction
@@ -33,49 +29,6 @@ public:
 	RenderPassBuilder(const RenderPassBuilder&) = delete;
 	RenderPassBuilder()
 	{}
-
-	/* example async graph creation implementation, might be used for explicit Async compute as well */
-	/* BuildAsyncRenderPass will call a function which continues graph building on another thread and returns a promise */
-	template<typename FunctionType, typename ReturnType = typename std::decay_t<typename Traits::function_traits<FunctionType>::return_type>::ReturnType>
-	auto BuildAsyncRenderPass(const char* Name, const FunctionType& BuildFunction, Promise<ReturnType>& Promise) const
-	{
-		/* sanity checking if the passed in variables make sense, otherwise fail early */
-		typedef Traits::function_traits<FunctionType> Traits;
-		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
-		typedef std::decay_t<typename Traits::return_type> PromiseType;
-		static_assert(Traits::arity == 2, "Build Functions have 2 parameters: the builder and the input table");
-		static_assert(std::is_base_of_v<PromiseBase, PromiseType>, "The returntype must be a Promise");
-		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
-		typedef ReturnType NestedOutputTableType;
-
-		const RenderPassBuilder* Self = this;
-		return MakeSequence([Self, &Promise, BuildFunction, Name](const auto& s)
-		{
-			CheckIsResourceTable(s);
-			InputTableType input = s;
-			
-			/* create some space on the heap for the sub-pass as we are async */
-			NestedOutputTableType* NestedRenderPassData = LinearAlloc<NestedOutputTableType>();	
-			//TODO reinstatiate builder and merge actionlist
-			
-			Promise = BuildFunction(*Self, input); //the build function will provide only the promise and does not execute
-			Promise.Run(NestedRenderPassData, Name); //continue the build on another thread
-
-			return s;
-		});
-	}
-
-	/* re-integrate the promise back into the normal flow */
-	template<typename ReturnType>
-	auto SynchronizeAsyncRenderPass(Promise<ReturnType>& Promise) const
-	{
-		return MakeSequence([&Promise](const auto& s)
-		{
-			CheckIsResourceTable(s);
-			//TODO reinstatiate builder and merge actionlist
-			return Promise.Get().Merge(s);
-		});
-	}
 
 	/* run an renderpass in another callable or function this can be useful to seperate the definition from the implementation in a cpp file */
 	template<typename FunctionType, typename... ARGS>
@@ -126,11 +79,8 @@ public:
 
 			/* create some space on the heap for the action as those are nodes of our graph */
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
-			{
-				//TODO reinstatiate builder and merge actionlist
-				std::lock_guard<std::mutex> lock(ActionListMutex); //async building to be removed
-				LocalActionList.push_back(NewRenderAction);
-			}
+			LocalActionList.push_back(NewRenderAction);
+
 			// merge and link (have the outputs point at this action from now on).
 			return NewRenderAction->RenderPassData.MergeAndLink(s);
 		});
