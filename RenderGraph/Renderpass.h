@@ -46,7 +46,7 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
 
 		const RenderPassBuilder* Self = this;
-		return MakeSequence([&, Self, Name](const auto& s)
+		return [&, Self, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			InputTableType input = s;
@@ -54,7 +54,7 @@ public:
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
 			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input, Args...), Name, nullptr);
 			return NestedRenderPassData.Merge(s);
-		});
+		};
 	}
 
 	template<typename FunctionType>
@@ -71,7 +71,7 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
 
 		auto& LocalActionList = ActionList;
-		return MakeSequence([&LocalActionList, QueuedTask, Name](const auto& s)
+		return [&LocalActionList, QueuedTask, Name](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
@@ -85,14 +85,14 @@ public:
 
 			// merge and link (have the outputs point at this action from now on).
 			return NewRenderAction->RenderPassData.MergeAndLink(s);
-		});
+		};
 	}
 
 	/* this function moves a Handle between the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
 	auto RenameOutputToOutput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return MakeSequence([FromIndex, ToIndex](const auto& s)
+		return [FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -129,14 +129,14 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		});
+		};
 	}
 
 	/* this function moves a Handle between the InputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
 	auto RenameInputToInput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return MakeSequence([FromIndex, ToIndex](const auto& s)
+		return [FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -171,7 +171,7 @@ public:
 			ToInput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
 			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
 			return s.Union(DestTable);
-		});
+		};
 	}
 
 	// TODO usage of this function might be unsafe, use with care 
@@ -179,7 +179,7 @@ public:
 	template<typename From, typename To>
 	auto RenameInputToOutput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return MakeSequence([FromIndex, ToIndex](const auto& s)
+		return [FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -216,14 +216,14 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		});
+		};
 	}
 
 	/* this function moves a Handle from the OutputList into the InputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
 	auto RenameOutputToInput(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
-		return MakeSequence([FromIndex, ToIndex](const auto& s)
+		return [FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -260,7 +260,7 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		});
+		};
 	}
 
 	/* this function moves all Handles from the InputList into the OutputList the destination is overwitten and the Source stays */
@@ -268,7 +268,7 @@ public:
 	auto RenameEntireInputsToOutputs() const
 	{
 		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
-		return MakeSequence([](const auto& s)
+		return [](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -288,29 +288,29 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		});
+		};
 	}
 
 	/* this function prunes the resourcetable and only returns the table of the type that was provided */ 
 	template<typename ResourceTableType>
 	auto ExtractResourceTableEntries() const
 	{
-		return MakeSequence([](const auto& s) -> ResourceTableType
+		return [](const auto& s) -> ResourceTableType
 		{
 			CheckIsResourceTable(s);
 			return s;
-		});
+		};
 	}
 
 	/* this function overwrites the resourcetable with another one */ 
 	template<typename TInputTableType, typename TOutputTableType>
 	auto ReplaceResourceTableEntries(const ResourceTable<TInputTableType, TOutputTableType>& table) const
 	{
-		return MakeSequence([table](const auto& s)
+		return [table](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			return table;
-		});
+		};
 	}
 
 	/* this function adds a new input to the resourcetable all descriptors have to be provided */ 
@@ -324,12 +324,12 @@ public:
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
-		return MakeSequence([WrappedResource](const auto& s)
+		return [WrappedResource](const auto& s)
 		{	
 			CheckIsResourceTable(s);
 			auto NewResourceTable = InputTableType<Handle>(InputTable<Handle>(WrappedResource), OutputTable<>());
 			return s.Union(NewResourceTable);
-		});
+		};
 	}
 
 	/* this function adds a new output to the resourcetable all descriptors have to be provided */ 
@@ -343,12 +343,12 @@ public:
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
-		return MakeSequence([WrappedResource](const auto& s)
+		return [WrappedResource](const auto& s)
 		{	
 			CheckIsResourceTable(s);
 			auto NewResourceTable = OutputTableType<Handle>(InputTable<>(), OutputTable<Handle>(WrappedResource));
 			return s.Union(NewResourceTable);
-		});
+		};
 	}
 
 	/* returns the empty resourcetable */

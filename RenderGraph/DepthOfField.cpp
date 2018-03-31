@@ -101,7 +101,7 @@ namespace RDAG
 template<typename ConvolutionOutputType>
 auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enabled)
 {
-	return MakeSequence([&Builder, Enabled](const auto& s)
+	return [&Builder, Enabled](const auto& s)
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetInputHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor ScatteringReduceDesc;
@@ -155,13 +155,13 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 			}(Result);
 		}
 		return Result;
-	});
+	};
 }
 
 template<typename BokehLUTType>
 auto BuildBokehLut(const RenderPassBuilder& Builder)
 {
-	return MakeSequence([&Builder](const auto& s)
+	return [&Builder](const auto& s)
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetInputHandle<RDAG::SceneViewInfo>();
 		typename BokehLUTType::DescriptorType LutOutputDesc[BokehLUTType::ResourceCount];
@@ -194,13 +194,13 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 			}
 		}
 		return LutOutputTable;
-	});
+	};
 }
 
 template<typename ConvolutionGatherType>
 auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true)
 {
-	return MakeSequence([&Builder, Enabled](const auto& s)
+	return [&Builder, Enabled](const auto& s)
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetInputHandle<RDAG::SceneViewInfo>();
 		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ConvolutionGatherType::ResourceCount];
@@ -234,7 +234,7 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			}
 		}
 		return ConvolutionOutputTable;
-	});
+	};
 }
 
 template<typename... DofPostfilterElems>
@@ -246,7 +246,7 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 		OutputTable<DofPostfilterElems...>
 	>;
 
-	return MakeSequence([&Builder, GatherForeGround](const auto& s)
+	return [&Builder, GatherForeGround](const auto& s)
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetInputHandle<RDAG::SceneViewInfo>();
 
@@ -260,12 +260,12 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 			})(Result);
 		}
 		return Result;
-	});
+	};
 }
 
 auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 {
-	return MakeSequence([&Builder](const auto& s)
+	return [&Builder](const auto& s)
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetInputHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor SlightOutOfFocusConvolutionDesc;
@@ -285,7 +285,7 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		}
 
 		return SlightlyOutOfFocusTable;
-	});
+	};
 };
 
 typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
