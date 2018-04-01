@@ -118,6 +118,7 @@ struct Wrapped : private Handle
 {
 	/* Internalize properies of the Handle for convienence */
 	using CompatibleType = typename Handle::CompatibleType;	
+	using HandleType = Handle;
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
 	static constexpr U32 ResourceCount = Handle::ResourceCount;
@@ -543,6 +544,38 @@ private:
 	const IRenderPassAction* Action = nullptr;
 };
 
+namespace Internal
+{
+	//the Microsoft compiler is a bomb (it blows trying to deduce differnt return type in constexpr if)
+	template<bool B>
+	struct VisualStudioDeductionHelper
+	{
+		template<typename X, typename LeftType, typename RightType>
+		static constexpr auto Select(const LeftType&, const RightType& Rhs)
+		{
+			// if the right table contains our result than use it 
+			// but first restore the original RealType to be able to extract it 
+			// because we checked compatible types which might not be the same
+			using RealType = decltype(RightType::template GetOriginalType<typename X::CompatibleType>());
+			return Rhs.template GetWrapped<RealType>();
+		}
+	};
+
+	template<>
+	struct VisualStudioDeductionHelper<false>
+	{
+		template<typename X, typename LeftType, typename RightType>
+		static constexpr auto Select(const LeftType& Lhs, const RightType&)
+		{
+			// otherwise use the result from the left table 
+			// but first restore the original ealType to be able to extract it 
+			// because we checked compatible types which might not be the same
+			using RealType = decltype(LeftType::template GetOriginalType<typename X::CompatibleType>());
+			return Lhs.template GetWrapped<RealType>();
+		}
+	};
+}
+
 /* Common interface for Table operations */
 template<template<typename...> class Derived, typename... TS>
 class BaseTable : protected Wrapped<TS>...
@@ -589,7 +622,7 @@ public:
 	constexpr auto Union(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
 	}
 
 	/* intersect two Tables taking the handles from the right Table */
@@ -597,7 +630,7 @@ public:
 	constexpr auto Intersect(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
 	}
 
 	/* returning the merged table without the intersection */
@@ -605,7 +638,7 @@ public:
 	constexpr auto Difference(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
 	}
 
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatble handles */
@@ -629,35 +662,21 @@ protected:
 	}
 
 private:
-	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge and the last argument is the resulting set of handles */
-	template<typename X, typename... XS, template<typename...> class TypeY, typename... YS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
-	static constexpr auto MergeToLeft(const Set::Type<X, XS...>&, const BaseTable<TypeY, YS...>& Lhs, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
+	/* after itteration build a new table from the resulting set */
+	template<typename X, typename LeftType, typename RightType>
+	static constexpr auto MergeSelect(const LeftType& Lhs, const RightType& Rhs)
 	{
-		using Rtype = BaseTable<TypeZ, ZS...>;
-		using Ltype = BaseTable<TypeY, YS...>;
-		if constexpr (Rtype::template Contains<X>())
-		{
-			// if the right table contains our result than use it 
-			// but first restore the original RealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			using RealType = decltype(Rtype::template GetOriginalType<typename X::CompatibleType>());
-			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Rhs.template GetWrapped<RealType>());
-		}
-		else
-		{
-			// otherwise use the result from the left table 
-			// but first restore the original ealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			using RealType = decltype(Ltype::template GetOriginalType<typename X::CompatibleType>());
-			return MergeToLeft(Set::Type<XS...>(), Lhs, Rhs, Args..., Lhs.template GetWrapped<RealType>());
-		}
+		return Internal::VisualStudioDeductionHelper<RightType::template Contains<X>()>::template Select<X>(Lhs, Rhs);
 	}
 
-	/* after itteration build a new table from the resulting set */
-	template<template<typename...> class TypeY, typename... YS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
-	static constexpr auto MergeToLeft(const Set::Type<>&, const BaseTable<TypeY, YS...>&, const BaseTable<TypeZ, ZS...>&, const Wrapped<ARGS>&... Args)
+	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge and the last argument is the resulting set of handles */
+	template<typename... XS, typename LeftType, typename RightType, typename ReturnType = Derived<typename std::decay_t<decltype(ThisType::MergeSelect<XS>(std::declval<LeftType>(), std::declval<RightType>()))>::HandleType...>>
+	static constexpr ReturnType MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
 	{
-		return TypeY<ARGS...>(Args...);
+		return ReturnType
+		(
+			ThisType::MergeSelect<XS>(Lhs, Rhs)...
+		);
 	}
 
 	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from and the last argument is the resulting set of handles */
