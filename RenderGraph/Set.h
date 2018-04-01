@@ -30,14 +30,28 @@ struct Set final
 	template<typename... XS, typename... YS>
 	static constexpr auto Union(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<true>(Type<YS...>(), Type<XS...>(), Type<XS...>(), Type<>());
+		if constexpr(sizeof...(YS) < sizeof...(XS))
+		{
+			return Recurse<true>(Type<YS...>(), Type<XS...>(), Type<XS...>(), Type<>());
+		}
+		else
+		{
+			return Recurse<true>(Type<XS...>(), Type<YS...>(), Type<>(), Type<YS...>());
+		}
 	}
 
 	/* The Intersection of two Sets */
 	template<typename... XS, typename... YS>
 	static constexpr auto Intersect(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<false>(Type<XS...>(), Type<YS...>(), Type<>(), Type<>());
+		if constexpr(sizeof...(XS) < sizeof...(YS))
+		{
+			return Recurse<false>(Type<XS...>(), Type<YS...>(), Type<>(), Type<>());
+		}
+		else
+		{
+			return Recurse<false>(Type<YS...>(), Type<XS...>(), Type<>(), Type<>());
+		}
 	}
 
 	/* The left Set without the right one */
@@ -58,7 +72,7 @@ struct Set final
 	template<typename... XS, typename... YS>
 	static constexpr auto Difference(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Union(LeftDifference(Type<XS...>(), Type<YS...>()), RightDifference(Type<XS...>(), Type<YS...>()));
+		return Recurse<true>(Union(Type<XS...>(), Type<YS...>()), Intersect(Type<XS...>(), Type<YS...>()), Type<>(), Type<>());
 	}
 
 private:
