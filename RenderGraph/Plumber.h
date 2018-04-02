@@ -724,14 +724,14 @@ protected:
 	}
 
 private:
-	/* after itteration build a new table from the resulting set */
+	/* prefer select element X from right otherwise take the lefthand side */
 	template<typename X, typename LeftType, typename RightType>
 	static constexpr auto MergeSelect(const LeftType& Lhs, const RightType& Rhs)
 	{
 		return Internal::VisualStudioDeductionHelper<RightType::template Contains<X>()>::template Select<X>(Lhs, Rhs);
 	}
 
-	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge and the last argument is the resulting set of handles */
+	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge */
 	template<typename... XS, typename LeftType, typename RightType, typename ReturnType = Derived<typename decltype(ThisType::MergeSelect<XS>(std::declval<LeftType>(), std::declval<RightType>()))::HandleType...>>
 	static constexpr ReturnType MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
 	{
@@ -741,7 +741,7 @@ private:
 		);
 	}
 
-	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from and the last argument is the resulting set of handles */
+	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from */
 	template<typename... XS, typename RightType>
 	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs) -> Derived<XS...>
 	{
