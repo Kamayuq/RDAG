@@ -56,6 +56,27 @@ public:
 
 namespace Traits
 {
+	template<int I, typename... TS>
+	struct TupleList;
+
+	template<int I, typename T, typename... TS>
+	struct TupleList<I, T, TS...> : TupleList<I + 1, TS...> {};
+
+	template<int I>
+	struct TupleList<I> {};
+
+	template <typename... ARGS>
+	struct TupleOperation
+	{
+		struct TupleType : TupleList<0, ARGS...> {};
+
+		template<int I, typename T, typename... TS>
+		static constexpr auto GetElementType2(const TupleList<I, T, TS...>&)->T;
+
+		template<int I>
+		static constexpr auto GetElementType() -> decltype(GetElementType2<I>(TupleType()));
+	};
+
 	/* function traits are useful to extract the signature of a function when passed as a template argument */
 	template <typename T>
 	struct function_traits;
@@ -65,14 +86,13 @@ namespace Traits
 	struct function_traits<RET(ARGS...)>
 	{
 		static constexpr size_t arity = sizeof...(ARGS);
-
-		typedef RET return_type;
+		using return_type = RET;
 
 		template <size_t I>
 		struct arg
 		{
 			static_assert(I < arity, "error: index out of bounds");
-			typedef typename std::tuple_element<I, std::tuple<ARGS...>>::type type;
+			using type = decltype(TupleOperation<ARGS...>::template GetElementType<I>());
 		};
 	};
 

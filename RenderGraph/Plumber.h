@@ -544,26 +544,47 @@ private:
 	const IRenderPassAction* Action = nullptr;
 };
 
+template<typename... TS>
+struct SetOperation
+{
+private:
+	/* A helper struct thas is just a pair of types */
+	template<typename CompatibleType, typename SetType>
+	struct CompatiblePair {};
+
+	/* A list of pairs with each having their origninal type first and their compatible type second */
+	struct CompatiblePairList : CompatiblePair<typename TS::CompatibleType, TS>... {};
+
+	/* Given a CompatibleType overload resolution will find us the Original type from a set of pairs */
+	template<typename CompatibleType, typename SetType>
+	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<CompatibleType, SetType>&)->SetType;
+
+public:
+	/* Helper declaration which plumbs in the List into the extracting function returning the OriginalType given a CompatibleType */
+	template<typename CompatibleType>
+	static constexpr auto GetOriginalType() -> decltype(GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
+};
+
 namespace Internal
 {
 	//the Microsoft compiler is a bomb (it blows trying to deduce differnt return type in constexpr if)
 	template<bool B>
 	struct VisualStudioDeductionHelper
 	{
-		template<typename X, typename LeftType, typename RightType>
-		static constexpr auto Select(const LeftType&, const RightType& Rhs)
+		template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
+		static constexpr auto Select(const LeftType<LS...>&, const RightType<RS...>& Rhs)
 		{
 			// if the right table contains our result than use it 
 			// but first restore the original RealType to be able to extract it 
 			// because we checked compatible types which might not be the same
-			using RealType = decltype(RightType::template GetOriginalType<typename X::CompatibleType>());
+			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Rhs.template GetWrapped<RealType>();
 		}
 
-		template<typename X, typename RightType>
-		static constexpr auto CollectSelect(const RightType& Rhs)
+		template<typename X, template<typename...> class RightType, typename... RS>
+		static constexpr auto CollectSelect(const RightType<RS...>& Rhs)
 		{
-			using RealType = decltype(RightType::template GetOriginalType<typename X::CompatibleType>());
+			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Wrapped<X>::ConvertFrom(Rhs.template GetWrapped<RealType>());
 		}
 
@@ -595,13 +616,13 @@ namespace Internal
 			}
 		};
 
-		template<typename X, typename LeftType, typename RightType>
-		static constexpr auto Select(const LeftType& Lhs, const RightType&)
+		template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
+		static constexpr auto Select(const LeftType<LS...>& Lhs, const RightType<RS...>&)
 		{
 			// otherwise use the result from the left table 
 			// but first restore the original ealType to be able to extract it 
 			// because we checked compatible types which might not be the same
-			using RealType = decltype(LeftType::template GetOriginalType<typename X::CompatibleType>());
+			using RealType = decltype(SetOperation<LS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Lhs.template GetWrapped<RealType>();
 		}
 
@@ -661,7 +682,7 @@ public:
 	constexpr auto Union(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
 	}
 
 	/* intersect two Tables taking the handles from the right Table */
@@ -669,7 +690,7 @@ public:
 	constexpr auto Intersect(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
 	}
 
 	/* returning the merged table without the intersection */
@@ -677,7 +698,7 @@ public:
 	constexpr auto Difference(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
 	}
 
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatble handles */
@@ -725,22 +746,6 @@ private:
 		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
 		return Internal::VisualStudioDeductionHelper<ContainsAll>::template Collect<Derived, XS...>(Rhs);
 	}
-
-	/* A helper struct thas is just a pair of types */
-	template<typename CompatibleType, typename SetType>
-	struct CompatiblePair {};
-	
-	/* A list of pairs with each having their origninal type first and their compatible type second */
-	struct CompatiblePairList : CompatiblePair<typename TS::CompatibleType, TS>... {};
-
-	/* Given a CompatibleType overload resolution will find us the Original type from a set of pairs */
-	template<typename CompatibleType, typename SetType>
-	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<CompatibleType, SetType>&) -> SetType;
-
-public:
-	/* Helper declaration which plumbs in the List into the extracting function returning the OriginalType given a CompatibleType */
-	template<typename CompatibleType>
-	static constexpr auto GetOriginalType() -> decltype(ThisType::template GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
 };
 
 /* An interface for InputTables */
@@ -752,6 +757,9 @@ public:
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
 
+	template<typename, typename>
+	friend class ResourceTable;
+
 	template<bool>
 	friend struct Internal::VisualStudioDeductionHelper;
 
@@ -761,7 +769,6 @@ public:
 	using BaseType::end;
 	using BaseType::GetSetType;
 	using BaseType::GetCompatibleSetType;
-	using BaseType::GetOriginalType;
 	using BaseType::GetSetSize;
 	using BaseType::Contains;
 	using BaseType::Union;
@@ -787,6 +794,9 @@ public:
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
 
+	template<typename, typename>
+	friend class ResourceTable;
+
 	template<bool>
 	friend struct Internal::VisualStudioDeductionHelper;
 
@@ -796,7 +806,6 @@ public:
 	using BaseType::end;
 	using BaseType::GetSetType;
 	using BaseType::GetCompatibleSetType;
-	using BaseType::GetOriginalType;
 	using BaseType::GetSetSize;
 	using BaseType::Contains;
 	using BaseType::Union;
@@ -806,27 +815,26 @@ public:
 	using BaseType::GetWrapped;
 	using BaseType::OnExecute;
 
+	static constexpr bool IsInputTable() { return false; }
+	static constexpr bool IsOutputTable() { return true; }
+
+protected:
 	/* only OutputTables support Linking */
 	template<typename... TS>
 	constexpr void Link(const OutputTable<TS...>& Source, const IResourceTableInfo* Parent)
 	{
-		// we can only link elements that are both in the source and the destination
-		// that is why we build the intersection set and link only those elements
-		typedef decltype(Set::Intersect(Set::Type<XS...>(), Set::Type<TS...>())) IntersectionSet;
-		LinkInternal(IntersectionSet(), Source, Parent);
+		// we can only link elements that are coming from the source
+		LinkInternal(Source, Parent);
 	}
-
-	static constexpr bool IsInputTable() { return false; }
-	static constexpr bool IsOutputTable() { return true; }
 
 private:
 	OutputTable(const Wrapped<XS>&... xs) : BaseType(xs...) {}
 
 	/* incrementally link all the Handles from the intersecting set*/
-	template<typename... TS, typename... YS>
-	constexpr void LinkInternal(const Set::Type<TS...>&, const OutputTable<YS...>& Source, const IResourceTableInfo* Parent)
+	template<typename... YS>
+	constexpr void LinkInternal(const OutputTable<YS...>& Source, const IResourceTableInfo* Parent)
 	{
-		(this->template GetWrapped<TS>().Link(Source.template GetWrapped<TS>(), Parent), ...);
+		(this->template GetWrapped<YS>().Link(Source.template GetWrapped<YS>(), Parent), ...);
 	}
 };
 
@@ -1040,26 +1048,6 @@ private:
 		static_assert(OutputTableType::IsOutputTable(), "Second Parameter must be the OutputTable");
 	}
 
-	/* Given two Sets extract their handles and give us a ResourceTable with all those Handles */
-	template<typename InTableType, typename OutTableType, typename... XS, typename... YS>
-	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&) -> ResourceTable
-	<
-		InputTable<decltype(InTableType::template GetOriginalType<XS>())...>, 
-		OutputTable<decltype(OutTableType::template GetOriginalType<YS>())...>
-	>;
-
-	/* Compute the input Intersection e.g keep the Handles in the OutputSet that are also Inputs */
-	template<typename InTableType, typename OutTableType, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
-	static constexpr auto ExtractInputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InTableType, OutTableType>(InputSet(), InputOutputSet()));
- 
- 	/* Remove the Inputs that are also in the OutputSet */
-	template<typename InTableType, typename OutTableType, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::LeftDifference(InputSet(), OutputSet()))>
-	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InTableType, OutTableType>(InputOutputSet(), OutputSet()));
-
-public:
-	using PassOutputType = decltype(ExtractOutputTableType<InputTableType, OutputTableType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
-	using PassInputType = decltype(ExtractInputTableType<InputTableType, OutputTableType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
-
 private:
 	/* Entry point for OnExecute callbacks */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
@@ -1075,7 +1063,44 @@ private:
 	}
 };
 
+template<typename ResourceTableType>
+struct ResourceTableOperation
+{
+private:
+	using InputTableType = typename ResourceTableType::InputTableType;
+	using OutputTableType = typename ResourceTableType::OutputTableType;
+
+	template<typename... XS>
+	static constexpr auto GetSetOperationType(const InputTable<XS...>&)->SetOperation<XS...>;
+	using InputOperationType = decltype(GetSetOperationType(std::declval<InputTableType>()));
+
+	template<typename... XS>
+	static constexpr auto GetSetOperationType(const OutputTable<XS...>&)->SetOperation<XS...>;
+	using OutputOperationType = decltype(GetSetOperationType(std::declval<OutputTableType>())); 
+
+	/* Given two Sets extract their handles and give us a ResourceTable with all those Handles */
+	template<typename InSetOp, typename OutSetOp, typename... XS, typename... YS>
+	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&)->ResourceTable
+	<
+		InputTable<decltype(InSetOp::template GetOriginalType<XS>())...>,
+		OutputTable<decltype(OutSetOp::template GetOriginalType<YS>())...>
+	>;
+
+	/* Compute the input Intersection e.g keep the Handles in the OutputSet that are also Inputs */
+	template<typename InSetOp, typename OutSetOp, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
+	static constexpr auto ExtractInputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InSetOp, OutSetOp>(InputSet(), InputOutputSet()));
+
+	/* Remove the Inputs that are also in the OutputSet */
+	template<typename InSetOp, typename OutSetOp, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::LeftDifference(InputSet(), OutputSet()))>
+	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InSetOp, OutSetOp>(InputOutputSet(), OutputSet()));
+
+public:
+	using PassOutputType = decltype(ExtractOutputTableType<InputOperationType, OutputOperationType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
+	using PassInputType = decltype(ExtractInputTableType<InputOperationType, OutputOperationType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
+};
+
+
 #define RESOURCE_TABLE(...)														\
 	using ResourceTableType	= ResourceTable< __VA_ARGS__ >;						\
-	using PassInputType		= typename ResourceTableType::PassInputType;		\
+	using PassInputType		= typename ResourceTableOperation<ResourceTableType>::PassInputType;		\
 	using PassOutputType	= ResourceTableType;		

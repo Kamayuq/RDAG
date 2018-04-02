@@ -1,9 +1,9 @@
 #pragma once
-#include <vector>
-#include <algorithm>
-
 #include "Renderpass.h"
 #include "Types.h"
+
+#include <vector>
+#include <algorithm>
 
 struct LeafRenderPass;
 
