@@ -559,11 +559,42 @@ namespace Internal
 			using RealType = decltype(RightType::template GetOriginalType<typename X::CompatibleType>());
 			return Rhs.template GetWrapped<RealType>();
 		}
+
+		template<typename X, typename RightType>
+		static constexpr auto CollectSelect(const RightType& Rhs)
+		{
+			using RealType = decltype(RightType::template GetOriginalType<typename X::CompatibleType>());
+			return Wrapped<X>::ConvertFrom(Rhs.template GetWrapped<RealType>());
+		}
+
+		template<template<typename...> class Derived, typename... XS, typename RightType>
+		static constexpr Derived<XS...> Collect(const RightType& Rhs)
+		{
+			// if we found a Handle we searched for we use it 
+			// but first restore the original ealType to be able to extract it 
+			// because we checked compatible types which might not be the same
+			return Derived<XS...>
+			(
+				CollectSelect<XS>(Rhs)...
+			);
+		}
 	};
 
 	template<>
 	struct VisualStudioDeductionHelper<false>
 	{
+		template<template<typename...> class Derived>
+		struct ErrorType
+		{
+			template<typename... XS>
+			static void ThrowError(const Set::Type<XS...>&)
+			{
+				static int Error = Derived<XS...>();
+				Error++;
+				static_assert(false, "missing entry: cannot collect");
+			}
+		};
+
 		template<typename X, typename LeftType, typename RightType>
 		static constexpr auto Select(const LeftType& Lhs, const RightType&)
 		{
@@ -572,6 +603,14 @@ namespace Internal
 			// because we checked compatible types which might not be the same
 			using RealType = decltype(LeftType::template GetOriginalType<typename X::CompatibleType>());
 			return Lhs.template GetWrapped<RealType>();
+		}
+
+		template<template<typename...> class Derived, typename... XS, typename RightType>
+		static constexpr Derived<XS...> Collect(const RightType&)
+		{
+			//if the collection missed some handles we force an error and print the intersection of the missing values
+			ErrorType<Derived>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); //this will always fail with an error where the DiffTable type is visible
+			return std::declval<Derived<XS...>>();
 		}
 	};
 }
@@ -622,7 +661,7 @@ public:
 	constexpr auto Union(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
+		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	/* intersect two Tables taking the handles from the right Table */
@@ -630,7 +669,7 @@ public:
 	constexpr auto Intersect(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
+		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	/* returning the merged table without the intersection */
@@ -638,7 +677,7 @@ public:
 	constexpr auto Difference(const TableType<YS...>& Other) const
 	{
 		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
+		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatble handles */
@@ -670,7 +709,7 @@ private:
 	}
 
 	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge and the last argument is the resulting set of handles */
-	template<typename... XS, typename LeftType, typename RightType, typename ReturnType = Derived<typename std::decay_t<decltype(ThisType::MergeSelect<XS>(std::declval<LeftType>(), std::declval<RightType>()))>::HandleType...>>
+	template<typename... XS, typename LeftType, typename RightType, typename ReturnType = Derived<typename decltype(ThisType::MergeSelect<XS>(std::declval<LeftType>(), std::declval<RightType>()))::HandleType...>>
 	static constexpr ReturnType MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
 	{
 		return ReturnType
@@ -680,44 +719,23 @@ private:
 	}
 
 	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from and the last argument is the resulting set of handles */
-	template<typename X, typename... XS, template<typename...> class TypeZ, typename... ZS, typename... ARGS>
-	static constexpr auto CollectInternal(const Set::Type<X, XS...>&, const BaseTable<TypeZ, ZS...>& Rhs, const Wrapped<ARGS>&... Args)
+	template<typename... XS, typename RightType>
+	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs) -> Derived<XS...>
 	{
-		using Rtype = BaseTable<TypeZ, ZS...>;
-		if constexpr (BaseTable<TypeZ, ZS...>::template Contains<X>())
-		{
-			// if we found a Handle we searched for we use it 
-			// but first restore the original ealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			using RealType = decltype(Rtype::template GetOriginalType<typename X::CompatibleType>());
-			const Wrapped<RealType>& Element = Rhs.template GetWrapped<RealType>();
-			return CollectInternal(Set::Type<XS...>(), Rhs, Args..., Wrapped<X>::ConvertFrom(Element));
-		}
-		else
-		{
-			// otherwise skip to the next element
-			return CollectInternal(Set::Type<XS...>(), Rhs, Args...);
-		}
-	}
-
-	/* after itteration build a new table from the resulting set */
-	template<template<typename...> class TypeZ, typename... ZS, typename... ARGS>
-	static constexpr auto CollectInternal(const Set::Type<>&, const BaseTable<TypeZ, ZS...>&, const Wrapped<ARGS>&... Args)
-	{
-		//static_assert(std::is_same_v<Derived<TS...>, Derived<ARGS...>>, "could not collect all parameters");
-		return Derived<ARGS...>(Args...);
+		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
+		return Internal::VisualStudioDeductionHelper<ContainsAll>::template Collect<Derived, XS...>(Rhs);
 	}
 
 	/* A helper struct thas is just a pair of types */
-	template<typename SetType, typename CompatibleType>
+	template<typename CompatibleType, typename SetType>
 	struct CompatiblePair {};
 	
 	/* A list of pairs with each having their origninal type first and their compatible type second */
-	struct CompatiblePairList : CompatiblePair<TS, typename TS::CompatibleType>... {};
+	struct CompatiblePairList : CompatiblePair<typename TS::CompatibleType, TS>... {};
 
 	/* Given a CompatibleType overload resolution will find us the Original type from a set of pairs */
 	template<typename CompatibleType, typename SetType>
-	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<SetType, CompatibleType>&) -> SetType;
+	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<CompatibleType, SetType>&) -> SetType;
 
 public:
 	/* Helper declaration which plumbs in the List into the extracting function returning the OriginalType given a CompatibleType */
@@ -733,6 +751,9 @@ public:
 	typedef BaseTable<::InputTable, XS...> BaseType;
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
+
+	template<bool>
+	friend struct Internal::VisualStudioDeductionHelper;
 
 	friend struct RenderPassBuilder;
 
@@ -765,6 +786,9 @@ public:
 	typedef BaseTable<::OutputTable, XS...> BaseType;
 	template<template<typename...> class, typename...>
 	friend class BaseTable;
+
+	template<bool>
+	friend struct Internal::VisualStudioDeductionHelper;
 
 	friend struct RenderPassBuilder;
 
@@ -986,25 +1010,8 @@ private:
 	constexpr ResourceTable<ITT, OTT> Populate() const
 	{
 		RTT::CheckIntegrity();
-		//first collect the results (this cannot fail)
-		auto in = ITT::Collect(GetInputTable().Union(GetOutputTable()));
-		auto out = OTT::Collect(GetOutputTable());
-
-		constexpr bool assignable = std::is_same_v<ResourceTable<ITT, OTT>, ResourceTable<decltype(in), decltype(out)>>;
-		if constexpr(!assignable)
-		{
-			//if the collection missed some handles we force an error and print the intersection of the missing values
-			using DiffTable = ResourceTable<decltype(in.Difference(std::declval<ITT>())), decltype(out.Difference(std::declval<OTT>()))>;
-			struct ErrorType {} Error;
-			DiffTable Table(Error); //this will always fail with an error where the DiffTable type is visible
-			bool inTest = in; (void)inTest; //this will fail and print the in type
-			bool outTest = out; (void)outTest; //this will fail and print the out type
-			static_assert(assignable, "missing resourcetable entry: cannot assign");
-			return Table;
-		}
-		
-		//if the collection matches the requested values everything is ok
-		return ResourceTable<ITT, OTT>(in, out);
+		//collect the results otherwise fail
+		return ResourceTable<ITT, OTT>(ITT::Collect(GetInputTable().Union(GetOutputTable())), OTT::Collect(GetOutputTable()));
 	}
 
 	template<typename Handle>
