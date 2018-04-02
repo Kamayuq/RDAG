@@ -87,9 +87,9 @@ int main(int argc, char* argv[])
 			Builder.RenameOutputToOutput<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
 			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 		}(Builder.GetEmptyResourceTable());
+		(void)val;
 	}
 
-	
 	{
 		std::chrono::duration<long long, std::nano> minDuration(std::numeric_limits<long long>::max());
 		//minDuration = std::numeric_limits<decltype(minDuration)>::max();
@@ -106,6 +106,7 @@ int main(int argc, char* argv[])
 				Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
 				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
 			}(Builder.GetEmptyResourceTable());
+			(void)val;
 
 			auto time = std::chrono::high_resolution_clock::now() - start;
 			minDuration = std::min(minDuration, time);

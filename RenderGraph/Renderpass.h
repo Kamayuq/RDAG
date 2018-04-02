@@ -42,8 +42,8 @@ public:
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
 		typedef std::decay_t<typename Traits::return_type> NestedOutputTableType;
 		static_assert(Traits::arity >= 2, "Build Functions have at least 2 parameters: the builder and the input table");
-		static_assert(std::is_base_of_v<IResourceTableInfo, NestedOutputTableType>, "The returntype must be a resource table");
-		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
+		static_assert(std::is_base_of_v<IResourceTableBase, NestedOutputTableType>, "The returntype must be a resource table");
+		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
 
 		const RenderPassBuilder* Self = this;
 		return [&, Self, Name](const auto& s)
@@ -52,7 +52,7 @@ public:
 			InputTableType input = s;
 			
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
-			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input, Args...), Name, nullptr);
+			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input, Args...), Name);
 			return NestedRenderPassData.Merge(s);
 		};
 	}
@@ -68,7 +68,7 @@ public:
 		static_assert(Traits::arity == 2, "Queue Functions have 2 parameters: the rendercontext and the input table");
 		static_assert(std::is_same_v<VoidReturnType, void>, "The returntype must be void");
 		static_assert(std::is_base_of_v<RenderContextBase, ContextType>, "The 1st parameter must be a rendercontext type");
-		static_assert(std::is_base_of_v<IResourceTableInfo, InputTableType>, "The 2nd parameter must be a resource table");
+		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
 
 		auto& LocalActionList = ActionList;
 		return [&LocalActionList, QueuedTask, Name](const auto& s)
@@ -354,7 +354,7 @@ public:
 	/* returns the empty resourcetable */
 	static inline auto GetEmptyResourceTable()
 	{
-		return ResourceTable<InputTable<>, OutputTable<>>(InputTable<>(), OutputTable<>(), "EmptyResourceTable");
+		return ResourceTable<InputTable<>, OutputTable<>>(InputTable<>(), OutputTable<>());
 	}
 
 	/* after the builing finished return all the actions recorded */
@@ -375,7 +375,7 @@ private:
 	template<typename Handle>
 	using InputTableType = ResourceTable<InputTable<Handle>, OutputTable<>>;
 
-	static void CheckIsResourceTable(const IResourceTableInfo&)
+	static void CheckIsResourceTable(const IResourceTableBase&)
 	{
 	}
 
@@ -401,7 +401,7 @@ private:
 			Task(checked_cast<ContextType&>(RndCtx), RenderPassData);
 		}
 
-		RenderPassDataType RenderPassData;
+		ItterableResourceTable<RenderPassDataType> RenderPassData;
 		FunctionType Task;
 	};
 

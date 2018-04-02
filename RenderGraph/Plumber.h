@@ -518,7 +518,7 @@ public:
 		const IResourceTableInfo* ResourceTable = nullptr;
 	};
 
-	IResourceTableInfo(const char* InName, const IRenderPassAction* InAction) : Name(InName), Action(InAction) {}
+	IResourceTableInfo(const IRenderPassAction* InAction) : Action(InAction) {}
 	virtual ~IResourceTableInfo() {}
 	
 	/* request to itterate over inputs */
@@ -527,11 +527,7 @@ public:
 	/* request to itterate over outputs */
 	virtual const Iteratable AsOutputIterator() const = 0;
 
-	/* Name of the Subpass or Action */
-	const char* GetName() const
-	{
-		return Name;
-	}
+	virtual const char* GetName() const = 0;
 
 	/* Only ResourceTables that do draw/dispatch work have an action */
 	const IRenderPassAction* GetAction() const
@@ -540,7 +536,6 @@ public:
 	}
 
 private:
-	const char* Name = nullptr;
 	const IRenderPassAction* Action = nullptr;
 };
 
@@ -799,6 +794,9 @@ public:
 	template<typename, typename>
 	friend class ResourceTable;
 
+	template<typename>
+	friend class ItterableResourceTable;
+
 	template<bool>
 	friend struct Internal::VisualStudioDeductionHelper;
 
@@ -840,14 +838,31 @@ private:
 	}
 };
 
+struct IResourceTableBase 
+{
+	IResourceTableBase(const char* InName) : Name(InName) {}
+
+	/* Name of the Subpass or Action */
+	const char* GetName() const
+	{
+		return Name;
+	}
+
+private:
+	const char* Name = nullptr;
+};
+
 /* ResourceTables are the main payload of the graph implementation */
 /* they are similar to compile time sets and they can be easily stored on the stack */
 template<typename TInputTableType, typename TOutputTableType>
-class ResourceTable final : private TInputTableType, private TOutputTableType, public IResourceTableInfo
+class ResourceTable : private TInputTableType, private TOutputTableType, public IResourceTableBase
 {
 public:
 	template<typename, typename>
 	friend class ResourceTable;
+
+	template<typename>
+	friend class ItterableResourceTable;
 
 	friend struct RenderPassBuilder;
 
@@ -855,66 +870,17 @@ public:
 	typedef TOutputTableType OutputTableType;
 	typedef ResourceTable<InputTableType, OutputTableType> ThisType;
 
-private:	
-	/* an itterator implementation T where is either Input- or OutputTable and RT is this Resourcetable*/
-	template<typename T>
-	class IteratableImpl : public IResourceTableInfo::Iteratable
-	{
-		template<typename, typename>
-		friend class ResourceTable;
-
-	public:
-		IteratableImpl(const ThisType* InResourceTable) : IResourceTableInfo::Iteratable(InResourceTable) 
-		{
-			static_assert(sizeof(IteratableImpl) == sizeof(IResourceTableInfo::Iteratable), "Sizes must match for safe slicing");
-		}
-
-		IteratableImpl& operator= (const IteratableImpl& Other)
-		{
-			//MSVC Compiler bug: the default implementation is mising this->
-			this->ResourceTable = Other.ResourceTable;
-			return *this;
-		}
-
-		virtual IResourceTableInfo::Iterator begin() const
-		{
-			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).begin(ResourceTable);
-		}
-
-		virtual IResourceTableInfo::Iterator end() const
-		{
-			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).end();
-		}
-	};
-
-public:
-	// Get the input itterator
-	const IResourceTableInfo::Iteratable AsInputIterator() const override
-	{
-		IResourceTableInfo::Iteratable Ret; //slice the type
-		new (&Ret) IteratableImpl<InputTableType>(this);
-		return Ret;
-	}
-
-	// Get the output itterator
-	const IResourceTableInfo::Iteratable AsOutputIterator() const override
-	{
-		IResourceTableInfo::Iteratable Ret; //slice the type
-		new (&Ret) IteratableImpl<OutputTableType>(this);
-		return Ret;
-	}
-
 public:
 	ResourceTable(const ThisType& RTT)
-		: ResourceTable(RTT, RTT.GetName(), RTT.GetAction()) {};
+		: ResourceTable(RTT, RTT.GetName()) {};
 
-	explicit ResourceTable(const ThisType& RTT, const char* Name, const IRenderPassAction* InAction)
-		: ResourceTable(RTT.GetInputTable(), RTT.GetOutputTable(), Name, InAction) {};
+	explicit ResourceTable(const ThisType& RTT, const char* Name)
+		: ResourceTable(RTT.GetInputTable(), RTT.GetOutputTable(), Name) {};
 
-	explicit ResourceTable(const InputTableType& IT, const OutputTableType& OT, const char* Name = "Unnamed", const IRenderPassAction* InAction = nullptr)
+	explicit ResourceTable(const InputTableType& IT, const OutputTableType& OT, const char* Name = "Unnamed")
 		: InputTableType(IT)
-		, OutputTableType(OT) 
-		, IResourceTableInfo(Name, InAction)
+		, OutputTableType(OT)
+		, IResourceTableBase(Name)
 	{ 
 		CheckIntegrity(); 
 	};
@@ -1006,15 +972,6 @@ private:
 		return ResourceTable<ITT, decltype(MergedOutput)>(Parent.GetInputTable(), MergedOutput);
 	}
 
-	/* First the tables are merged and than the results are linked to track the history */ 
-	template<typename ITT, typename OTT>
-	constexpr auto MergeAndLink(const ResourceTable<ITT, OTT>& Parent) const
-	{
-		auto MergedOutput = Parent.GetOutputTable().Union(GetOutputTable());
-		MergedOutput.Link(GetOutputTable(), this);
-		return ResourceTable<ITT, decltype(MergedOutput)>(Parent.GetInputTable(), MergedOutput);
-	}
-
 	/* Populate will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */ 
 	template<typename RTT, typename ITT = typename RTT::InputTableType, typename OTT = typename RTT::OutputTableType>
 	constexpr ResourceTable<ITT, OTT> Populate() const
@@ -1062,6 +1019,84 @@ private:
 		//and the output type was UAV and previous state was UAV
 		//and UAV to texture to UAV barrier will be issued
 		//otherwise if UAV was input and output no barrier will be issued
+	}
+};
+
+template<typename ResourceTableType>
+class ItterableResourceTable final : public ResourceTableType, public IResourceTableInfo
+{
+	using ThisType = ItterableResourceTable<ResourceTableType>;
+	using InputTableType = typename ResourceTableType::InputTableType;
+	using OutputTableType = typename ResourceTableType::OutputTableType;
+
+	friend struct RenderPassBuilder;
+
+private:
+	/* an itterator implementation T where is either Input- or OutputTable and RT is this Resourcetable*/
+	template<typename T>
+	class IteratableImpl : public IResourceTableInfo::Iteratable
+	{
+		template<typename, typename>
+		friend class ResourceTable;
+
+	public:
+		IteratableImpl(const ThisType* InResourceTable) : IResourceTableInfo::Iteratable(InResourceTable)
+		{
+			static_assert(sizeof(IteratableImpl) == sizeof(IResourceTableInfo::Iteratable), "Sizes must match for safe slicing");
+		}
+
+		IteratableImpl& operator= (const IteratableImpl& Other)
+		{
+			//MSVC Compiler bug: the default implementation is mising this->
+			this->ResourceTable = Other.ResourceTable;
+			return *this;
+		}
+
+		virtual IResourceTableInfo::Iterator begin() const
+		{
+			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).begin(ResourceTable);
+		}
+
+		virtual IResourceTableInfo::Iterator end() const
+		{
+			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).end();
+		}
+	};
+
+public:
+	explicit ItterableResourceTable(const ResourceTableType& RTT, const char* Name, const IRenderPassAction* InAction)
+		: ResourceTableType(RTT, Name)
+		, IResourceTableInfo(InAction) {};
+
+	// Get the input itterator
+	const IResourceTableInfo::Iteratable AsInputIterator() const override
+	{
+		IResourceTableInfo::Iteratable Ret; //slice the type
+		new (&Ret) IteratableImpl<InputTableType>(this);
+		return Ret;
+	}
+
+	// Get the output itterator
+	const IResourceTableInfo::Iteratable AsOutputIterator() const override
+	{
+		IResourceTableInfo::Iteratable Ret; //slice the type
+		new (&Ret) IteratableImpl<OutputTableType>(this);
+		return Ret;
+	}
+
+	const char* GetName() const override
+	{
+		return IResourceTableBase::GetName();
+	}
+
+private:
+	/* First the tables are merged and than the results are linked to track the history */
+	template<typename ITT, typename OTT>
+	constexpr auto MergeAndLink(const ResourceTable<ITT, OTT>& Parent) const
+	{
+		auto MergedOutput = Parent.GetOutputTable().Union(this->GetOutputTable());
+		MergedOutput.Link(this->GetOutputTable(), this);
+		return ResourceTable<ITT, decltype(MergedOutput)>(Parent.GetInputTable(), MergedOutput);
 	}
 };
 
