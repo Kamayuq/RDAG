@@ -1052,12 +1052,12 @@ private:
 			return *this;
 		}
 
-		virtual IResourceTableInfo::Iterator begin() const
+		IResourceTableInfo::Iterator begin() const override
 		{
 			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).begin(ResourceTable);
 		}
 
-		virtual IResourceTableInfo::Iterator end() const
+		IResourceTableInfo::Iterator end() const override
 		{
 			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).end();
 		}
