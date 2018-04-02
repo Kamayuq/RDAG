@@ -58,24 +58,31 @@ struct Set final
 	template<typename... XS, typename... YS>
 	static constexpr auto LeftDifference(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<true>(Type<XS...>(), Intersect(Type<XS...>(), Type<YS...>()), Type<>(), Type<>());
+		return Recurse<true>(Type<XS...>(), Type<YS...>(), Type<>(), Type<>());
 	}
 
 	/* The right Set without the left one */
 	template<typename... XS, typename... YS>
 	static constexpr auto RightDifference(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<true>(Type<YS...>(), Intersect(Type<XS...>(), Type<YS...>()), Type<>(), Type<>());
+		return Recurse<true>(Type<YS...>(), Type<XS...>(), Type<>(), Type<>());
 	}
 
 	/* Two Sets combined without their Intersection */
 	template<typename... XS, typename... YS>
 	static constexpr auto Difference(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<true>(Union(Type<XS...>(), Type<YS...>()), Intersect(Type<XS...>(), Type<YS...>()), Type<>(), Type<>());
+		return Meld(LeftDifference(Type<XS...>(), Type<YS...>()), RightDifference(Type<XS...>(), Type<YS...>()));
 	}
 
 private:
+	/* meld 2 disjunct Sets */
+	template<typename... RS, typename... LS>
+	static constexpr auto Meld(const Type<LS...>&, const Type<RS...>&)
+	{
+		return Type<LS..., RS...>();
+	}
+
 	/* Recursively itterate through the first argument checking it against the second and accumulating the results in the third */
 	template<bool InverseTest, typename T, typename... TS, typename... XS, typename... RS, typename... LS>
 	static constexpr auto Recurse(const Type<T, TS...>&, const Type<XS...>&, const Type<RS...>&, const Type<LS...>&)
