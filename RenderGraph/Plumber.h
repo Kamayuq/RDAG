@@ -565,14 +565,16 @@ public:
 	static constexpr auto GetOriginalType() -> decltype(GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
 };
 
+struct IBaseTable {};
+
 namespace Internal
 {
 	//the Microsoft compiler is a bomb (it blows trying to deduce differnt return type in constexpr if)
 	template<bool B>
 	struct VisualStudioDeductionHelper
 	{
-		template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
-		static constexpr auto Select(const LeftType<LS...>&, const RightType<RS...>& Rhs)
+		template<typename X, template<typename...> class RightType, typename... RS>
+		static constexpr auto Select(const IBaseTable&, const RightType<RS...>& Rhs)
 		{
 			// if the right table contains our result than use it 
 			// but first restore the original RealType to be able to extract it 
@@ -616,8 +618,8 @@ namespace Internal
 			}
 		};
 
-		template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
-		static constexpr auto Select(const LeftType<LS...>& Lhs, const RightType<RS...>&)
+		template<typename X, template<typename...> class LeftType, typename... LS>
+		static constexpr auto Select(const LeftType<LS...>& Lhs, const IBaseTable&)
 		{
 			// otherwise use the result from the left table 
 			// but first restore the original ealType to be able to extract it 
@@ -627,7 +629,7 @@ namespace Internal
 		}
 
 		template<template<typename...> class Derived, typename... XS, typename RightType>
-		static constexpr Derived<XS...> Collect(const RightType&)
+		static constexpr Derived<XS...> Collect(const IBaseTable&)
 		{
 			//if the collection missed some handles we force an error and print the intersection of the missing values
 			ErrorType<Derived>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); //this will always fail with an error where the DiffTable type is visible
@@ -638,7 +640,7 @@ namespace Internal
 
 /* Common interface for Table operations */
 template<template<typename...> class Derived, typename... TS>
-class BaseTable : protected Wrapped<TS>...
+class BaseTable : protected Wrapped<TS>..., public IBaseTable
 {
 	typedef BaseTable<Derived, TS...> ThisType;
 public:
