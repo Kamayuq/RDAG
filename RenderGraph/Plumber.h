@@ -1006,20 +1006,6 @@ private:
 		static_assert(InputTableType::IsInputTable(), "First Parameter must be the InputTable");
 		static_assert(OutputTableType::IsOutputTable(), "Second Parameter must be the OutputTable");
 	}
-
-private:
-	/* Entry point for OnExecute callbacks */
-	void OnExecute(struct ImmediateRenderContext& Ctx) const
-	{
-		//first transition and execute the inputs
-		GetInputTable().OnExecute(Ctx);
-		//than transition and execute the outputs 
-		GetOutputTable().OnExecute(Ctx);
-		//this way if a compatible type was input bound as Texture
-		//and the output type was UAV and previous state was UAV
-		//and UAV to texture to UAV barrier will be issued
-		//otherwise if UAV was input and output no barrier will be issued
-	}
 };
 
 template<typename ResourceTableType>
@@ -1097,6 +1083,19 @@ private:
 		auto MergedOutput = Parent.GetOutputTable().Union(this->GetOutputTable());
 		MergedOutput.Link(this->GetOutputTable(), this);
 		return ResourceTable<ITT, decltype(MergedOutput)>(Parent.GetInputTable(), MergedOutput);
+	}
+
+	/* Entry point for OnExecute callbacks */
+	void OnExecute(struct ImmediateRenderContext& Ctx) const
+	{
+		//first transition and execute the inputs
+		this->GetInputTable().OnExecute(Ctx);
+		//than transition and execute the outputs 
+		this->GetOutputTable().OnExecute(Ctx);
+		//this way if a compatible type was input bound as Texture
+		//and the output type was UAV and previous state was UAV
+		//and UAV to texture to UAV barrier will be issued
+		//otherwise if UAV was input and output no barrier will be issued
 	}
 };
 
