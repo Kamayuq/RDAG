@@ -628,8 +628,8 @@ namespace Internal
 			return Lhs.template GetWrapped<RealType>();
 		}
 
-		template<template<typename...> class Derived, typename... XS>
-		static constexpr Derived<XS...> Collect(const IBaseTable&)
+		template<template<typename...> class Derived, typename... XS, typename RightType>
+		static constexpr Derived<XS...> Collect(const RightType&)
 		{
 			//if the collection missed some handles we force an error and print the intersection of the missing values
 			ErrorType<Derived>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); //this will always fail with an error where the DiffTable type is visible
