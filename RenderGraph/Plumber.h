@@ -628,7 +628,7 @@ namespace Internal
 			return Lhs.template GetWrapped<RealType>();
 		}
 
-		template<template<typename...> class Derived, typename... XS, typename RightType>
+		template<template<typename...> class Derived, typename... XS>
 		static constexpr Derived<XS...> Collect(const IBaseTable&)
 		{
 			//if the collection missed some handles we force an error and print the intersection of the missing values
