@@ -1,6 +1,5 @@
 #pragma once
 #include "Set.h"
-#include "Concepts.h"
 #include "Types.h"
 #include "Assert.h"
 #include "LinearAlloc.h"

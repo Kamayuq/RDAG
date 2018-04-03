@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <limits>
+#include <cstring>
 
 #if _DEBUG
 #define checked_cast dynamic_cast
