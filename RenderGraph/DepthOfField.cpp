@@ -184,13 +184,10 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 		{
 			for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
 			{
-				LutOutputTable = Seq
+				LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
 				{
-					Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
-					{
-						Ctx.Draw("BuildBokehLUTAction");
-					})
-				}(LutOutputTable);
+					Ctx.Draw("BuildBokehLUTAction");
+				})(LutOutputTable);
 			}
 		}
 		return LutOutputTable;

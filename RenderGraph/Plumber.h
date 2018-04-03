@@ -726,10 +726,10 @@ private:
 	}
 
 	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge */
-	template<typename... XS, typename LeftType, typename RightType, typename ReturnType = Derived<typename decltype(ThisType::MergeSelect<XS>(std::declval<LeftType>(), std::declval<RightType>()))::HandleType...>>
-	static constexpr ReturnType MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
+	template<typename... XS, typename LeftType, typename RightType>
+	static constexpr auto MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
 	{
-		return ReturnType
+		return Derived<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>
 		(
 			ThisType::MergeSelect<XS>(Lhs, Rhs)...
 		);
