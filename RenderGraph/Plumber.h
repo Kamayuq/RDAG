@@ -587,6 +587,7 @@ namespace Internal
 		template<template<typename...> class Derived, typename... XS, typename RightType>
 		static constexpr Derived<XS...> Collect(const RightType& Rhs)
 		{
+			(void)Rhs; //silly MSVC thinks it's unreferenced
 			// if we found a Handle we searched for we use it 
 			// but first restore the original ealType to be able to extract it 
 			// because we checked compatible types which might not be the same
@@ -714,6 +715,7 @@ protected:
 	/* forward OnExecute callback for all the handles the Table contains */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
+		(void)Ctx; //silly MSVC thinks it's unreferenced
 		(GetWrapped<TS>().OnExecute(Ctx), ...);
 	}
 
@@ -729,6 +731,8 @@ private:
 	template<typename... XS, typename LeftType, typename RightType>
 	static constexpr auto MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
 	{
+		(void)Lhs; //silly MSVC thinks they are unreferenced
+		(void)Rhs; //silly MSVC thinks they are unreferenced
 		return Derived<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>
 		(
 			ThisType::MergeSelect<XS>(Lhs, Rhs)...

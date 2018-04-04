@@ -30,7 +30,6 @@ namespace RDAG
 		static constexpr const char* Name = "ForwardRenderTarget";
 		
 		explicit ForwardRenderTarget(ESortOrder::Type InSortOrder) : SortOrder(InSortOrder) {}
-		explicit ForwardRenderTarget(const HalfResTransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
 		explicit ForwardRenderTarget(const TransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
 		
 		void OnExecute(ImmediateRenderContext& Ctx, const ForwardRenderTarget::ResourceType& Resource) const

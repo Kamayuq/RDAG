@@ -32,7 +32,6 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 	if (NumValidMutables)
 	{
 		//Statics only need to be processed for Leafs
-		const IRenderPassAction* Action = Pass->GetAction();
 		if (Action != nullptr)
 		{
 			for (const ResourceTableEntry& Input : Pass->AsInputIterator())
