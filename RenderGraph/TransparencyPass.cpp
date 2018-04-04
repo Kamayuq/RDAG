@@ -22,8 +22,9 @@ typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRender
 			{
 				Builder.RenameInputToInput<RDAG::DepthTarget, RDAG::DownsampleInput>(),
 				Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
-				Builder.RenameOutputToOutput<RDAG::DownsampleResult, RDAG::DepthTarget>()
+				Builder.RenameOutputToInput<RDAG::DownsampleResult, RDAG::DepthTarget>()
 			},
+			Builder.RenameInputToOutput<RDAG::DepthTarget, RDAG::DepthTarget>(),
 			Builder.CreateOutputResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }),
 			Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
 			Builder.RenameOutputToInput<RDAG::DepthTarget, RDAG::HalfResDepth>(),
