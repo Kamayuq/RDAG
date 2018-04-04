@@ -570,6 +570,7 @@ namespace Internal
 		template<typename X, template<typename...> class RightType, typename... RS>
 		static constexpr auto Select(const IBaseTable&, const RightType<RS...>& Rhs)
 		{
+			// see VisualStudioDeductionHelper<false>::Select
 			// if the right table contains our result than use it 
 			// but first restore the original RealType to be able to extract it 
 			// because we checked compatible types which might not be the same
@@ -580,6 +581,8 @@ namespace Internal
 		template<typename X, template<typename...> class RightType, typename... RS>
 		static constexpr auto CollectSelect(const RightType<RS...>& Rhs)
 		{
+			//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
+			//before we cast it to the type that we want to fill the new table with
 			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Wrapped<X>::ConvertFrom(Rhs.template GetWrapped<RealType>());
 		}
@@ -588,9 +591,8 @@ namespace Internal
 		static constexpr Derived<XS...> Collect(const RightType& Rhs)
 		{
 			(void)Rhs; //silly MSVC thinks it's unreferenced
-			// if we found a Handle we searched for we use it 
-			// but first restore the original ealType to be able to extract it 
-			// because we checked compatible types which might not be the same
+			//for all XSs try to collect their values
+			//we know the definite type here therefore there is no need to deduce from any compatible type
 			return Derived<XS...>
 			(
 				CollectSelect<XS>(Rhs)...
@@ -607,6 +609,7 @@ namespace Internal
 			template<typename... XS>
 			static void ThrowError(const Set::Type<XS...>&)
 			{
+				//this assignment will error and therefore print the values that are missing from the table
 				static int Error = Derived<XS...>();
 				Error++;
 				static_assert(false, "missing entry: cannot collect");
@@ -616,6 +619,7 @@ namespace Internal
 		template<typename X, template<typename...> class LeftType, typename... LS>
 		static constexpr auto Select(const LeftType<LS...>& Lhs, const IBaseTable&)
 		{
+			// see VisualStudioDeductionHelper<true>::Select
 			// otherwise use the result from the left table 
 			// but first restore the original ealType to be able to extract it 
 			// because we checked compatible types which might not be the same
@@ -1109,10 +1113,12 @@ private:
 	using InputTableType = typename ResourceTableType::InputTableType;
 	using OutputTableType = typename ResourceTableType::OutputTableType;
 
+	/* Convert from an inputtable to its set operation type */
 	template<typename... XS>
 	static constexpr auto GetSetOperationType(const InputTable<XS...>&)->SetOperation<XS...>;
 	using InputOperationType = decltype(GetSetOperationType(std::declval<InputTableType>()));
 
+	/* Convert from an outputtable to its set operation type */
 	template<typename... XS>
 	static constexpr auto GetSetOperationType(const OutputTable<XS...>&)->SetOperation<XS...>;
 	using OutputOperationType = decltype(GetSetOperationType(std::declval<OutputTableType>())); 
@@ -1134,7 +1140,9 @@ private:
 	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InSetOp, OutSetOp>(InputOutputSet(), OutputSet()));
 
 public:
+	/*The table without the inputs that are only inputs*/
 	using PassOutputType = decltype(ExtractOutputTableType<InputOperationType, OutputOperationType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
+	/*The table without the outputs that are only outputs (and not inputs or compatible types)*/
 	using PassInputType = decltype(ExtractInputTableType<InputOperationType, OutputOperationType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
 };
 

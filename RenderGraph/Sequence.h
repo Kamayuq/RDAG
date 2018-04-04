@@ -43,6 +43,7 @@ struct Seq : SequenceType
 	Seq(const ARGS&... Args) : SequenceType(Internal::Seq(Args...)) {}
 };
 
+//C++17 deduction helper
 template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
@@ -65,6 +66,7 @@ namespace Internal
 		return x;
 	}
 
+	/* sequence where the input type (s) is the same as its return type but changes are are carried on*/
 	template<typename X, typename... XS>
 	auto SeqScope(const X& x, const XS&... xs)
 	{
@@ -86,10 +88,11 @@ struct SeqScope : SequenceType
 	SeqScope(const ARGS&... Args) : SequenceType(Internal::SeqScope(Args...)) {}
 };
 
+//C++17 deduction helper
 template<typename... ARGS>
 SeqScope(const ARGS&... Args) -> SeqScope<decltype(Internal::SeqScope(std::declval<ARGS>()...)), ARGS...>;
 
-/* this Sequence will revert the changes done to the entries passed into the Sequence and return the extra specified values */
+/* this Sequence will revert the changes done to the entries passed into the Sequence and only return the changes of the extra specified values in AddedReturnTable */
 template<typename AddedReturnTable, typename... ARGS>
 auto SeqSelect(const ARGS&... Args)
 {
