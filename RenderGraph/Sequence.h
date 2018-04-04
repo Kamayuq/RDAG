@@ -1,12 +1,20 @@
 #pragma once
 #include <utility>
 
+struct IResourceTableBase;
+
 namespace Internal
 {
+	static inline void CheckIsResourceTable(const IResourceTableBase&) {}
+
 	/* the empty Sequence just returns the result */
 	constexpr auto Seq()
 	{
-		return [=](const auto& s) constexpr { return s; };
+		return [=](const auto& s) constexpr 
+		{ 
+			CheckIsResourceTable(s);
+			return s; 
+		};
 	}
 
 	/* Single Element optimization */
@@ -20,7 +28,11 @@ namespace Internal
 	template<typename X, typename... XS>
 	constexpr auto Seq(const X& x, const XS&... xs)
 	{
-		return [=](const auto& s) constexpr { return Seq(xs...)(x(s)); };
+		return [=](const auto& s) constexpr 
+		{ 
+			CheckIsResourceTable(s);
+			return Seq(xs...)(x(s)); 
+		};
 	}
 }
 
@@ -39,7 +51,11 @@ namespace Internal
 	/* the empty Sequence just returns the result */
 	constexpr auto SeqScope()
 	{
-		return[=](const auto& s) constexpr { return s; };
+		return[=](const auto& s) constexpr 
+		{
+			CheckIsResourceTable(s);
+			return s; 
+		};
 	}
 
 	/* Single Element optimization */
@@ -54,6 +70,7 @@ namespace Internal
 	{
 		return[=](const auto& s) constexpr
 		{
+			CheckIsResourceTable(s);
 			using ReturnType = decltype(s);
 			ReturnType TempResult = Seq(x, xs...)(s);
 			return TempResult;
@@ -78,6 +95,7 @@ auto SeqSelect(const ARGS&... Args)
 {
 	return[=](const auto& s) constexpr
 	{
+		Internal::CheckIsResourceTable(s);
 		AddedReturnTable ExtraResult = Seq(Args...)(s);
 		return s.Union(ExtraResult);
 	};

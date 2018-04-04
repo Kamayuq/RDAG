@@ -291,28 +291,6 @@ public:
 		};
 	}
 
-	/* this function prunes the resourcetable and only returns the table of the type that was provided */ 
-	template<typename ResourceTableType>
-	auto ExtractResourceTableEntries() const
-	{
-		return [](const auto& s) -> ResourceTableType
-		{
-			CheckIsResourceTable(s);
-			return s;
-		};
-	}
-
-	/* this function overwrites the resourcetable with another one */ 
-	template<typename TInputTableType, typename TOutputTableType>
-	auto ReplaceResourceTableEntries(const ResourceTable<TInputTableType, TOutputTableType>& table) const
-	{
-		return [table](const auto& s)
-		{
-			CheckIsResourceTable(s);
-			return table;
-		};
-	}
-
 	/* this function adds a new input to the resourcetable all descriptors have to be provided */ 
 	template<typename Handle, typename... ARGS>
 	auto CreateInputResource(const typename Handle::DescriptorType(&InDescriptors)[Handle::ResourceCount], const ARGS&... Args) const
