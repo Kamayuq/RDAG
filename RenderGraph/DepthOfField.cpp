@@ -331,6 +331,12 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			OutputTable<RDAG::DepthOfFieldOutput>
 		>;
 
+		using ConvolutionResult = ResourceTable
+		<
+			InputTable<>,
+			OutputTable<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput>
+		>;
+
 		return Seq
 		{
 			Builder.CreateOutputResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
@@ -339,28 +345,34 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			{
 				Ctx.Draw("DOFSetupAction");
 			}),
-			Builder.RenameOutputToInput<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
-			Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-			Builder.RenameOutputToOutput<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>(),
-			Builder.CreateOutputResource<RDAG::CocTileOutput>({ CocTileDesc }),
-			Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
-			{
-				Ctx.Draw("CocDilateAction");
-			}),
-			Builder.CreateOutputResource<RDAG::PrefilterOutput>({ PrefilterOutputDesc }),
-			Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
-			{
-				Ctx.Draw("PreFilterAction");
-			}),
-			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
-			BuildBokehLut<RDAG::GatheringBokehLUTOutput>(Builder),
-			ConvolutionGatherPass<RDAG::BackgroundConvolutionOutput>(Builder),
-			ConvolutionGatherPass<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
-			DofPostfilterPass<RDAG::BackgroundConvolutionOutput>(Builder, !ViewInfo.DofSettings.GatherForeground),
-			DofPostfilterPass<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
-			HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
-			HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
-			SlightlyOutOfFocusPass(Builder),
+			SeqSelect<ConvolutionResult>
+			(
+				SeqScope
+				{
+					Builder.RenameOutputToInput<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
+					Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
+					Builder.RenameOutputToOutput<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>()
+				},
+				Builder.CreateOutputResource<RDAG::CocTileOutput>({ CocTileDesc }),
+				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
+				{
+					Ctx.Draw("CocDilateAction");
+				}),
+				Builder.CreateOutputResource<RDAG::PrefilterOutput>({ PrefilterOutputDesc }),
+				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
+				{
+					Ctx.Draw("PreFilterAction");
+				}),
+				BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
+				BuildBokehLut<RDAG::GatheringBokehLUTOutput>(Builder),
+				ConvolutionGatherPass<RDAG::BackgroundConvolutionOutput>(Builder),
+				ConvolutionGatherPass<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
+				DofPostfilterPass<RDAG::BackgroundConvolutionOutput>(Builder, !ViewInfo.DofSettings.GatherForeground),
+				DofPostfilterPass<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
+				HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
+				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
+				SlightlyOutOfFocusPass(Builder)
+			),
 			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
 			Builder.CreateOutputResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)

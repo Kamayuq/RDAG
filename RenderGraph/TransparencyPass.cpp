@@ -13,10 +13,11 @@ typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRender
 	HalfResTransparencyDescriptor.Height = TransparencyInfo.Height >> 1;
 	HalfResTransparencyDescriptor.Width = TransparencyInfo.Width >> 1;
 
+	using SelectionType = ResourceTable<InputTable<RDAG::HalfResInput, RDAG::HalfResDepth>, OutputTable<>>;
 	return Seq
 	{
-		Seq
-		{
+		SeqSelect<SelectionType>
+		(
 			Builder.CreateOutputResource<RDAG::HalfResTransparencyResult>({ HalfResTransparencyDescriptor }),
 			Builder.RenameInputToInput<RDAG::DepthTarget, RDAG::DownsampleInput>(),
 			Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
@@ -25,8 +26,8 @@ typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRender
 			Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
 			Builder.RenameOutputToInput<RDAG::DepthTarget, RDAG::HalfResDepth>(),
 			Builder.RenameOutputToInput<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()
-		},
-		Builder.RenameInputToOutput<RDAG::DepthTarget, RDAG::DepthTarget>(), //restore original depth from before the forward pass
+		),
+		//Builder.RenameInputToOutput<RDAG::DepthTarget, RDAG::DepthTarget>(), //restore original depth from before the forward pass
 		Builder.BuildRenderPass("HalfResTransparency_BilateralUpsampleRenderPass", BilateralUpsampleRenderPass::Build),
 		Builder.RenameOutputToOutput<RDAG::UpsampleResult, RDAG::HalfResTransparencyResult>()
 	}(Input);
@@ -39,7 +40,7 @@ typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(co
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
 	if (ViewInfo.TransparencyEnabled)
 	{
-		Output = Seq
+		Output = SeqScope
 		{
 			Builder.RenameOutputToOutput<RDAG::TransparencyResult, RDAG::ForwardRenderTarget>(),
 			Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build),
@@ -49,7 +50,7 @@ typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(co
 
 	if (ViewInfo.TransparencySeperateEnabled)
 	{
-		Output = Seq
+		Output = SeqScope
 		{
 			Builder.BuildRenderPass("HalfResTransparencyRenderPass", HalfResTransparencyRenderPass::Build),
 			Builder.RenameOutputToOutput<RDAG::TransparencyResult, RDAG::BlendSource>(0, 0),
