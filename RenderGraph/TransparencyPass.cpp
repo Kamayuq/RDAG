@@ -18,11 +18,13 @@ typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRender
 	{
 		SeqSelect<SelectionType>
 		(
-			Builder.CreateOutputResource<RDAG::HalfResTransparencyResult>({ HalfResTransparencyDescriptor }),
-			Builder.RenameInputToInput<RDAG::DepthTarget, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
-			Builder.RenameOutputToOutput<RDAG::DownsampleResult, RDAG::DepthTarget>(),
-			Builder.RenameOutputToOutput<RDAG::HalfResTransparencyResult, RDAG::ForwardRenderTarget>(),
+			SeqScope
+			{
+				Builder.RenameInputToInput<RDAG::DepthTarget, RDAG::DownsampleInput>(),
+				Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
+				Builder.RenameOutputToOutput<RDAG::DownsampleResult, RDAG::DepthTarget>()
+			},
+			Builder.CreateOutputResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }),
 			Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
 			Builder.RenameOutputToInput<RDAG::DepthTarget, RDAG::HalfResDepth>(),
 			Builder.RenameOutputToInput<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()
