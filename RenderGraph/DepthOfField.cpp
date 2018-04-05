@@ -345,14 +345,14 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			{
 				Ctx.Draw("DOFSetupAction");
 			}),
-			SeqSelect<ConvolutionResult>
-			(
-				SeqScope
+			Extract<ConvolutionResult>(Seq
+			{
+				Scope(Seq
 				{
 					Builder.RenameOutputToInput<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
 					Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
 					Builder.RenameOutputToOutput<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>()
-				},
+				}),
 				Builder.CreateOutputResource<RDAG::CocTileOutput>({ CocTileDesc }),
 				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
 				{
@@ -372,7 +372,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
 				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
 				SlightlyOutOfFocusPass(Builder)
-			),
+			}),
 			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
 			Builder.CreateOutputResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
