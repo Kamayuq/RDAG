@@ -53,7 +53,7 @@ auto Scope(const SEQ& seq)
 {
 	return[=](const auto& s) constexpr
 	{
-		CheckIsResourceTable(s);
+		Internal::CheckIsResourceTable(s);
 		using ReturnType = decltype(s);
 		ReturnType TempResult = seq(s);
 		return TempResult;
