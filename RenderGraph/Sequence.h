@@ -48,20 +48,22 @@ template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
 /* this will scope the changes done to the entries passed into the Sequence and where the input type (s) is the same as its return type but changes are are carried on*/
-template<typename SequenceType>
-auto Scope(const Seq<SequenceType>& seq)
+template<typename SequenceType, typename... SequenceArgs>
+auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	//this is a lambda from type of s -> to type of s
-	return[=](const auto& s) constexpr -> decltype(s)
+	return[=](const auto& s) constexpr
 	{
 		Internal::CheckIsResourceTable(s);
-		return seq(s);
+		using ReturnType = std::decay_t<decltype(s)>;
+		ReturnType Ret = seq(s);
+		return Ret;
 	};
 }
 
 /* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */
-template<typename EXTRACTION, typename SequenceType>
-auto Extract(const Seq<SequenceType>& seq)
+template<typename EXTRACTION, typename SequenceType, typename... SequenceArgs>
+auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	return[=](const auto& s) constexpr
 	{
