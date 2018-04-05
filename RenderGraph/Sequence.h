@@ -51,12 +51,11 @@ Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...))
 template<typename SequenceType>
 auto Scope(const Seq<SequenceType>& seq)
 {
-	return[=](const auto& s) constexpr
+	//this is a lambda from type of s -> to type of s
+	return[=](const auto& s) constexpr -> decltype(s)
 	{
 		Internal::CheckIsResourceTable(s);
-		using ReturnType = decltype(s);
-		ReturnType TempResult = seq(s);
-		return TempResult;
+		return seq(s);
 	};
 }
 
