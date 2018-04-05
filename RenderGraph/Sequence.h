@@ -92,14 +92,14 @@ struct SeqScope : SequenceType
 template<typename... ARGS>
 SeqScope(const ARGS&... Args) -> SeqScope<decltype(Internal::SeqScope(std::declval<ARGS>()...)), ARGS...>;
 
-/* this Sequence will revert the changes done to the entries passed into the Sequence and only return the changes of the extra specified values in AddedReturnTable */
-template<typename AddedReturnTable, typename... ARGS>
-auto SeqSelect(const ARGS&... Args)
+/* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */
+template<typename EXTRACTION, typename SEQ>
+auto Extract(const SEQ& seq)
 {
 	return[=](const auto& s) constexpr
 	{
 		Internal::CheckIsResourceTable(s);
-		AddedReturnTable ExtraResult = Seq(Args...)(s);
-		return s.Union(ExtraResult);
+		EXTRACTION ExtractedResult = seq(s);
+		return s.Union(ExtractedResult);
 	};
 }
