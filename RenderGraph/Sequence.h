@@ -47,50 +47,18 @@ struct Seq : SequenceType
 template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
-namespace Internal
+/* this will scope the changes done to the entries passed into the Sequence and where the input type (s) is the same as its return type but changes are are carried on*/
+template<typename SEQ>
+auto Scope(const SEQ& seq)
 {
-	/* the empty Sequence just returns the result */
-	constexpr auto SeqScope()
+	return[=](const auto& s) constexpr
 	{
-		return[=](const auto& s) constexpr 
-		{
-			CheckIsResourceTable(s);
-			return s; 
-		};
-	}
-
-	/* Single Element optimization */
-	template<typename X>
-	constexpr auto SeqScope(const X& x)
-	{
-		return x;
-	}
-
-	/* sequence where the input type (s) is the same as its return type but changes are are carried on*/
-	template<typename X, typename... XS>
-	auto SeqScope(const X& x, const XS&... xs)
-	{
-		return[=](const auto& s) constexpr
-		{
-			CheckIsResourceTable(s);
-			using ReturnType = decltype(s);
-			ReturnType TempResult = Seq(x, xs...)(s);
-			return TempResult;
-		};
-	}
+		CheckIsResourceTable(s);
+		using ReturnType = decltype(s);
+		ReturnType TempResult = seq(s);
+		return TempResult;
+	};
 }
-
-
-/* A scoped Sequence will revert added entries inside the seq and only return the Type passed into the Sequence with changes done to those elements */
-template<typename SequenceType, typename... ARGS>
-struct SeqScope : SequenceType
-{
-	SeqScope(const ARGS&... Args) : SequenceType(Internal::SeqScope(Args...)) {}
-};
-
-//C++17 deduction helper
-template<typename... ARGS>
-SeqScope(const ARGS&... Args) -> SeqScope<decltype(Internal::SeqScope(std::declval<ARGS>()...)), ARGS...>;
 
 /* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */
 template<typename EXTRACTION, typename SEQ>
