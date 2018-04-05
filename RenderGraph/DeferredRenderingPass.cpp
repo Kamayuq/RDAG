@@ -20,17 +20,14 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 		Builder.BuildRenderPass("ShadowMapRenderPass", ShadowMapRenderPass::Build),
 		Builder.BuildRenderPass("DeferredLightingPass", DeferredLightingPass::Build),
 		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass::Build),
-		Extract<PostProcessingResult>
-		(
-			Seq
-			{
-				Builder.RenameOutputToInput<RDAG::LightingUAV, RDAG::TransparencyInput>(),
-				Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build),
-				Builder.RenameOutputToInput<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
-				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-				Builder.RenameOutputToInput<RDAG::TemporalAAOutput, RDAG::PostProcessingInput>()
-			}
-		),
+		Extract<PostProcessingResult>(Seq
+		{
+			Builder.RenameOutputToInput<RDAG::LightingUAV, RDAG::TransparencyInput>(),
+			Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build),
+			Builder.RenameOutputToInput<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
+			Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
+			Builder.RenameOutputToInput<RDAG::TemporalAAOutput, RDAG::PostProcessingInput>()
+		}),
 		Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build)
 	}(Input);
 }
