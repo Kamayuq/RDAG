@@ -48,8 +48,8 @@ template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
 /* this will scope the changes done to the entries passed into the Sequence and where the input type (s) is the same as its return type but changes are are carried on*/
-template<typename SEQ>
-auto Scope(const SEQ& seq)
+template<typename SequenceType>
+auto Scope(const Seq<SequenceType>& seq)
 {
 	return[=](const auto& s) constexpr
 	{
@@ -61,8 +61,8 @@ auto Scope(const SEQ& seq)
 }
 
 /* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */
-template<typename EXTRACTION, typename SEQ>
-auto Extract(const SEQ& seq)
+template<typename EXTRACTION, typename SequenceType>
+auto Extract(const Seq<SequenceType>& seq)
 {
 	return[=](const auto& s) constexpr
 	{
