@@ -149,9 +149,6 @@
     <ClCompile Include="LinearAlloc.cpp">
       <Filter>Core</Filter>
     </ClCompile>
-    <ClCompile Include="Plumber.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
     <ClCompile Include="Graphvis.cpp">
       <Filter>Core\Tool</Filter>
     </ClCompile>
