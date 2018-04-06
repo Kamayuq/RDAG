@@ -16,7 +16,6 @@ namespace RDAG
 		static constexpr const char* Name = "PostProcessingInput";
 
 		explicit PostProcessingInput() {}
-		explicit PostProcessingInput(const TemporalAAOutput&) {}
 
 		template<int I>
 		explicit PostProcessingInput(const DownsamplePyramid<I>&) {}

@@ -47,28 +47,46 @@ struct Seq : SequenceType
 template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
+/* Scope Filters on Output based on its Input*/
 /* this will scope the changes done to the entries passed into the Sequence and where the input type (s) is the same as its return type but changes are are carried on*/
 template<typename SequenceType, typename... SequenceArgs>
 auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	//this is a lambda from type of s -> to type of s
-	return[=](const auto& s) constexpr
+	return Seq([=](const auto& s)
 	{
 		Internal::CheckIsResourceTable(s);
+		//the return type is limited to the input (s)
 		using ReturnType = std::decay_t<decltype(s)>;
 		ReturnType Ret = seq(s);
 		return Ret;
-	};
+	});
 }
 
+/* an Extaction filters on output */
 /* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */
 template<typename EXTRACTION, typename SequenceType, typename... SequenceArgs>
 auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 {
-	return[=](const auto& s) constexpr
+	return Seq([=](const auto& s)
 	{
 		Internal::CheckIsResourceTable(s);
 		EXTRACTION ExtractedResult = seq(s);
+		//the return type will always contain the input (s)
 		return s.Union(ExtractedResult);
-	};
+	});
+}
+
+/* a Selection filters on input */
+/* this will reduce the input type to the selection before coninuing with the sequence, the removed values will be re-added after the sequence */
+template<typename SELECTION, typename SequenceType, typename... SequenceArgs>
+auto Select(const Seq<SequenceType, SequenceArgs...>& seq)
+{
+	return Seq([=](const auto& s)
+	{
+		Internal::CheckIsResourceTable(s);
+		auto SelectionResult = seq(SELECTION(s));
+		//the return type will always contain the input (s)
+		return s.Union(SelectionResult);
+	});
 }

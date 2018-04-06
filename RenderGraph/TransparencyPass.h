@@ -20,6 +20,7 @@ namespace RDAG
 		explicit TransparencyResult(const TransparencyInput&) {}
 		explicit TransparencyResult(const struct ForwardRenderTarget&) {}
 		explicit TransparencyResult(const struct BlendDest&) {}
+		explicit TransparencyResult(const struct TemporalAAOutput&) {}
 	};
 
 	struct HalfResTransparencyResult : Texture2dResourceHandle<HalfResTransparencyResult>
