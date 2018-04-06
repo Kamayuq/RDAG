@@ -35,7 +35,11 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::DistanceField:
 		{
 			AoDescriptor.Name = "DistanceFieldAoTarget";
-			using DFAOTable = ResourceTable<InputTable<RDAG::SceneViewInfo>, OutputTable<RDAG::AmbientOcclusionUAV>>;
+			using DFAOTable = ResourceTable
+			<
+				InputTable<RDAG::SceneViewInfo>, 
+				OutputTable<RDAG::AmbientOcclusionUAV>
+			>;
 
 			return Seq
 			{
@@ -51,7 +55,11 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::HorizonBased:
 		{
 			AoDescriptor.Name = "HorizonBasedAoTarget";
-			using HBAOTable = ResourceTable<InputTable<RDAG::GbufferTarget, RDAG::DepthTexture>, OutputTable<RDAG::AmbientOcclusionUAV>>;
+			using HBAOTable = ResourceTable
+			<
+				InputTable<RDAG::GbufferTarget, RDAG::DepthTexture>, 
+				OutputTable<RDAG::AmbientOcclusionUAV>
+			>;
 
 			return Seq
 			{

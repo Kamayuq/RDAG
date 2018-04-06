@@ -274,7 +274,11 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		auto SlightlyOutOfFocusTable = Builder.CreateOutputResource<RDAG::SlightOutOfFocusConvolutionOutput>({ SlightOutOfFocusConvolutionDesc })(s);
 		if (ViewInfo.DofSettings.RecombineQuality > 0)
 		{
-			using GatherPassData = ResourceTable<InputTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::ScatteringBokehLUTOutput>, OutputTable<RDAG::SlightOutOfFocusConvolutionOutput>>;
+			using GatherPassData = ResourceTable
+			<
+				InputTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::ScatteringBokehLUTOutput>, 
+				OutputTable<RDAG::SlightOutOfFocusConvolutionOutput>
+			>;
 			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData&)
 			{
 				Ctx.Draw("SlightlyOutOfFocusAction");

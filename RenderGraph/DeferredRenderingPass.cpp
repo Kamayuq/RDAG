@@ -11,7 +11,11 @@
 
 typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	using LightingResult = ResourceTable<InputTable<RDAG::SceneViewInfo>, OutputTable<RDAG::DepthTexture, RDAG::LightingUAV>>;
+	using LightingResult = ResourceTable
+	<
+		InputTable<RDAG::SceneViewInfo>, 
+		OutputTable<RDAG::DepthTexture, RDAG::LightingUAV>
+	>;
 	return Seq
 	{
 		Extract<LightingResult>(Seq
