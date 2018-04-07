@@ -23,7 +23,7 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 	>;
 	return Seq
 	{
-		Builder.BuildRenderPass("DepthRenderPass", DepthRenderPass::Build),
+		Builder.BuildRenderPass<RDAG::DepthTexture>("DepthRenderPass", DepthRenderPass::Build),
 		Extract<DeferredResult>(Seq
 		{
 			Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass::Build),

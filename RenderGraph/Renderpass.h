@@ -33,7 +33,7 @@ public:
 	{}
 
 	/* run an renderpass in another callable or function this can be useful to seperate the definition from the implementation in a cpp file */
-	template<typename FunctionType, typename... ARGS>
+	template<typename... LinkedTypes, typename FunctionType, typename... ARGS>
 	auto BuildRenderPass(const char* Name, const FunctionType& BuildFunction, const ARGS&... Args) const
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
@@ -57,7 +57,7 @@ public:
 		};
 	}
 
-	template<typename FunctionType>
+	template<typename... LinkedTypes, typename FunctionType>
 	auto QueueRenderAction(const char* Name, const FunctionType& QueuedTask) const
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
@@ -353,8 +353,11 @@ private:
 	template<typename Handle>
 	using InputTableType = ResourceTable<InputTable<Handle>, OutputTable<>>;
 
-	static void CheckIsResourceTable(const IResourceTableBase&)
+	template<typename ResourceTableType>
+	static void CheckIsResourceTable(const ResourceTableType& Table)
 	{
+		static_assert(std::is_base_of<IResourceTableBase, ResourceTableType>(), "Table is not a ResorceTable");
+		Table.CheckAllValid();
 	}
 
 	template<typename ContextType, typename RenderPassDataType, typename FunctionType>

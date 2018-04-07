@@ -709,6 +709,11 @@ public:
 		return CollectInternal(GetSetType(), Other);
 	}
 
+	void CheckAllValid() const
+	{
+		(check(GetWrapped<TS>().IsValid()), ...);
+	}
+
 	template<typename Handle>
 	const Wrapped<Handle>& GetWrapped() const { return static_cast<const Wrapped<Handle>&>(*this); }
 
@@ -781,6 +786,7 @@ public:
 	using BaseType::Collect;
 	using BaseType::GetWrapped;
 	using BaseType::OnExecute;
+	using BaseType::CheckAllValid;
 
 	static constexpr bool IsInputTable() { return true; }
 	static constexpr bool IsOutputTable() { return false; }
@@ -821,6 +827,7 @@ public:
 	using BaseType::Collect;
 	using BaseType::GetWrapped;
 	using BaseType::OnExecute;
+	using BaseType::CheckAllValid;
 
 	static constexpr bool IsInputTable() { return false; }
 	static constexpr bool IsOutputTable() { return true; }
@@ -968,6 +975,12 @@ public:
 	const auto& GetOutputDescriptor(U32 i = 0) const
 	{
 		return GetWrappedOutput<Handle>().GetDescriptor(i);
+	}
+
+	void CheckAllValid() const
+	{
+		this->GetInputTable().CheckAllValid();
+		this->GetOutputTable().CheckAllValid();
 	}
 
 private:

@@ -5,7 +5,12 @@ struct IResourceTableBase;
 
 namespace Internal
 {
-	static inline void CheckIsResourceTable(const IResourceTableBase&) {}
+	template<typename ResourceTableType>
+	static inline void CheckIsResourceTable(const ResourceTableType& Table)
+	{
+		static_assert(std::is_base_of<IResourceTableBase, ResourceTableType>(), "Table is not a ResorceTable");
+		Table.CheckAllValid();
+	}
 
 	/* the empty Sequence just returns the result */
 	constexpr auto Seq()
