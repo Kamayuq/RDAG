@@ -116,9 +116,9 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 		ScatterCompilationDesc.Height = ViewInfo.SceneHeight;
 		ScatterCompilationDesc.Width = ViewInfo.SceneWidth;
 		
-		using ScatteringReduceData = ResourceTable<RDAG::GatherColorSetup, RDAG::ScatteringReduce>;
-		using ScatterCompilationData = ResourceTable<RDAG::ScatteringReduce, RDAG::ScatterCompilation>;
-		using DOFHybridScatter = ResourceTable<RDAG::ScatterCompilation, RDAG::ScatteringBokehLUTOutput, ConvolutionOutputType>;
+		using ScatteringReduceData = ResourceTable<RDAG::ScatteringReduce, RDAG::GatherColorSetup>;
+		using ScatterCompilationData = ResourceTable< RDAG::ScatterCompilation, RDAG::ScatteringReduce>;
+		using DOFHybridScatter = ResourceTable<ConvolutionOutputType, RDAG::ScatterCompilation, RDAG::ScatteringBokehLUTOutput>;
 
 		using ResourceTableType = std::decay_t<decltype(s)>;
 		ResourceTableType Result = s;
@@ -197,7 +197,7 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			ConvolutionOutputDesc[i].Width = ViewInfo.SceneWidth;
 		}
 		auto ConvolutionOutputTable = Builder.CreateResource<ConvolutionGatherType>(ConvolutionOutputDesc)(s);
-		using GatherPassData = ResourceTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::GatheringBokehLUTOutput, RDAG::ConvolutionOutput>;
+		using GatherPassData = ResourceTable<RDAG::ConvolutionOutput, RDAG::GatheringBokehLUTOutput, RDAG::PrefilterOutput, RDAG::CocTileOutput>;
 
 		if (Enabled)
 		{
@@ -256,7 +256,7 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		auto SlightlyOutOfFocusTable = Builder.CreateResource<RDAG::SlightOutOfFocusConvolutionOutput>({ SlightOutOfFocusConvolutionDesc })(s);
 		if (ViewInfo.DofSettings.RecombineQuality > 0)
 		{
-			using GatherPassData = ResourceTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::ScatteringBokehLUTOutput, RDAG::SlightOutOfFocusConvolutionOutput>;
+			using GatherPassData = ResourceTable<RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ScatteringBokehLUTOutput, RDAG::PrefilterOutput, RDAG::CocTileOutput>;
 			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::SlightOutOfFocusConvolutionOutput>
 			{
 				Ctx.Draw("SlightlyOutOfFocusAction");
@@ -284,31 +284,31 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		GatherColorDesc.Format = ERenderResourceFormat::ARGB16F;
 		GatherColorDesc.Height = ViewInfo.SceneHeight >> 1;
 		GatherColorDesc.Width = ViewInfo.SceneWidth >> 1;
-		using DofSetupPassData = ResourceTable<RDAG::DepthOfFieldInput, RDAG::VelocityVectors, RDAG::FullresColorSetup, RDAG::GatherColorSetup>;
+		using DofSetupPassData = ResourceTable<RDAG::FullresColorSetup, RDAG::GatherColorSetup, RDAG::DepthOfFieldInput, RDAG::VelocityVectors>;
 
 		Texture2d::Descriptor CocTileDesc = GatherColorDesc;
 		GatherColorDesc.Name = "CocTileOutput";
-		using CocDilateData = ResourceTable<RDAG::GatherColorSetup, RDAG::CocTileOutput>;
+		using CocDilateData = ResourceTable< RDAG::CocTileOutput, RDAG::GatherColorSetup>;
 
 		Texture2d::Descriptor PrefilterOutputDesc = GatherColorDesc;
 		PrefilterOutputDesc.Name = "PrefilterOutputDesc";
-		using PreFilterData = ResourceTable<RDAG::GatherColorSetup, RDAG::PrefilterOutput>;
+		using PreFilterData = ResourceTable<RDAG::PrefilterOutput, RDAG::GatherColorSetup>;
 
 		Texture2d::Descriptor OutputDesc = Input.GetDescriptor<RDAG::DepthOfFieldInput>();
 		OutputDesc.Name = "DepthOfFieldOutput";
-		using RecombineData = ResourceTable<RDAG::FullresColorSetup, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ScatteringBokehLUTOutput, RDAG::DepthOfFieldOutput>;
+		using RecombineData = ResourceTable<RDAG::DepthOfFieldOutput, RDAG::ScatteringBokehLUTOutput, RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::FullresColorSetup>;
 
 		return Seq
 		{
-			Builder.CreateResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
 			Builder.CreateResource<RDAG::GatherColorSetup>({ GatherColorDesc }),
+			Builder.CreateResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
 			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData& Resources) -> ResourceTable<RDAG::FullresColorSetup, RDAG::GatherColorSetup>
 			{
 				Ctx.Draw("DOFSetupAction");
 				return Resources;
 			}),
-			Select<RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors, RDAG::GatherColorSetup>(
-			Extract<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput>(Seq
+			Select<RDAG::GatherColorSetup, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>(
+			Extract<RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Seq
 			{
 				Scope(Seq
 				{

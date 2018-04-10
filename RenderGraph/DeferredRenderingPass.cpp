@@ -24,7 +24,7 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 		}),
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build),
 		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass::Build),
-		Select<RDAG::SceneViewInfo, RDAG::DepthTarget, RDAG::VelocityVectors, RDAG::TransparencyResult>(Seq
+		Select<RDAG::VelocityVectors, RDAG::TransparencyResult, RDAG::DepthTarget, RDAG::SceneViewInfo>(Seq
 		{
 			Scope(Seq
 			{
