@@ -298,9 +298,6 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		OutputDesc.Name = "DepthOfFieldOutput";
 		using RecombineData = ResourceTable<RDAG::FullresColorSetup, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ScatteringBokehLUTOutput, RDAG::DepthOfFieldOutput>;
 
-		using ConvolutionSelection = ResourceTable<RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors, RDAG::GatherColorSetup>;
-		using ConvolutionExtraction = ResourceTable<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput>;
-
 		return Seq
 		{
 			Builder.CreateResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
@@ -310,7 +307,8 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				Ctx.Draw("DOFSetupAction");
 				return Resources;
 			}),
-			Select<ConvolutionSelection>(Extract<ConvolutionExtraction>(Seq
+			Select<RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors, RDAG::GatherColorSetup>(
+			Extract<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::SlightOutOfFocusConvolutionOutput>(Seq
 			{
 				Scope(Seq
 				{

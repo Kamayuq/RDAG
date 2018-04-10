@@ -68,15 +68,19 @@ auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 	});
 }
 
+template<typename... TS>
+class ResourceTable;
+
 /* an Extaction filters on output */
 /* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */
-template<typename EXTRACTION, typename SequenceType, typename... SequenceArgs>
+template<typename... EXTRACTIONS, typename SequenceType, typename... SequenceArgs>
 auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	return Seq([=](const auto& s)
 	{
 		Internal::CheckIsResourceTable(s);
-		EXTRACTION ExtractedResult = seq(s);
+		using ExtractionTable = ResourceTable<EXTRACTIONS...>;
+		ExtractionTable ExtractedResult = seq(s);
 		//the return type will always contain the input (s)
 		return s.Union(ExtractedResult);
 	});
@@ -84,13 +88,14 @@ auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 
 /* a Selection filters on input */
 /* this will reduce the input type to the selection before coninuing with the sequence, the removed values will be re-added after the sequence */
-template<typename SELECTION, typename SequenceType, typename... SequenceArgs>
+template<typename... SELECTIONS, typename SequenceType, typename... SequenceArgs>
 auto Select(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	return Seq([=](const auto& s)
 	{
 		Internal::CheckIsResourceTable(s);
-		auto SelectionResult = seq(SELECTION(s));
+		using SelectionTable = ResourceTable<SELECTIONS...>;
+		auto SelectionResult = seq(SelectionTable(s));
 		//the return type will always contain the input (s)
 		return s.Union(SelectionResult);
 	});

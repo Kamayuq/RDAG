@@ -13,10 +13,9 @@ typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRender
 	HalfResTransparencyDescriptor.Height = TransparencyInfo.Height >> 1;
 	HalfResTransparencyDescriptor.Width = TransparencyInfo.Width >> 1;
 
-	using SelectionType = ResourceTable<RDAG::HalfResInput, RDAG::HalfResDepth>;
 	return Seq
 	{
-		Extract<SelectionType>(Seq
+		Extract<RDAG::HalfResInput, RDAG::HalfResDepth>(Seq
 		{
 			Scope(Seq
 			{

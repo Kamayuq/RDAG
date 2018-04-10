@@ -11,12 +11,10 @@
 
 typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	using DeferredResult = ResourceTable<RDAG::TransparencyInput>;
-	using PostprocessingData = ResourceTable<RDAG::SceneViewInfo, RDAG::DepthTarget, RDAG::VelocityVectors, RDAG::TransparencyResult>;
 	return Seq
 	{
 		Builder.BuildRenderPass("DepthRenderPass", DepthRenderPass::Build),
-		Extract<DeferredResult>(Seq
+		Extract<RDAG::TransparencyInput>(Seq
 		{
 			Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass::Build),
 			Builder.BuildRenderPass("AmbientOcclusionPass", AmbientOcclusionPass::Build),
@@ -26,7 +24,7 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 		}),
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build),
 		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass::Build),
-		Select<PostprocessingData>(Seq
+		Select<RDAG::SceneViewInfo, RDAG::DepthTarget, RDAG::VelocityVectors, RDAG::TransparencyResult>(Seq
 		{
 			Scope(Seq
 			{
