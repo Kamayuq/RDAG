@@ -307,15 +307,15 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				Ctx.Draw("DOFSetupAction");
 				return Resources;
 			}),
-			Select<RDAG::GatherColorSetup, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>(
+			Scope(Seq
+			{
+				Builder.RenameEntry<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
+				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
+				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>()
+			}),
+			Select<RDAG::GatherColorSetup, RDAG::SceneViewInfo>(
 			Extract<RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Seq
 			{
-				Scope(Seq
-				{
-					Builder.RenameEntry<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
-					Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-					Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>()
-				}),
 				Builder.CreateResource<RDAG::CocTileOutput>({ CocTileDesc }),
 				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData& Resources) -> ResourceTable<RDAG::CocTileOutput>
 				{
