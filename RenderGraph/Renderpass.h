@@ -33,7 +33,7 @@ public:
 	{}
 
 	/* run an renderpass in another callable or function this can be useful to seperate the definition from the implementation in a cpp file */
-	template<typename... LinkedTypes, typename FunctionType, typename... ARGS>
+	template<typename FunctionType, typename... ARGS>
 	auto BuildRenderPass(const char* Name, const FunctionType& BuildFunction, const ARGS&... Args) const
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
@@ -53,25 +53,22 @@ public:
 			
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
 			NestedOutputTableType NestedRenderPassData(Name, BuildFunction(*Self, input, Args...));
-			ResourceTable<LinkedTypes...> MergedTypes = NestedRenderPassData;
-			return s.Union(MergedTypes);
+			return s.Union(NestedRenderPassData);
 		};
 	}
 
-	template<typename... LinkedTypes, typename FunctionType>
+	template<typename FunctionType>
 	auto QueueRenderAction(const char* Name, const FunctionType& QueuedTask) const
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
 		typedef Traits::function_traits<FunctionType> Traits;
 		typedef std::decay_t<typename Traits::template arg<0>::type> ContextType;
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
-		typedef std::decay_t<typename Traits::return_type> VoidReturnType;
+		typedef std::decay_t<typename Traits::return_type> ActionReturnType;
 		static_assert(Traits::arity == 2, "Queue Functions have 2 parameters: the rendercontext and the input table");
-		static_assert(std::is_same_v<VoidReturnType, void>, "The returntype must be void");
+		static_assert(std::is_base_of_v<IResourceTableBase, ActionReturnType>, "The returntype must be a resource table");
 		static_assert(std::is_base_of_v<RenderContextBase, ContextType>, "The 1st parameter must be a rendercontext type");
 		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
-		//TODO to optimize
-		using MergedTableType = std::decay_t<decltype(std::declval<InputTableType>().Union(std::declval<ResourceTable<LinkedTypes...>>()))>;
 
 		auto& LocalActionList = ActionList;
 		return [&LocalActionList, QueuedTask, Name](const auto& s)
@@ -79,15 +76,15 @@ public:
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
-			typedef TRenderPassAction<ContextType, MergedTableType, FunctionType> RenderActionType;
-			MergedTableType input = s;
+			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
+			InputTableType input = s;
 
 			/* create some space on the heap for the action as those are nodes of our graph */
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			LocalActionList.push_back(NewRenderAction);
 
 			// merge and link (have the outputs point at this action from now on).
-			return NewRenderAction->RenderPassData.template Link<LinkedTypes...>(s);
+			return NewRenderAction->RenderPassData.Link(ActionReturnType::GetSetType(), s);
 		};
 	}
 

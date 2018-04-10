@@ -176,9 +176,9 @@ struct ActionStyle
 		});
 	}
 
-	void PrintPins(FILE* fhp, const std::vector<PinStyle>& Pins, const char* LocalRank) const
+	void PrintPins(FILE* fhp, const std::vector<PinStyle>& LocalPins, const char* LocalRank) const
 	{
-		for (const auto& Entry : Pins)
+		for (const auto& Entry : LocalPins)
 		{
 			fprintf(fhp, R"(
 			)");
@@ -188,7 +188,7 @@ struct ActionStyle
 
 		fprintf(fhp, R"(
 			{rank = %s; )", LocalRank);
-		for (const auto& Entry : Pins)
+		for (const auto& Entry : LocalPins)
 		{
 			Entry.PrintName(fhp);
 			fprintf(fhp, R"( ; )");

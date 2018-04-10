@@ -40,9 +40,10 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			return Seq
 			{
 				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
-				Builder.QueueRenderAction<RDAG::AmbientOcclusionUAV>("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable&)
+				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable& Resources) -> PassOutputType
 				{
 					Ctx.Draw("DistancefieldAOAction");
+					return Resources;
 				})
 			}(Input);
 		}
@@ -56,9 +57,10 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 			return Seq
 			{
 				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
-				Builder.QueueRenderAction<RDAG::AmbientOcclusionUAV>("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable&)
+				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable& Resources) -> PassOutputType
 				{
 					Ctx.Draw("HorizonBasedAOAction");
+					return Resources;
 				})
 			}(Input);
 		}

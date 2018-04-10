@@ -13,9 +13,10 @@ typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const Rend
 	return Seq
 	{
 		Builder.CreateResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
-		Builder.QueueRenderAction<RDAG::VelocityVectors>("VelocityRenderAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
 		{
 			Ctx.Draw("VelocityRenderAction");
+			return Resources;
 		})
 	}(Input);
 }

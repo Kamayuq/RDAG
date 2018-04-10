@@ -15,27 +15,27 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 	using PostprocessingData = ResourceTable<RDAG::SceneViewInfo, RDAG::DepthTarget, RDAG::VelocityVectors, RDAG::TransparencyResult>;
 	return Seq
 	{
-		Builder.BuildRenderPass<RDAG::DepthTarget>("DepthRenderPass", DepthRenderPass::Build),
+		Builder.BuildRenderPass("DepthRenderPass", DepthRenderPass::Build),
 		Extract<DeferredResult>(Seq
 		{
-			Builder.BuildRenderPass<RDAG::DepthTarget, RDAG::GbufferTarget>("GbufferRenderPass", GbufferRenderPass::Build),
-			Builder.BuildRenderPass<RDAG::AmbientOcclusionTexture>("AmbientOcclusionPass", AmbientOcclusionPass::Build),
-			Builder.BuildRenderPass<RDAG::ShadowMapTextureArray>("ShadowMapRenderPass", ShadowMapRenderPass::Build),
-			Builder.BuildRenderPass<RDAG::LightingUAV>("DeferredLightingPass", DeferredLightingPass::Build),
+			Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass::Build),
+			Builder.BuildRenderPass("AmbientOcclusionPass", AmbientOcclusionPass::Build),
+			Builder.BuildRenderPass("ShadowMapRenderPass", ShadowMapRenderPass::Build),
+			Builder.BuildRenderPass("DeferredLightingPass", DeferredLightingPass::Build),
 			Builder.RenameEntry<RDAG::LightingUAV, RDAG::TransparencyInput>(),
 		}),
-		Builder.BuildRenderPass<RDAG::DepthTarget, RDAG::TransparencyResult>("TransparencyRenderPass", TransparencyRenderPass::Build),
-		Builder.BuildRenderPass<RDAG::VelocityVectors>("VelocityRenderPass", VelocityRenderPass::Build),
+		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build),
+		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass::Build),
 		Select<PostprocessingData>(Seq
 		{
 			Scope(Seq
 			{
 				Builder.RenameEntry<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
-				Builder.BuildRenderPass<RDAG::TemporalAAOutput>("TemporalAARenderPass", TemporalAARenderPass::Build),
+				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
 				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::TransparencyResult>()
 			}),
 			Builder.RenameEntry<RDAG::TransparencyResult, RDAG::PostProcessingInput>(),
-			Builder.BuildRenderPass<RDAG::PostProcessingResult>("PostProcessingPass", PostProcessingPass::Build)
+			Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build)
 		})
 	}(Input);
 }

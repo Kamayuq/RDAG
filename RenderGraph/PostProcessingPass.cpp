@@ -17,9 +17,10 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	return Seq
 	{
 		Builder.CreateResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
-		Builder.QueueRenderAction<RDAG::PostProcessingResult>("ToneMappingAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
 		{
 			Ctx.Draw("ToneMappingAction");
+			return Resources;
 		})
 	}(Input);
 }
@@ -31,11 +32,11 @@ typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const Rend
 		Scope(Seq
 		{
 			Builder.RenameEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass<RDAG::DownsamplePyramid<16>>("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
+			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
 			Builder.RenameEntry<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
-			Builder.BuildRenderPass<RDAG::DepthOfFieldOutput>("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
+			Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
 			Builder.RenameEntry<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>()
 		}),
-		Builder.BuildRenderPass<RDAG::PostProcessingResult>("ToneMappingPass", ToneMappingPass::Build)
+		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 	}(Input);
 }

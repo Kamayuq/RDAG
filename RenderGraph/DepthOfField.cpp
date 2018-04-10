@@ -127,18 +127,21 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 			Result = Seq
 			{
 				Builder.CreateResource<RDAG::ScatteringReduce>({ ScatteringReduceDesc }),
-				Builder.QueueRenderAction<RDAG::ScatteringReduce>("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData&)
+				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData& Resources) -> ResourceTable<RDAG::ScatteringReduce>
 				{
 					Ctx.Draw("ScatteringReduceAction");
+					return Resources;
 				}),
 				Builder.CreateResource<RDAG::ScatterCompilation>({ ScatterCompilationDesc }),
-				Builder.QueueRenderAction<RDAG::ScatterCompilation>("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData&)
+				Builder.QueueRenderAction("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData& Resources) -> ResourceTable<RDAG::ScatterCompilation>
 				{
 					Ctx.Draw("ScatterCompilationAction");
+					return Resources;
 				}),
-				Builder.QueueRenderAction<ConvolutionOutputType>("DOFHybridScatterAction", [](RenderContext& Ctx, const DOFHybridScatter&)
+				Builder.QueueRenderAction("DOFHybridScatterAction", [](RenderContext& Ctx, const DOFHybridScatter& Resources) -> ResourceTable<ConvolutionOutputType>
 				{
 					Ctx.Draw("DOFHybridScatterAction");
+					return Resources;
 				})
 			}(Result);
 		}
@@ -168,9 +171,10 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 		{
 			for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
 			{
-				LutOutputTable = Builder.QueueRenderAction<BokehLUTType>("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
+				LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData& Resources) -> ResourceTable<BokehLUTType>
 				{
 					Ctx.Draw("BuildBokehLUTAction");
+					return Resources;
 				})(LutOutputTable);
 			}
 		}
@@ -202,9 +206,10 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 				ConvolutionOutputTable = Seq
 				{
 					Builder.RenameEntry<ConvolutionGatherType, RDAG::ConvolutionOutput>(i, 0),
-					Builder.QueueRenderAction<RDAG::ConvolutionOutput>("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData&)
+					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::ConvolutionOutput>
 					{
 						Ctx.Draw("GatherPassDataAction");
+						return Resources;
 					}),
 					Builder.RenameEntry<RDAG::ConvolutionOutput, ConvolutionGatherType>(0, i)
 				}(ConvolutionOutputTable);
@@ -227,9 +232,10 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 		ResourceTableType Result = s;
 		if (ViewInfo.DofSettings.EnablePostfilterMethod && GatherForeGround)
 		{
-			Result = Builder.QueueRenderAction<DofPostfilterElems...>("DOFPostfilterAction", [](RenderContext& Ctx, const DofPostfilterData&)
+			Result = Builder.QueueRenderAction("DOFPostfilterAction", [](RenderContext& Ctx, const DofPostfilterData& Resources) -> ResourceTable<DofPostfilterElems...>
 			{
 				Ctx.Draw("DOFPostfilterAction");
+				return Resources;
 			})(Result);
 		}
 		return Result;
@@ -251,9 +257,10 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		if (ViewInfo.DofSettings.RecombineQuality > 0)
 		{
 			using GatherPassData = ResourceTable<RDAG::PrefilterOutput, RDAG::CocTileOutput, RDAG::ScatteringBokehLUTOutput, RDAG::SlightOutOfFocusConvolutionOutput>;
-			SlightlyOutOfFocusTable = Builder.QueueRenderAction<RDAG::SlightOutOfFocusConvolutionOutput>("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData&)
+			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::SlightOutOfFocusConvolutionOutput>
 			{
 				Ctx.Draw("SlightlyOutOfFocusAction");
+				return Resources;
 			})(SlightlyOutOfFocusTable);
 		}
 
@@ -298,27 +305,30 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		{
 			Builder.CreateResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
 			Builder.CreateResource<RDAG::GatherColorSetup>({ GatherColorDesc }),
-			Builder.QueueRenderAction<RDAG::FullresColorSetup, RDAG::GatherColorSetup>("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData&)
+			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData& Resources) -> ResourceTable<RDAG::FullresColorSetup, RDAG::GatherColorSetup>
 			{
 				Ctx.Draw("DOFSetupAction");
+				return Resources;
 			}),
 			Select<ConvolutionSelection>(Extract<ConvolutionExtraction>(Seq
 			{
 				Scope(Seq
 				{
 					Builder.RenameEntry<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
-					Builder.BuildRenderPass<RDAG::TemporalAAOutput>("TemporalAARenderPass", TemporalAARenderPass::Build),
+					Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
 					Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>()
 				}),
 				Builder.CreateResource<RDAG::CocTileOutput>({ CocTileDesc }),
-				Builder.QueueRenderAction<RDAG::CocTileOutput>("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
+				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData& Resources) -> ResourceTable<RDAG::CocTileOutput>
 				{
 					Ctx.Draw("CocDilateAction");
+					return Resources;
 				}),
 				Builder.CreateResource<RDAG::PrefilterOutput>({ PrefilterOutputDesc }),
-				Builder.QueueRenderAction<RDAG::PrefilterOutput>("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
+				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData& Resources) -> ResourceTable<RDAG::PrefilterOutput>
 				{
 					Ctx.Draw("PreFilterAction");
+					return Resources;
 				}),
 				BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
 				BuildBokehLut<RDAG::GatheringBokehLUTOutput>(Builder),
@@ -332,9 +342,10 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			})),
 			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
 			Builder.CreateResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
-			Builder.QueueRenderAction<RDAG::DepthOfFieldOutput>("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
+			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData& Resources) -> PassOutputType
 			{
 				Ctx.Draw("RecombineAction");
+				return Resources;
 			})
 		}(Input);
 	}

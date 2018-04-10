@@ -28,9 +28,10 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 	return Seq
 	{
 		Builder.CreateResource<RDAG::DepthTarget>({ DepthDescriptor }),
-		Builder.QueueRenderAction<RDAG::DepthTarget>("DepthRenderAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
 		{
 			Ctx.Draw("DepthRenderAction");
+			return Resources;
 		})
 	}(Input);
 }

@@ -59,7 +59,7 @@ auto RunDownsamplePass(const RenderPassBuilder& Builder, int InputOffset = 0, in
 	return Seq
 	{
 		Builder.RenameEntry<InputType, RDAG::DownsampleInput>(InputOffset, 0),
-		Builder.BuildRenderPass<RDAG::DownsampleResult>("DownsampleRenderPass", DownsampleRenderPass::Build),
+		Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass::Build),
 		Builder.RenameEntry<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
 	};
 }

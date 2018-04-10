@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
 
 	RenderPassBuilder Builder;
 
-	//{
+	{
 		using PassInputType = ResourceTable<>;
 		using PassOutputType = ResourceTable<RDAG::SimpleResourceHandle>;
 		auto SimpleRenderPass = [](const RenderPassBuilder& Builder, const PassInputType& Input) -> PassOutputType
@@ -68,23 +68,24 @@ int main(int argc, char* argv[])
 			return Seq
 			{
 				Builder.CreateResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
-				Builder.QueueRenderAction<RDAG::SimpleResourceHandle>("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType& Resources) -> PassOutputType
 				{
 					Ctx.Draw("SimpleRenderAction");
+					return Resources;
 				})
 			}(Input);
 		};
 
 		auto val = Seq
 		{
-			Builder.BuildRenderPass<RDAG::SimpleResourceHandle>("SimpleRenderPass", SimpleRenderPass),
+			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
 			Builder.RenameEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass<RDAG::DownsamplePyramid<16>>("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
+			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
 			Builder.RenameEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
-			Builder.BuildRenderPass<RDAG::PostProcessingResult>("ToneMappingPass", ToneMappingPass::Build)
+			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 		}(Builder.GetEmptyResourceTable());
 		(void)val;
-	//}
+	}
 
 	{
 		std::chrono::duration<long long, std::nano> minDuration(std::numeric_limits<long long>::max());
@@ -99,7 +100,7 @@ int main(int argc, char* argv[])
 			auto val = Seq
 			{
 				Builder.CreateResource<RDAG::SceneViewInfo>({}, ViewInfo),
-				Builder.BuildRenderPass<RDAG::PostProcessingResult>("MainRenderPass", DeferredRendererPass::Build)
+				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
 			}(Builder.GetEmptyResourceTable());
 			(void)val;
 

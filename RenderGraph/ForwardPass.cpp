@@ -8,9 +8,10 @@ typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const Render
 
 	return Seq
 	{
-		Builder.QueueRenderAction<RDAG::DepthTarget, RDAG::ForwardRenderTarget>("ForwardRenderAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
 		{
 			Ctx.Draw("ForwardRenderAction");
+			return Resources;
 		})
 	}(Input);
 }

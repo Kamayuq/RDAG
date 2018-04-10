@@ -300,14 +300,14 @@ private:
 public:
 	UintPtr ParentHash() const
 	{
-		return ((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) * 19) 
-			  + (reinterpret_cast<UintPtr>(Revision.Parent) * 7));
+		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
+			  + ((reinterpret_cast<UintPtr>(Revision.Parent) >> 3) * 1610612741));
 	}
 
 	UintPtr Hash() const
 	{
-		return ((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) * 19)
-			  + (reinterpret_cast<UintPtr>(Owner) * 7));
+		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
+			  + ((reinterpret_cast<UintPtr>(Owner) >> 3) * 1610612741));
 	}
 
 	/* External resourcers are not managed by the graph and the user has to provide an implementation to retrieve the resource */
@@ -825,12 +825,20 @@ private:
 	/* First the tables are merged and than the results are linked to track the history */
 	/* Linking is used to update the Resourcetable-entries to point to the previous action */
 	template<typename... XS, typename... YS>
-	constexpr auto Link(const ResourceTable<YS...>& Parent) const
+	constexpr auto Link(const Set::Type<XS...>&, const ResourceTable<YS...>& Parent) const
 	{
 		auto MergedOutput = Parent.Union(*this);
 		/* incrementally link all the Handles from the intersecting set*/
-		(MergedOutput.template GetWrapped<XS>().Link(this->template GetWrapped<XS>(), this), ...);
+		(LinkInternal<XS>(MergedOutput, *this), ...);
 		return MergedOutput;
+	}
+
+	template<typename X, typename... ZS, typename... TS>
+	constexpr void LinkInternal(ResourceTable<ZS...>& MergedOutput, const ResourceTable<TS...>& /* this */) const
+	{
+		using RealDestType = decltype(SetOperation<ZS...>::template GetOriginalType<typename X::CompatibleType>());
+		using RealSrcType = decltype(SetOperation<TS...>::template GetOriginalType<typename X::CompatibleType>());
+		MergedOutput.template GetWrapped<RealDestType>().Link(this->template GetWrapped<RealSrcType>(), this);
 	}
 
 	/* Entry point for OnExecute callbacks */
