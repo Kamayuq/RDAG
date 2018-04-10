@@ -19,14 +19,7 @@ struct ResourceHandleBase
 
 	/* Callback to specialize TransientResourceImpl creation from a Descriptor */
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreateInput(const typename Handle::DescriptorType& InDescriptor) 
-	{
-		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
-	}
-
-	/* Callback to specialize TransientResourceImpl creation from a Descriptor */
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreateOutput(const typename Handle::DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreate(const typename Handle::DescriptorType& InDescriptor) 
 	{
 		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
 	}
@@ -134,7 +127,7 @@ struct Wrapped : private Handle
 
 	friend struct RenderPassBuilder;
 
-	template<typename, typename>
+	template<typename...>
 	friend class ResourceTable;
 
 	Wrapped() = default;
@@ -240,8 +233,8 @@ struct ResourceTableEntry
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
 
 	template<typename Handle> // only the static data of the Handle can be stored
-	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, bool InIsInputTable, const Handle&)
-		: Revision(InRevision), Owner(InOwner), Name(Handle::Name), IsInputTable(InIsInputTable)
+	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const Handle&)
+		: Revision(InRevision), Owner(InOwner), Name(Handle::Name)
 	{}
 
 	bool operator==(const ResourceTableEntry& Other) const
@@ -276,7 +269,7 @@ struct ResourceTableEntry
 	
 	bool IsUndefined() const
 	{
-		return Revision.ImaginaryResource == nullptr || (IsInputTable && Revision.Parent == nullptr);
+		return Revision.ImaginaryResource == nullptr || Revision.Parent == nullptr;
 	}
 
 	bool IsMaterialized() const
@@ -303,8 +296,6 @@ private:
 	const IResourceTableInfo* Owner = nullptr;
 	//the name as given by the constexpr value of the Handle
 	const char* Name = nullptr;
-
-	bool IsInputTable = false;
 
 public:
 	UintPtr ParentHash() const
@@ -380,7 +371,7 @@ class ResourceTableIterator<TableType, Index, X, XS...> : public IResourceTableI
 	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner)
 	{
 		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
-		return ResourceTableEntry(Wrap.Revisions[Index], Owner, TableType::IsInputTable(), Wrap.GetHandle());
+		return ResourceTableEntry(Wrap.Revisions[Index], Owner, Wrap.GetHandle());
 	}
 
 public:
@@ -417,7 +408,7 @@ class ResourceTableIterator<TableType, 0> : public IResourceTableIterator
 	/* helper function to build an empty ResourceTableEntry for the base class */
 	static ResourceTableEntry Get()
 	{
-		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, false, ResourceHandleBase());
+		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, ResourceHandleBase());
 	}
 
 public:
@@ -481,51 +472,12 @@ public:
 		}
 	};
 
-	/* common base for input and output itterators */
-	class Iteratable
-	{
-	public:
-		Iteratable() = default;
-
-		Iteratable(const Iteratable& Other) 
-		{ 
-			check(Other.ResourceTable); //slicing is wanted, static_assert is in place
-			memcpy(static_cast<void*>(this), static_cast<const void*>(&Other), sizeof(Iteratable));
-		};
-
-		Iteratable& operator= (const Iteratable& Other) 
-		{ 
-			check(Other.ResourceTable); //slicing is wanted, static_assert is in place
-			memcpy(static_cast<void*>(this), static_cast<const void*>(&Other), sizeof(Iteratable));
-			return *this;
-		}
-
-		virtual IResourceTableInfo::Iterator begin() const 
-		{ 
-			check(0);
-			return {};
-		};
-
-		virtual IResourceTableInfo::Iterator end() const 
-		{
-			check(0);
-			return {};
-		};
-
-	protected:
-		Iteratable(const IResourceTableInfo* InResourceTable) : ResourceTable(InResourceTable) {}
-		const IResourceTableInfo* ResourceTable = nullptr;
-	};
-
 	IResourceTableInfo(const IRenderPassAction* InAction) : Action(InAction) {}
 	virtual ~IResourceTableInfo() {}
 	
-	/* request to itterate over inputs */
-	virtual const Iteratable AsInputIterator() const = 0;
-	
-	/* request to itterate over outputs */
-	virtual const Iteratable AsOutputIterator() const = 0;
-
+	/* iterator implementation */
+	virtual IResourceTableInfo::Iterator begin() const = 0;
+	virtual IResourceTableInfo::Iterator end() const = 0;
 	virtual const char* GetName() const = 0;
 
 	/* Only ResourceTables that do draw/dispatch work have an action */
@@ -549,17 +501,31 @@ private:
 	/* A list of pairs with each having their origninal type first and their compatible type second */
 	struct CompatiblePairList : CompatiblePair<typename TS::CompatibleType, TS>... {};
 
+	/* this function has no implementation as it is only used within a decltype */
 	/* Given a CompatibleType overload resolution will find us the Original type from a set of pairs */
 	template<typename CompatibleType, typename SetType>
 	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<CompatibleType, SetType>&)->SetType;
 
 public:
+	/* this function has no implementation as it is only used within a decltype */
 	/* Helper declaration which plumbs in the List into the extracting function returning the OriginalType given a CompatibleType */
 	template<typename CompatibleType>
 	static constexpr auto GetOriginalType() -> decltype(GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
 };
 
-struct IBaseTable {};
+struct IResourceTableBase
+{
+	IResourceTableBase(const char* InName) : Name(InName) {}
+
+	/* Name of the Subpass or Action */
+	const char* GetName() const
+	{
+		return Name;
+	}
+
+private:
+	const char* Name = nullptr;
+};
 
 namespace Internal
 {
@@ -567,23 +533,21 @@ namespace Internal
 	template<bool B>
 	struct VisualStudioDeductionHelper
 	{
-		template<typename X, template<typename...> class RightType, typename... RS>
-		static constexpr auto Select(const IBaseTable&, const RightType<RS...>& Rhs)
+		template<typename X, template<typename...> class RightType, typename... RS, typename RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>())>
+		static constexpr auto Select(const IResourceTableBase&, const RightType<RS...>& Rhs) -> Wrapped<RealType>
 		{
 			// see VisualStudioDeductionHelper<false>::Select
 			// if the right table contains our result than use it 
 			// but first restore the original RealType to be able to extract it 
 			// because we checked compatible types which might not be the same
-			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Rhs.template GetWrapped<RealType>();
 		}
 
-		template<typename X, template<typename...> class RightType, typename... RS>
-		static constexpr auto CollectSelect(const RightType<RS...>& Rhs)
+		template<typename X, template<typename...> class RightType, typename... RS, typename RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>())>
+		static constexpr auto CollectSelect(const RightType<RS...>& Rhs) -> Wrapped<X>
 		{
 			//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
 			//before we cast it to the type that we want to fill the new table with
-			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Wrapped<X>::ConvertFrom(Rhs.template GetWrapped<RealType>());
 		}
 
@@ -595,7 +559,7 @@ namespace Internal
 			//we know the definite type here therefore there is no need to deduce from any compatible type
 			return Derived<XS...>
 			(
-				CollectSelect<XS>(Rhs)...
+				"Collect", CollectSelect<XS>(Rhs)...
 			);
 		}
 	};
@@ -616,14 +580,13 @@ namespace Internal
 			}
 		};
 
-		template<typename X, template<typename...> class LeftType, typename... LS>
-		static constexpr auto Select(const LeftType<LS...>& Lhs, const IBaseTable&)
+		template<typename X, template<typename...> class LeftType, typename... LS, typename RealType = decltype(SetOperation<LS...>::template GetOriginalType<typename X::CompatibleType>())>
+		static constexpr auto Select(const LeftType<LS...>& Lhs, const IResourceTableBase&) -> Wrapped<RealType>
 		{
 			// see VisualStudioDeductionHelper<true>::Select
 			// otherwise use the result from the left table 
 			// but first restore the original ealType to be able to extract it 
 			// because we checked compatible types which might not be the same
-			using RealType = decltype(SetOperation<LS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Lhs.template GetWrapped<RealType>();
 		}
 
@@ -638,30 +601,42 @@ namespace Internal
 }
 
 /* Common interface for Table operations */
-template<template<typename...> class Derived, typename... TS>
-class BaseTable : protected Wrapped<TS>..., public IBaseTable
+/* ResourceTables are the main payload of the graph implementation */
+/* they are similar to compile time sets and they can be easily stored on the stack */
+template<typename... TS>
+class ResourceTable : protected Wrapped<TS>..., public IResourceTableBase
 {
-	typedef BaseTable<Derived, TS...> ThisType;
-public:
-	/* create an itterator and point to the start of the table */
-	IResourceTableInfo::Iterator begin(const IResourceTableInfo* Owner) const
-	{
-		return IResourceTableInfo::Iterator::MakeIterator<Derived<TS...>, TS...>(static_cast<const Derived<TS...>*>(this), Owner);
-	};
-
-	/* returning the empty itterator */
-	IResourceTableInfo::Iterator end() const
-	{
-		return IResourceTableInfo::Iterator::MakeIterator<Derived<TS...>>(static_cast<const Derived<TS...>*>(this), nullptr);
-	};
+	using ThisType = ResourceTable<TS...>;
 
 public:
+	/*                   MakeFriends                    */
 	/* make friends with other tables */
-	template<template<typename...> class, typename...>
-	friend class BaseTable;
-	
-	BaseTable(const Wrapped<TS>&... xs) : Wrapped<TS>(xs)... {}
+	template<typename...>
+	friend class ResourceTable;
 
+	template<typename>
+	friend class ItterableResourceTable;
+	/*                   MakeFriends                    */
+
+	/*                   Constructors                    */
+	ResourceTable(const ThisType& RTT)
+		: ResourceTable(RTT.GetName(), RTT) {};
+
+	explicit ResourceTable(const char* Name, const ThisType& RTT)
+		: ResourceTable(Name, RTT.GetWrapped<TS>()...) {};
+
+	explicit ResourceTable(const char* Name, const Wrapped<TS>&... xs)
+		: Wrapped<TS>(xs)...
+		, IResourceTableBase(Name)
+	{};
+
+	/* assignment constructor from another resourcetable */
+	template<typename... YS>
+	ResourceTable(const ResourceTable<YS...>& RTT) : ResourceTable(RTT.template Populate<TS...>()) {}
+
+	/*                   Constructors                    */
+
+	/*                   StaticStuff                     */
 	/* return the set of unique compatible handle types */
 	static constexpr auto GetCompatibleSetType() { return Set::Type<typename TS::CompatibleType...>(); }
 	
@@ -677,36 +652,64 @@ public:
 	{ 
 		return GetCompatibleSetType().template Contains<typename C::CompatibleType>();
 	}
+	/*                   StaticStuff                     */
 
+	/*                  SetOperations                    */
 	/* merge two Tables where the right table overwrites entries from the left if they both contain the same compatible type */
-	template<template<typename...> class TableType, typename... YS>
-	constexpr auto Union(const TableType<YS...>& Other) const
+	template<typename... YS>
+	constexpr auto Union(const ResourceTable<YS...>& Other) const
 	{
-		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
+		using OtherType = ResourceTable<YS...>;
+		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	/* intersect two Tables taking the handles from the right Table */
-	template<template<typename...> class TableType, typename... YS>
-	constexpr auto Intersect(const TableType<YS...>& Other) const
+	template<typename... YS>
+	constexpr auto Intersect(const ResourceTable<YS...>& Other) const
 	{
-		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
+		using OtherType = ResourceTable<YS...>;
+		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	/* returning the merged table without the intersection */
-	template<template<typename...> class TableType, typename... YS>
-	constexpr auto Difference(const TableType<YS...>& Other) const
+	template<typename... YS>
+	constexpr auto Difference(const ResourceTable<YS...>& Other) const
 	{
-		using OtherType = TableType<YS...>;
-		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), static_cast<const Derived<TS...>&>(*this), Other);
+		using OtherType = ResourceTable<YS...>;
+		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
 
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatble handles */
-	template<template<typename...> class TableType, typename... YS>
-	static constexpr auto Collect(const TableType<YS...>& Other)
+	template<typename... YS>
+	static constexpr auto Collect(const ResourceTable<YS...>& Other)
 	{
 		return CollectInternal(GetSetType(), Other);
+	}
+	/*                  SetOperations                    */
+
+	/*                ElementOperations                  */
+	template<typename Handle>
+	constexpr bool IsValid(U32 i = 0) const
+	{
+		return GetWrapped<Handle>().IsValid(i);
+	}
+
+	template<typename Handle>
+	constexpr bool IsUndefined(U32 i = 0) const
+	{
+		return GetWrapped<Handle>().IsUndefined(i);
+	}
+
+	template<typename Handle>
+	const auto& GetHandle() const
+	{
+		return GetWrapped<Handle>().GetHandle();
+	}
+
+	template<typename Handle>
+	const auto& GetDescriptor(U32 i = 0) const
+	{
+		return GetWrapped<Handle>().GetDescriptor(i);
 	}
 
 	void CheckAllValid() const
@@ -715,18 +718,22 @@ public:
 	}
 
 	template<typename Handle>
-	const Wrapped<Handle>& GetWrapped() const { return static_cast<const Wrapped<Handle>&>(*this); }
+	const Wrapped<Handle>& GetWrapped() const 
+	{ 
+		constexpr bool contains = this->template Contains<Handle>();
+		Wrapped<Handle>::template Test<contains>();
+		return *static_cast<const Wrapped<Handle>*>(this); 
+	}
 
 protected:
 	template<typename Handle>
-	Wrapped<Handle>& GetWrapped() { return static_cast<Wrapped<Handle>&>(*this); }
-
-	/* forward OnExecute callback for all the handles the Table contains */
-	void OnExecute(struct ImmediateRenderContext& Ctx) const
-	{
-		(void)Ctx; //silly MSVC thinks it's unreferenced
-		(GetWrapped<TS>().OnExecute(Ctx), ...);
+	Wrapped<Handle>& GetWrapped() 
+	{ 
+		constexpr bool contains = this->template Contains<Handle>();
+		Wrapped<Handle>::template Test<contains>();
+		return *static_cast<Wrapped<Handle>*>(this); 
 	}
+	/*                ElementOperations                  */
 
 private:
 	/* prefer select element X from right otherwise take the lefthand side */
@@ -742,425 +749,98 @@ private:
 	{
 		(void)Lhs; //silly MSVC thinks they are unreferenced
 		(void)Rhs; //silly MSVC thinks they are unreferenced
-		return Derived<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>
-		(
-			ThisType::MergeSelect<XS>(Lhs, Rhs)...
-		);
+		using ReturnType = ResourceTable<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>;
+		return ReturnType
+		{
+			"MergeToLeft", ThisType::MergeSelect<XS>(Lhs, Rhs)...
+		};
 	}
 
 	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from */
 	template<typename... XS, typename RightType>
-	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs) -> Derived<XS...>
+	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs) -> ResourceTable<XS...>
 	{
 		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
-		return Internal::VisualStudioDeductionHelper<ContainsAll>::template Collect<Derived, XS...>(Rhs);
+		return Internal::VisualStudioDeductionHelper<ContainsAll>::template Collect<::ResourceTable, XS...>(Rhs);
 	}
-};
 
-/* An interface for InputTables */
-template<typename... XS>
-class InputTable : protected BaseTable<InputTable, XS...>
-{
-public:
-	typedef BaseTable<::InputTable, XS...> BaseType;
-	template<template<typename...> class, typename...>
-	friend class BaseTable;
-
-	template<typename, typename>
-	friend class ResourceTable;
-
-	template<bool>
-	friend struct Internal::VisualStudioDeductionHelper;
-
-	friend struct RenderPassBuilder;
-
-	using BaseType::begin;
-	using BaseType::end;
-	using BaseType::GetSetType;
-	using BaseType::GetCompatibleSetType;
-	using BaseType::GetSetSize;
-	using BaseType::Contains;
-	using BaseType::Union;
-	using BaseType::Intersect;
-	using BaseType::Difference;
-	using BaseType::Collect;
-	using BaseType::GetWrapped;
-	using BaseType::OnExecute;
-	using BaseType::CheckAllValid;
-
-	static constexpr bool IsInputTable() { return true; }
-	static constexpr bool IsOutputTable() { return false; }
-
-private:
-	InputTable(const Wrapped<XS>&... xs) : BaseType(xs...) {}
-};
-
-/* An interface for OutputTables */
-template<typename... XS>
-class OutputTable : protected BaseTable<OutputTable, XS...>
-{
-public:
-	typedef BaseTable<::OutputTable, XS...> BaseType;
-	template<template<typename...> class, typename...>
-	friend class BaseTable;
-
-	template<typename, typename>
-	friend class ResourceTable;
-
-	template<typename>
-	friend class ItterableResourceTable;
-
-	template<bool>
-	friend struct Internal::VisualStudioDeductionHelper;
-
-	friend struct RenderPassBuilder;
-
-	using BaseType::begin;
-	using BaseType::end;
-	using BaseType::GetSetType;
-	using BaseType::GetCompatibleSetType;
-	using BaseType::GetSetSize;
-	using BaseType::Contains;
-	using BaseType::Union;
-	using BaseType::Intersect;
-	using BaseType::Difference;
-	using BaseType::Collect;
-	using BaseType::GetWrapped;
-	using BaseType::OnExecute;
-	using BaseType::CheckAllValid;
-
-	static constexpr bool IsInputTable() { return false; }
-	static constexpr bool IsOutputTable() { return true; }
+	/* Populate will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
+	template<typename... XS>
+	constexpr ResourceTable<XS...> Populate() const
+	{
+		using ReturnType = ResourceTable<XS...>;
+		//collect the results otherwise fail
+		return ReturnType(ReturnType::Collect(*this));
+	}
 
 protected:
-	/* only OutputTables support Linking */
-	template<typename... TS>
-	constexpr void Link(const OutputTable<TS...>& Source, const IResourceTableInfo* Parent)
+	/* forward OnExecute callback for all the handles the Table contains */
+	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		// we can only link elements that are coming from the source
-		LinkInternal(Source, Parent);
+		(void)Ctx; //silly MSVC thinks it's unreferenced
+		(GetWrapped<TS>().OnExecute(Ctx), ...);
 	}
 
-private:
-	OutputTable(const Wrapped<XS>&... xs) : BaseType(xs...) {}
-
-	/* incrementally link all the Handles from the intersecting set*/
-	template<typename... YS>
-	constexpr void LinkInternal(const OutputTable<YS...>& Source, const IResourceTableInfo* Parent)
+	IResourceTableInfo::Iterator begin(const IResourceTableInfo* Owner) const
 	{
-		(this->template GetWrapped<YS>().Link(Source.template GetWrapped<YS>(), Parent), ...);
-	}
-};
-
-struct IResourceTableBase 
-{
-	IResourceTableBase(const char* InName) : Name(InName) {}
-
-	/* Name of the Subpass or Action */
-	const char* GetName() const
-	{
-		return Name;
-	}
-
-private:
-	const char* Name = nullptr;
-};
-
-/* ResourceTables are the main payload of the graph implementation */
-/* they are similar to compile time sets and they can be easily stored on the stack */
-template<typename TInputTableType, typename TOutputTableType>
-class ResourceTable : private TInputTableType, private TOutputTableType, public IResourceTableBase
-{
-public:
-	template<typename, typename>
-	friend class ResourceTable;
-
-	template<typename>
-	friend class ItterableResourceTable;
-
-	friend struct RenderPassBuilder;
-
-	typedef TInputTableType InputTableType;
-	typedef TOutputTableType OutputTableType;
-	typedef ResourceTable<InputTableType, OutputTableType> ThisType;
-
-public:
-	ResourceTable(const ThisType& RTT)
-		: ResourceTable(RTT, RTT.GetName()) {};
-
-	explicit ResourceTable(const ThisType& RTT, const char* Name)
-		: ResourceTable(RTT.GetInputTable(), RTT.GetOutputTable(), Name) {};
-
-	explicit ResourceTable(const InputTableType& IT, const OutputTableType& OT, const char* Name = "Unnamed")
-		: InputTableType(IT)
-		, OutputTableType(OT)
-		, IResourceTableBase(Name)
-	{ 
-		CheckIntegrity(); 
+		return IResourceTableInfo::Iterator::MakeIterator<ThisType, TS...>(this, Owner);
 	};
 
-	/* assignment constructor from another resourcetable */
-	template<typename ITT2, typename OTT2>
-	ResourceTable(const ResourceTable<ITT2, OTT2>& RTT) : ResourceTable(RTT.template Populate<ThisType>()) {}
-
-	static constexpr auto GetInputSetType() { return InputTableType::GetSetType(); };
-	static constexpr auto GetOutputSetType() { return OutputTableType::GetSetType(); };
-	static constexpr size_t GetInputSetSize() { return InputTableType::GetSetSize(); };
-	static constexpr size_t GetOutputSetSize() { return OutputTableType::GetSetSize(); };
-
-	template<typename C>
-	static constexpr bool ContainsInput() { return InputTableType::template Contains<C>(); }
-
-	template<typename C>
-	static constexpr bool ContainsOutput() { return OutputTableType::template Contains<C>(); }
-
-	/* returns the union of two Resourcetables where the right side is taken if they contain similar handles */
-	template<typename ITT, typename OTT>
-	constexpr auto Union(const ResourceTable<ITT, OTT>& Other) const
+	/* returning the empty itterator */
+	IResourceTableInfo::Iterator end() const
 	{
-		auto in = GetInputTable().Union(Other.GetInputTable());
-		auto out = GetOutputTable().Union(Other.GetOutputTable());
-		return ResourceTable<decltype(in), decltype(out)>(in, out);
-	}
-
-	/* returns the intersection of two Resourcetables */
-	template<typename ITT, typename OTT>
-	constexpr auto Intersect(const ResourceTable<ITT, OTT>& Other) const
-	{
-		auto in = GetInputTable().Intersect(Other.GetInputTable());
-		auto out = GetOutputTable().Intersect(Other.GetOutputTable());
-		return ResourceTable<decltype(in), decltype(out)>(in, out);
-	}
-
-	/* returns the union of two Resourcetables without their intersection */
-	template<typename ITT, typename OTT>
-	constexpr auto Difference(const ResourceTable<ITT, OTT>& Other) const
-	{
-		auto in = GetInputTable().Difference(Other.GetInputTable());
-		auto out = GetOutputTable().Difference(Other.GetOutputTable());
-		return ResourceTable<decltype(in), decltype(out)>(in, out);
-	}
-
-	template<typename Handle>
-	constexpr bool IsValidInput(U32 i = 0) const
-	{
-		return GetWrappedInput<Handle>().IsValid(i);
-	}
-
-	template<typename Handle>
-	constexpr bool IsValidOutput(U32 i = 0) const
-	{
-		return GetWrappedOutput<Handle>().IsValid(i);
-	}
-
-	template<typename Handle>
-	constexpr bool IsUndefinedInput(U32 i = 0) const
-	{
-		return GetWrappedInput<Handle>().IsUndefined(i);
-	}
-
-	template<typename Handle>
-	const auto& GetInputHandle() const
-	{
-		return GetWrappedInput<Handle>().GetHandle();
-	}
-
-	template<typename Handle>
-	const auto& GetInputDescriptor(U32 i = 0) const
-	{
-		return GetWrappedInput<Handle>().GetDescriptor(i);
-	}
-
-	template<typename Handle>
-	const auto& GetOutputDescriptor(U32 i = 0) const
-	{
-		return GetWrappedOutput<Handle>().GetDescriptor(i);
-	}
-
-	void CheckAllValid() const
-	{
-		this->GetInputTable().CheckAllValid();
-		this->GetOutputTable().CheckAllValid();
-	}
-
-private:
-	/* Merging returns the Union of the outputs only, inputs are never merged */ 
-	template<typename ITT, typename OTT>
-	constexpr auto Merge(const ResourceTable<ITT, OTT>& Parent) const
-	{
-		auto MergedOutput = Parent.GetOutputTable().Union(GetOutputTable());
-		return ResourceTable<ITT, decltype(MergedOutput)>(Parent.GetInputTable(), MergedOutput);
-	}
-
-	/* Populate will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */ 
-	template<typename RTT, typename ITT = typename RTT::InputTableType, typename OTT = typename RTT::OutputTableType>
-	constexpr ResourceTable<ITT, OTT> Populate() const
-	{
-		RTT::CheckIntegrity();
-		//collect the results otherwise fail
-		return ResourceTable<ITT, OTT>(ITT::Collect(GetInputTable().Union(GetOutputTable())), OTT::Collect(GetOutputTable()));
-	}
-
-	template<typename Handle>
-	const auto& GetWrappedInput() const
-	{
-		constexpr bool contains = InputTableType::template Contains<Handle>();
-		Wrapped<Handle>::template Test<contains>();
-		return GetInputTable().template GetWrapped<Handle>();
-	}
-
-	template<typename Handle>
-	const auto& GetWrappedOutput() const
-	{
-		constexpr bool contains = OutputTableType::template Contains<Handle>();
-		Wrapped<Handle>::template Test<contains>();
-		return GetOutputTable().template GetWrapped<Handle>();
-	}
-
-	const InputTableType& GetInputTable() const { return static_cast<const InputTableType&> (*this); }
-	const OutputTableType& GetOutputTable() const { return static_cast<const OutputTableType&> (*this); }
-	OutputTableType& GetOutputTable() { return static_cast<OutputTableType&> (*this); }
-
-	static constexpr void CheckIntegrity()
-	{
-		static_assert(InputTableType::IsInputTable(), "First Parameter must be the InputTable");
-		static_assert(OutputTableType::IsOutputTable(), "Second Parameter must be the OutputTable");
-	}
+		return IResourceTableInfo::Iterator::MakeIterator<ThisType>(this, nullptr);
+	};
 };
 
 template<typename ResourceTableType>
 class ItterableResourceTable final : public ResourceTableType, public IResourceTableInfo
 {
 	using ThisType = ItterableResourceTable<ResourceTableType>;
-	using InputTableType = typename ResourceTableType::InputTableType;
-	using OutputTableType = typename ResourceTableType::OutputTableType;
 
 	friend struct RenderPassBuilder;
 
-private:
-	/* an itterator implementation T where is either Input- or OutputTable and RT is this Resourcetable*/
-	template<typename T>
-	class IteratableImpl : public IResourceTableInfo::Iteratable
-	{
-		template<typename, typename>
-		friend class ResourceTable;
-
-	public:
-		IteratableImpl(const ThisType* InResourceTable) : IResourceTableInfo::Iteratable(InResourceTable)
-		{
-			static_assert(sizeof(IteratableImpl) == sizeof(IResourceTableInfo::Iteratable), "Sizes must match for safe slicing");
-		}
-
-		IteratableImpl& operator= (const IteratableImpl& Other)
-		{
-			//MSVC Compiler bug: the default implementation is mising this->
-			this->ResourceTable = Other.ResourceTable;
-			return *this;
-		}
-
-		IResourceTableInfo::Iterator begin() const override
-		{
-			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).begin(ResourceTable);
-		}
-
-		IResourceTableInfo::Iterator end() const override
-		{
-			return static_cast<const T&>(static_cast<const ThisType&>(*ResourceTable)).end();
-		}
-	};
-
 public:
 	explicit ItterableResourceTable(const ResourceTableType& RTT, const char* Name, const IRenderPassAction* InAction)
-		: ResourceTableType(RTT, Name)
+		: ResourceTableType(Name, RTT)
 		, IResourceTableInfo(InAction) {};
 
-	// Get the input itterator
-	const IResourceTableInfo::Iteratable AsInputIterator() const override
-	{
-		IResourceTableInfo::Iteratable Ret; //slice the type
-		new (&Ret) IteratableImpl<InputTableType>(this);
-		return Ret;
-	}
-
-	// Get the output itterator
-	const IResourceTableInfo::Iteratable AsOutputIterator() const override
-	{
-		IResourceTableInfo::Iteratable Ret; //slice the type
-		new (&Ret) IteratableImpl<OutputTableType>(this);
-		return Ret;
-	}
-
+	/* IResourceTableInfo implementation */
 	const char* GetName() const override
 	{
 		return IResourceTableBase::GetName();
 	}
 
+	IResourceTableInfo::Iterator begin() const override
+	{
+		return ResourceTableType::begin(this);
+	}
+
+	IResourceTableInfo::Iterator end() const override
+	{
+		return ResourceTableType::end();
+	}
+
 private:
 	/* First the tables are merged and than the results are linked to track the history */
-	template<typename ITT, typename OTT>
-	constexpr auto MergeAndLink(const ResourceTable<ITT, OTT>& Parent) const
+	/* Linking is used to update the Resourcetable-entries to point to the previous action */
+	template<typename... XS, typename... YS>
+	constexpr auto Link(const ResourceTable<YS...>& Parent) const
 	{
-		auto MergedOutput = Parent.GetOutputTable().Union(this->GetOutputTable());
-		MergedOutput.Link(this->GetOutputTable(), this);
-		return ResourceTable<ITT, decltype(MergedOutput)>(Parent.GetInputTable(), MergedOutput);
+		auto MergedOutput = Parent.Union(*this);
+		/* incrementally link all the Handles from the intersecting set*/
+		(MergedOutput.template GetWrapped<XS>().Link(this->template GetWrapped<XS>(), this), ...);
+		return MergedOutput;
 	}
 
 	/* Entry point for OnExecute callbacks */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		//first transition and execute the inputs
-		this->GetInputTable().OnExecute(Ctx);
-		//than transition and execute the outputs 
-		this->GetOutputTable().OnExecute(Ctx);
+		//first transition and execute
+		ResourceTableType::OnExecute(Ctx);
 		//this way if a compatible type was input bound as Texture
 		//and the output type was UAV and previous state was UAV
 		//and UAV to texture to UAV barrier will be issued
 		//otherwise if UAV was input and output no barrier will be issued
 	}
-};
-
-template<typename ResourceTableType>
-struct ResourceTableOperation
-{
-private:
-	using InputTableType = typename ResourceTableType::InputTableType;
-	using OutputTableType = typename ResourceTableType::OutputTableType;
-
-	/* Convert from an inputtable to its set operation type */
-	template<typename... XS>
-	static constexpr auto GetSetOperationType(const InputTable<XS...>&)->SetOperation<XS...>;
-	using InputOperationType = decltype(GetSetOperationType(std::declval<InputTableType>()));
-
-	/* Convert from an outputtable to its set operation type */
-	template<typename... XS>
-	static constexpr auto GetSetOperationType(const OutputTable<XS...>&)->SetOperation<XS...>;
-	using OutputOperationType = decltype(GetSetOperationType(std::declval<OutputTableType>())); 
-
-	/* Given two Sets extract their handles and give us a ResourceTable with all those Handles */
-	template<typename InSetOp, typename OutSetOp, typename... XS, typename... YS>
-	static constexpr auto TableTypeFromSets(const Set::Type<XS...>&, const Set::Type<YS...>&)->ResourceTable
-	<
-		InputTable<decltype(InSetOp::template GetOriginalType<XS>())...>,
-		OutputTable<decltype(OutSetOp::template GetOriginalType<YS>())...>
-	>;
-
-	/* Compute the input Intersection e.g keep the Handles in the OutputSet that are also Inputs */
-	template<typename InSetOp, typename OutSetOp, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::Intersect(InputSet(), OutputSet()))>
-	static constexpr auto ExtractInputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InSetOp, OutSetOp>(InputSet(), InputOutputSet()));
-
-	/* Remove the Inputs that are also in the OutputSet */
-	template<typename InSetOp, typename OutSetOp, typename InputSet, typename OutputSet, typename InputOutputSet = decltype(Set::LeftDifference(InputSet(), OutputSet()))>
-	static constexpr auto ExtractOutputTableType(const InputSet&, const OutputSet&) -> decltype(TableTypeFromSets<InSetOp, OutSetOp>(InputOutputSet(), OutputSet()));
-
-public:
-	/*The table without the inputs that are only inputs*/
-	using PassOutputType = decltype(ExtractOutputTableType<InputOperationType, OutputOperationType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
-	/*The table without the outputs that are only outputs (and not inputs or compatible types)*/
-	using PassInputType = decltype(ExtractInputTableType<InputOperationType, OutputOperationType>(InputTableType::GetCompatibleSetType(), OutputTableType::GetCompatibleSetType()));
-};
-
-
-#define RESOURCE_TABLE(...)														\
-	using ResourceTableType	= ResourceTable< __VA_ARGS__ >;						\
-	using PassInputType		= typename ResourceTableOperation<ResourceTableType>::PassInputType;		\
-	using PassOutputType	= ResourceTableType;		
+};	

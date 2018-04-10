@@ -34,11 +34,8 @@ namespace RDAG
 
 struct HalfResTransparencyRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::DepthTarget, RDAG::TransparencyInput>,
-		OutputTable<RDAG::HalfResTransparencyResult>
-	);
+	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyInput>;
+	using PassOutputType = ResourceTable<RDAG::HalfResTransparencyResult>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
@@ -46,11 +43,9 @@ struct HalfResTransparencyRenderPass
 
 struct TransparencyRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::DepthTarget, RDAG::TransparencyInput, RDAG::SceneViewInfo>,
-		OutputTable<RDAG::DepthTarget, RDAG::TransparencyResult>
-	);
+	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyInput, RDAG::SceneViewInfo>;
+	using PassOutputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyResult>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

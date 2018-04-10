@@ -7,11 +7,9 @@
 
 struct DeferredRendererPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::SceneViewInfo>,
-		OutputTable<RDAG::PostProcessingResult>
-	);
+	using PassInputType = ResourceTable<RDAG::SceneViewInfo>;
+	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

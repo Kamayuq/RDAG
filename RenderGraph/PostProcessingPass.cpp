@@ -6,7 +6,7 @@
 
 typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto PPfxInfo = Input.GetInputDescriptor<RDAG::PostProcessingInput>();
+	auto PPfxInfo = Input.GetDescriptor<RDAG::PostProcessingInput>();
 	ExternalTexture2dDescriptor ResultDescriptor;
 	ResultDescriptor.Index = 0x10;
 	ResultDescriptor.Name = "PostProcessingResult";
@@ -16,8 +16,8 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 
 	return Seq
 	{
-		Builder.CreateOutputResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
-		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const PassOutputType&)
+		Builder.CreateResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
+		Builder.QueueRenderAction<RDAG::PostProcessingResult>("ToneMappingAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("ToneMappingAction");
 		})
@@ -30,12 +30,12 @@ typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const Rend
 	{
 		Scope(Seq
 		{
-			Builder.RenameInputToInput<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
-			Builder.RenameOutputToInput<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
-			Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
-			Builder.RenameOutputToInput<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>()
+			Builder.RenameEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
+			Builder.BuildRenderPass<RDAG::DownsamplePyramid<16>>("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
+			Builder.RenameEntry<RDAG::DownsamplePyramid<16>, RDAG::DepthOfFieldInput>(4, 0),
+			Builder.BuildRenderPass<RDAG::DepthOfFieldOutput>("DepthOfFieldRenderPass", DepthOfFieldPass::Build),
+			Builder.RenameEntry<RDAG::DepthOfFieldOutput, RDAG::PostProcessingInput>()
 		}),
-		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
+		Builder.BuildRenderPass<RDAG::PostProcessingResult>("ToneMappingPass", ToneMappingPass::Build)
 	}(Input);
 }

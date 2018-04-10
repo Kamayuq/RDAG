@@ -45,11 +45,9 @@ namespace RDAG
 
 struct ForwardRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::DepthTarget, RDAG::ForwardRenderTarget>,
-		OutputTable<RDAG::DepthTarget, RDAG::ForwardRenderTarget>
-	);
+	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::ForwardRenderTarget>;
+	using PassOutputType = ResourceTable<RDAG::DepthTarget, RDAG::ForwardRenderTarget>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

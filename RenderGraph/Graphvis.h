@@ -82,11 +82,8 @@ private:
 
 struct PinStyle
 {
-	enum Type { Input, Output };
-	static constexpr const char* TypeChart[2] = { "Input", "Output" };
-
-	PinStyle(Type InType, const ResourceTableEntry& InEntry, const IRenderPassAction* InRenderPassAction) 
-		: EntryType(InType), Entry(InEntry), RenderPassAction(InRenderPassAction)
+	PinStyle(const ResourceTableEntry& InEntry, const IRenderPassAction* InRenderPassAction) 
+		: Entry(InEntry), RenderPassAction(InRenderPassAction)
 		, ArrowDrawStyle(ArrowStyle::Forward, ArrowStyle::Normal, ArrowStyle::None)
 		, PinDrawStyle(DrawStyle::Ellipse, DrawStyle::Solid)
 		, PinColorStyle(ColorStyle::Grey)
@@ -115,7 +112,7 @@ struct PinStyle
 
 	void PrintName(FILE* fhp) const
 	{
-		fprintf(fhp, R"(%s%zu)", TypeChart[EntryType], Entry.Hash());
+		fprintf(fhp, R"(Pin%zu)", Entry.Hash());
 	}
 
 	void Print(FILE* fhp) const
@@ -127,7 +124,7 @@ struct PinStyle
 		PinDrawStyle.Print(fhp); fprintf(fhp, ", ");
 		PinColorStyle.Print(fhp); fprintf(fhp, ", ");
 		PinFontColorStyle.Print(fhp);
-		fprintf(fhp, R"(, label="%s\n%s")", TypeChart[EntryType], Entry.GetName());
+		fprintf(fhp, R"(, label="%s")", Entry.GetName());
 		fprintf(fhp, R"(];)");
 	}
 
@@ -140,12 +137,11 @@ struct PinStyle
 
 	void DrawArrow(FILE* fhp) const
 	{
-		check(EntryType == Input);
 		if (Entry.GetParent() == nullptr)
 			return;
 
 		fprintf(fhp, R"(
-		Output%zu -> Input%zu [constraint = true, penwidth = 2, )", Entry.ParentHash(), Entry.Hash());
+		Pin%zu -> Pin%zu [constraint = true, penwidth = 2, )", Entry.ParentHash(), Entry.Hash());
 		PinColorStyle.Print(fhp);
 		fprintf(fhp, R"(];)");
 	}
@@ -156,7 +152,6 @@ struct PinStyle
 	}
 
 private:
-	Type EntryType;
 	ResourceTableEntry Entry;
 	const IRenderPassAction* RenderPassAction;
 
@@ -171,20 +166,11 @@ struct ActionStyle
 {
 	ActionStyle(const IRenderPassAction* InRenderPassAction) : RenderPassAction(InRenderPassAction), LocalActionIndex(GlobalActionIndex++)
 	{
-		for (const auto& Entry : RenderPassAction->GetRenderPassData()->AsInputIterator())
+		for (const auto& Entry : *RenderPassAction->GetRenderPassData())
 		{
-			InputPins.push_back(PinStyle(PinStyle::Input, Entry, RenderPassAction));
+			Pins.push_back(PinStyle(Entry, RenderPassAction));
 		}
-		std::sort(InputPins.begin(), InputPins.end(), [](const PinStyle& a, const PinStyle& b)
-		{
-			return a.GetImaginaryResource() < b.GetImaginaryResource();
-		});
-
-		for (const auto& Entry : RenderPassAction->GetRenderPassData()->AsOutputIterator())
-		{
-			OutputPins.push_back(PinStyle(PinStyle::Output, Entry, RenderPassAction));
-		}
-		std::sort(OutputPins.begin(), OutputPins.end(), [](const PinStyle& a, const PinStyle& b)
+		std::sort(Pins.begin(), Pins.end(), [](const PinStyle& a, const PinStyle& b)
 		{
 			return a.GetImaginaryResource() < b.GetImaginaryResource();
 		});
@@ -226,18 +212,7 @@ struct ActionStyle
 			fillcolor="grey99"
 			)", LocalActionIndex, RenderPassAction->GetName());
 		
-		PrintPins(fhp, InputPins, "same");
-		PrintPins(fhp, OutputPins, "same");
-
-		if (InputPins.size() > 0 && OutputPins.size() > 0)
-		{
-			fprintf(fhp, R"(
-			)");
-			InputPins[0].PrintName(fhp);
-			fprintf(fhp, " -> ");
-			OutputPins[0].PrintName(fhp);
-			fprintf(fhp, R"([style = "invis"])");
-		}
+		PrintPins(fhp, Pins, "same");
 
 		fprintf(fhp, R"(
 		})");
@@ -255,9 +230,7 @@ struct ActionStyle
 
 private:
 	const IRenderPassAction* RenderPassAction;
-	
-	std::vector<PinStyle> InputPins;
-	std::vector<PinStyle> OutputPins;
+	std::vector<PinStyle> Pins;
 
 private:
 	U32 Rank = 0;
@@ -287,9 +260,9 @@ digraph G
 		for (const IRenderPassAction* Action : InAllActions)
 		{
 			Actions.push_back(ActionStyle(Action));
-			for (ResourceTableEntry Entry : Action->GetRenderPassData()->AsInputIterator())
+			for (ResourceTableEntry Entry : *Action->GetRenderPassData())
 			{
-				AllInputEntries.push_back(PinStyle(PinStyle::Input, Entry, Action));
+				AllEntries.push_back(PinStyle(Entry, Action));
 			}
 		}
 		std::sort(Actions.begin(), Actions.end(), [](const ActionStyle& a, const ActionStyle& b)
@@ -299,7 +272,7 @@ digraph G
 
 		PrintActions(fhp);
 
-		for (const auto& PinEntry : AllInputEntries)
+		for (const auto& PinEntry : AllEntries)
 		{
 			PinEntry.DrawArrow(fhp);
 		}
@@ -325,7 +298,7 @@ digraph G
 	}
 
 private:
-	std::vector<PinStyle> AllInputEntries;
+	std::vector<PinStyle> AllEntries;
 	std::vector<ActionStyle> Actions;
 	FILE* fhp = nullptr;
 };

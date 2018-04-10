@@ -46,11 +46,9 @@ namespace RDAG
 
 struct DownsampleRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::DownsampleInput>,
-		OutputTable<RDAG::DownsampleResult>
-	);
+	using PassInputType = ResourceTable<RDAG::DownsampleInput>;
+	using PassOutputType = ResourceTable<RDAG::DownsampleResult>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
@@ -60,36 +58,34 @@ auto RunDownsamplePass(const RenderPassBuilder& Builder, int InputOffset = 0, in
 {
 	return Seq
 	{
-		Builder.RenameOutputToInput<InputType, RDAG::DownsampleInput>(InputOffset, 0),
-		Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass::Build),
-		Builder.RenameOutputToOutput<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
+		Builder.RenameEntry<InputType, RDAG::DownsampleInput>(InputOffset, 0),
+		Builder.BuildRenderPass<RDAG::DownsampleResult>("DownsampleRenderPass", DownsampleRenderPass::Build),
+		Builder.RenameEntry<RDAG::DownsampleResult, OutputType>(0, OutputOffset)
 	};
 }
 
 template<int Count>
 struct PyramidDownSampleRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::DownsampleInput>,
-		OutputTable<RDAG::DownsamplePyramid<Count>>
-	);
+	using PassInputType = ResourceTable<RDAG::DownsampleInput>;
+	using PassOutputType = ResourceTable<RDAG::DownsamplePyramid<Count>>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 	{
-		PassOutputType Output = Builder.RenameInputToOutput<RDAG::DownsampleInput, RDAG::DownsamplePyramid<Count>>(0, 0)(Input);
+		PassOutputType Output = Builder.RenameEntry<RDAG::DownsampleInput, RDAG::DownsamplePyramid<Count>>(0, 0)(Input);
 		
 		U32 i = 1;
 		for (; i < RDAG::DownsamplePyramid<Count>::ResourceCount; i++)
 		{
-			auto DownSampleInfo = Output.template GetOutputDescriptor<RDAG::DownsamplePyramid<Count>>(i - 1);
+			auto DownSampleInfo = Output.template GetDescriptor<RDAG::DownsamplePyramid<Count>>(i - 1);
 			if (((DownSampleInfo.Width >> 1) == 0) || ((DownSampleInfo.Height >> 1) == 0))
 				break;
 
 			Output = RunDownsamplePass<RDAG::DownsamplePyramid<Count>>(Builder, i - 1, i)(Output);
 		}
 
-		auto DownSampleInfo = Output.template GetOutputDescriptor<RDAG::DownsamplePyramid<Count>>(i - 1);
+		auto DownSampleInfo = Output.template GetDescriptor<RDAG::DownsamplePyramid<Count>>(i - 1);
 		check((DownSampleInfo.Width == 1 || DownSampleInfo.Height == 1) && "Downsample incomplete due to insufficent space available");
 		return Output;
 	}

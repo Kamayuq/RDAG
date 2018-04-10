@@ -52,8 +52,9 @@ public:
 			InputTableType input = s;
 			
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
-			NestedOutputTableType NestedRenderPassData(BuildFunction(*Self, input, Args...), Name);
-			return NestedRenderPassData.Merge(s);
+			NestedOutputTableType NestedRenderPassData(Name, BuildFunction(*Self, input, Args...));
+			ResourceTable<LinkedTypes...> MergedTypes = NestedRenderPassData;
+			return s.Union(MergedTypes);
 		};
 	}
 
@@ -69,6 +70,8 @@ public:
 		static_assert(std::is_same_v<VoidReturnType, void>, "The returntype must be void");
 		static_assert(std::is_base_of_v<RenderContextBase, ContextType>, "The 1st parameter must be a rendercontext type");
 		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
+		//TODO to optimize
+		using MergedTableType = std::decay_t<decltype(std::declval<InputTableType>().Union(std::declval<ResourceTable<LinkedTypes...>>()))>;
 
 		auto& LocalActionList = ActionList;
 		return [&LocalActionList, QueuedTask, Name](const auto& s)
@@ -76,40 +79,39 @@ public:
 			CheckIsResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
-			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
-			InputTableType input = s;
+			typedef TRenderPassAction<ContextType, MergedTableType, FunctionType> RenderActionType;
+			MergedTableType input = s;
 
 			/* create some space on the heap for the action as those are nodes of our graph */
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			LocalActionList.push_back(NewRenderAction);
 
 			// merge and link (have the outputs point at this action from now on).
-			return NewRenderAction->RenderPassData.MergeAndLink(s);
+			return NewRenderAction->RenderPassData.template Link<LinkedTypes...>(s);
 		};
 	}
 
 	/* this function moves a Handle between the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto RenameOutputToOutput(U32 FromIndex = 0, U32 ToIndex = 0) const
+	auto RenameEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
 		return [FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(std::is_base_of_v<From, typename StateType::OutputTableType>, "Source was not found in the resource table");
+			static_assert(std::is_base_of_v<From, StateType>, "Source was not found in the resource table");
 
-			Wrapped<From> FromOutput = s.template GetWrappedOutput<From>();
-			OutputTableType<From> SourceTable{ InputTable<>(), OutputTable<From>(FromOutput) };
-			
+			Wrapped<From> FromEntry = s.template GetWrapped<From>();
 			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToOutput(To(FromOutput.GetHandle()), {});
-			if constexpr (s.template ContainsOutput<To>())
+			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), {});
+
+			if constexpr (s.template Contains<To>())
 			{
 				//copy over the old revisions to not loose entries
-				const auto& Destination = s.template GetWrappedOutput<To>();
+				const auto& Destination = s.template GetWrapped<To>();
 				for (U32 i = 0; i < To::ResourceCount; i++)
 				{
-					ToOutput.Revisions[i] = Destination.Revisions[i];
+					ToEntry.Revisions[i] = Destination.Revisions[i];
 				}
 			}
 			else
@@ -119,144 +121,13 @@ public:
 					if (i != ToIndex)
 					{
 						//create undefined dummy resources with the same descriptor
-						ToOutput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromOutput.GetDescriptor(FromIndex));
+						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
 					}
 				}
 			}
 
-			ToOutput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
-			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
-
-			//remove the old output and copy it into the new destination
-			return s.Union(DestTable);
-		};
-	}
-
-	/* this function moves a Handle between the InputList the destination is overwitten and the Source stays */
-	template<typename From, typename To>
-	auto RenameInputToInput(U32 FromIndex = 0, U32 ToIndex = 0) const
-	{
-		return [FromIndex, ToIndex](const auto& s)
-		{
-			CheckIsResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(std::is_base_of_v<From, typename StateType::InputTableType>, "Source was not found in the resource table");
-
-			Wrapped<From> FromInput = s.template GetWrappedInput<From>();
-			InputTableType<From> SourceTable{ InputTable<From>(FromInput), OutputTable<>() };
-
-			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToInput(To(FromInput.GetHandle()), {});
-			if constexpr (s.template ContainsInput<To>())
-			{
-				//copy over the old revisions to not loose entries
-				const auto& Destination = s.template GetWrappedInput<To>();
-				for (U32 i = 0; i < To::ResourceCount; i++)
-				{
-					ToInput.Revisions[i] = Destination.Revisions[i];
-				}
-			}
-			else
-			{
-				for (U32 i = 0; i < To::ResourceCount; i++)
-				{
-					if (i != ToIndex)
-					{
-						//create undefined dummy resources with the same descriptor
-						ToInput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromInput.GetDescriptor(FromIndex));
-					}
-				}
-			}
-
-			ToInput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
-			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
-			return s.Union(DestTable);
-		};
-	}
-
-	// TODO usage of this function might be unsafe, use with care 
-	/* this function moves a Handle from the InputList into the OutputList the destination is overwitten and the Source stays */
-	template<typename From, typename To>
-	auto RenameInputToOutput(U32 FromIndex = 0, U32 ToIndex = 0) const
-	{
-		return [FromIndex, ToIndex](const auto& s)
-		{
-			CheckIsResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(std::is_base_of_v<From, typename StateType::InputTableType>, "Source was not found in the resource table");
-	
-			Wrapped<From> FromInput = s.template GetWrappedInput<From>();
-			InputTableType<From> SourceTable{ InputTable<From>(FromInput), OutputTable<>() };
-
-			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToOutput(To(FromInput.GetHandle()), {});
-			if constexpr (s.template ContainsOutput<To>())
-			{
-				//copy over the old revisions to not loose entries
-				const auto& Destination = s.template GetWrappedOutput<To>();
-				for (U32 i = 0; i < To::ResourceCount; i++)
-				{
-					ToOutput.Revisions[i] = Destination.Revisions[i];
-				}
-			}
-			else
-			{
-				for (U32 i = 0; i < To::ResourceCount; i++)
-				{
-					if (i != ToIndex)
-					{
-						//create undefined dummy resources with the same descriptor
-						ToOutput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromInput.GetDescriptor(FromIndex));
-					}
-				}
-			}
-
-			ToOutput.Revisions[ToIndex] = FromInput.Revisions[FromIndex];
-			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
-
-			//remove the old output and copy it into the new destination
-			return s.Union(DestTable);
-		};
-	}
-
-	/* this function moves a Handle from the OutputList into the InputList the destination is overwitten and the Source stays */
-	template<typename From, typename To>
-	auto RenameOutputToInput(U32 FromIndex = 0, U32 ToIndex = 0) const
-	{
-		return [FromIndex, ToIndex](const auto& s)
-		{
-			CheckIsResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(std::is_base_of_v<From, typename StateType::OutputTableType>, "Source was not found in the resource table");
-
-			Wrapped<From> FromOutput = s.template GetWrappedOutput<From>();
-			OutputTableType<From> SourceTable{ InputTable<>(), OutputTable<From>(FromOutput) };
-
-			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToInput(To(FromOutput.GetHandle()), {});
-			if constexpr (s.template ContainsInput<To>())
-			{
-				//copy over the old revisions to not loose entries
-				const auto& Destination = s.template GetWrappedInput<To>();
-				for (U32 i = 0; i < To::ResourceCount; i++)
-				{
-					ToInput.Revisions[i] = Destination.Revisions[i];
-				}
-			}
-			else
-			{
-				for (U32 i = 0; i < To::ResourceCount; i++)
-				{
-					if (i != ToIndex)
-					{
-						//create undefined dummy resources with the same descriptor
-						ToInput.Revisions[i].ImaginaryResource = To::template OnCreateInput<To>(FromOutput.GetDescriptor(FromIndex));
-					}
-				}
-			}
-
-			ToInput.Revisions[ToIndex] = FromOutput.Revisions[FromIndex];
-			InputTableType<To> DestTable{ InputTable<To>(ToInput), OutputTable<>() };
+			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
+			ResourceTable<To> DestTable { "RenameEntry", ToEntry };
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
@@ -265,66 +136,45 @@ public:
 
 	/* this function moves all Handles from the InputList into the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto RenameEntireInputsToOutputs() const
+	auto RenameAllEntries() const
 	{
 		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
 		return [](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(std::is_base_of_v<From, typename StateType::InputTableType>, "Source was not found in the resource table");
+			static_assert(std::is_base_of_v<From, StateType>, "Source was not found in the resource table");
 
-			Wrapped<From> FromInput = s.template GetWrappedInput<From>();
-			InputTableType<From> SourceTable{ InputTable<From>(FromInput), OutputTable<>() };
+			Wrapped<From> FromEntry = s.template GetWrapped<From>();
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToOutput(To(FromInput.GetHandle()), {});
+			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), {});
 
-			for(U32 i = 0; i < To::ResourceCount; i++)
+			for (U32 i = 0; i < To::ResourceCount; i++)
 			{
-				ToOutput.Revisions[i] = FromInput.Revisions[i];
+				ToEntry.Revisions[i] = FromEntry.Revisions[i];
 			}
-			OutputTableType<To> DestTable{ InputTable<>(), OutputTable<To>(ToOutput) };
+			ResourceTable<To> DestTable{ "RenameAllEntries", ToEntry };
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
 		};
 	}
-
-	/* this function adds a new input to the resourcetable all descriptors have to be provided */ 
+	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
 	template<typename Handle, typename... ARGS>
-	auto CreateInputResource(const typename Handle::DescriptorType(&InDescriptors)[Handle::ResourceCount], const ARGS&... Args) const
+	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[Handle::ResourceCount], const ARGS&... Args) const
 	{
 		ResourceRevision Revisions[Handle::ResourceCount];
 		for (U32 i = 0; i < Handle::ResourceCount; i++)
 		{
-			Revisions[i].ImaginaryResource = Handle::template OnCreateInput<Handle>(InDescriptors[i]);
+			Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
 		return [WrappedResource](const auto& s)
 		{	
 			CheckIsResourceTable(s);
-			auto NewResourceTable = InputTableType<Handle>(InputTable<Handle>(WrappedResource), OutputTable<>());
-			return s.Union(NewResourceTable);
-		};
-	}
-
-	/* this function adds a new output to the resourcetable all descriptors have to be provided */ 
-	template<typename Handle, typename... ARGS>
-	auto CreateOutputResource(const typename Handle::DescriptorType(&InDescriptors)[Handle::ResourceCount], const ARGS&... Args) const
-	{
-		ResourceRevision Revisions[Handle::ResourceCount];
-		for (U32 i = 0; i < Handle::ResourceCount; i++)
-		{
-			Revisions[i].ImaginaryResource = Handle::template OnCreateOutput<Handle>(InDescriptors[i]);
-		}
-		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
-
-		return [WrappedResource](const auto& s)
-		{	
-			CheckIsResourceTable(s);
-			auto NewResourceTable = OutputTableType<Handle>(InputTable<>(), OutputTable<Handle>(WrappedResource));
+			auto NewResourceTable = ResourceTable<Handle>("CreateResource", WrappedResource);
 			return s.Union(NewResourceTable);
 		};
 	}
@@ -332,7 +182,7 @@ public:
 	/* returns the empty resourcetable */
 	static inline auto GetEmptyResourceTable()
 	{
-		return ResourceTable<InputTable<>, OutputTable<>>(InputTable<>(), OutputTable<>());
+		return ResourceTable<>("EmptyResourceTable");
 	}
 
 	/* after the builing finished return all the actions recorded */
@@ -347,12 +197,6 @@ public:
 	}
 
 private:
-	template<typename Handle>
-	using OutputTableType = ResourceTable<InputTable<>, OutputTable<Handle>>;
-
-	template<typename Handle>
-	using InputTableType = ResourceTable<InputTable<Handle>, OutputTable<>>;
-
 	template<typename ResourceTableType>
 	static void CheckIsResourceTable(const ResourceTableType& Table)
 	{

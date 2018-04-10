@@ -39,24 +39,12 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	typedef ExternalTexture2dDescriptor DescriptorType;
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreateInput(const DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
 		TransientResourceImpl<Handle>* Ret = nullptr;
 		if (InDescriptor.Index != -1)
 		{
-			Ret = Texture2dResourceHandle<CRTP>::template OnCreateInput<Handle>(InDescriptor);
-			Ret->Materialize();
-		}
-		return Ret;
-	}
-
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreateOutput(const DescriptorType& InDescriptor)
-	{
-		TransientResourceImpl<Handle>* Ret = nullptr;
-		if (InDescriptor.Index != -1)
-		{
-			Ret = Texture2dResourceHandle<CRTP>::template OnCreateOutput<Handle>(InDescriptor);
+			Ret = Texture2dResourceHandle<CRTP>::template OnCreate<Handle>(InDescriptor);
 			Ret->Materialize();
 		}
 		return Ret;
@@ -99,18 +87,11 @@ struct CpuOnlyResourceHandle : ResourceHandle<CRTP>
 	typedef CpuOnlyResource::Descriptor DescriptorType;
 
 	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreateInput(const DescriptorType& InDescriptor)
+	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = ResourceHandleBase::OnCreateInput<Handle>(InDescriptor);
+		TransientResourceImpl<Handle>* Ret = ResourceHandleBase::OnCreate<Handle>(InDescriptor);
 		Ret->Materialize();
 		return Ret;
-	}
-
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreateOutput(const DescriptorType& InDescriptor)
-	{
-		check(false && "Not valid Use Case");
-		return nullptr;
 	}
 
 	static ResourceType* OnMaterialize(const DescriptorType&)

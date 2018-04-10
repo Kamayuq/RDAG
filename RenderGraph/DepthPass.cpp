@@ -18,7 +18,7 @@ namespace RDAG
 
 typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	const RDAG::SceneViewInfo& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
+	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor DepthDescriptor;
 	DepthDescriptor.Name = "DepthRenderTarget";
 	DepthDescriptor.Format = ViewInfo.DepthFormat;
@@ -27,8 +27,8 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 
 	return Seq
 	{
-		Builder.CreateOutputResource<RDAG::DepthTarget>({ DepthDescriptor }),
-		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+		Builder.CreateResource<RDAG::DepthTarget>({ DepthDescriptor }),
+		Builder.QueueRenderAction<RDAG::DepthTarget>("DepthRenderAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("DepthRenderAction");
 		})

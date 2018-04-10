@@ -24,7 +24,7 @@ namespace RDAG
 
 typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	const auto& ViewInfo = Input.GetInputHandle<RDAG::SceneViewInfo>();
+	const auto& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor AoDescriptor;
 	AoDescriptor.Width = ViewInfo.SceneWidth;
 	AoDescriptor.Height = ViewInfo.SceneHeight;
@@ -35,16 +35,12 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::DistanceField:
 		{
 			AoDescriptor.Name = "DistanceFieldAoTarget";
-			using DFAOTable = ResourceTable
-			<
-				InputTable<RDAG::SceneViewInfo>, 
-				OutputTable<RDAG::AmbientOcclusionUAV>
-			>;
+			using DFAOTable = ResourceTable<RDAG::SceneViewInfo, RDAG::AmbientOcclusionUAV>;
 
 			return Seq
 			{
-				Builder.CreateOutputResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
-				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable&)
+				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
+				Builder.QueueRenderAction<RDAG::AmbientOcclusionUAV>("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable&)
 				{
 					Ctx.Draw("DistancefieldAOAction");
 				})
@@ -55,16 +51,12 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::HorizonBased:
 		{
 			AoDescriptor.Name = "HorizonBasedAoTarget";
-			using HBAOTable = ResourceTable
-			<
-				InputTable<RDAG::GbufferTarget, RDAG::DepthTexture>, 
-				OutputTable<RDAG::AmbientOcclusionUAV>
-			>;
+			using HBAOTable = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTexture, RDAG::AmbientOcclusionUAV>;
 
 			return Seq
 			{
-				Builder.CreateOutputResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
-				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable&)
+				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
+				Builder.QueueRenderAction<RDAG::AmbientOcclusionUAV>("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable&)
 				{
 					Ctx.Draw("HorizonBasedAOAction");
 				})

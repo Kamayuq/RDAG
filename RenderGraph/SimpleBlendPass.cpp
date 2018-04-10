@@ -3,7 +3,7 @@
 
 typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto BlendSrcInfo = Input.GetInputDescriptor<RDAG::BlendSource>(0);
+	auto BlendSrcInfo = Input.GetDescriptor<RDAG::BlendSource>(0);
 	Texture2d::Descriptor BlendDstDescriptor;
 	BlendDstDescriptor.Name = "BlendDestinationRenderTarget";
 	BlendDstDescriptor.Format = BlendSrcInfo.Format;
@@ -12,8 +12,8 @@ typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPass
 
 	return Seq
 	{
-		Builder.CreateOutputResource<RDAG::BlendDest>({ BlendDstDescriptor }),
-		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext& Ctx, const PassOutputType&)
+		Builder.CreateResource<RDAG::BlendDest>({ BlendDstDescriptor }),
+		Builder.QueueRenderAction<RDAG::BlendDest>("SimpleBlendAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("SimpleBlendAction");
 		})

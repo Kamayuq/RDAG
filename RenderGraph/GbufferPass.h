@@ -22,11 +22,9 @@ namespace RDAG
 
 struct GbufferRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::DepthTarget>,
-		OutputTable<RDAG::DepthTarget, RDAG::GbufferTarget>
-	);
+	using PassInputType = ResourceTable<RDAG::DepthTarget>;
+	using PassOutputType = ResourceTable<RDAG::DepthTarget, RDAG::GbufferTarget>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

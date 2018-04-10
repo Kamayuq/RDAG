@@ -6,7 +6,6 @@ constexpr const char* DrawStyle::StyleChart[];
 constexpr const char* DrawStyle::ShapeChart[];
 constexpr const char* ArrowStyle::HeadChart[];
 constexpr const char* ArrowStyle::DirChart[];
-constexpr const char* PinStyle::TypeChart[];
 #endif
 
 U32 ActionStyle::GlobalActionIndex = 0;

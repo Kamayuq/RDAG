@@ -3,12 +3,12 @@
 
 typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto ForwardInfo = Input.GetInputHandle<RDAG::ForwardRenderTarget>();
+	auto ForwardInfo = Input.GetHandle<RDAG::ForwardRenderTarget>();
 	(void)ForwardInfo;
 
 	return Seq
 	{
-		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+		Builder.QueueRenderAction<RDAG::DepthTarget, RDAG::ForwardRenderTarget>("ForwardRenderAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("ForwardRenderAction");
 		})

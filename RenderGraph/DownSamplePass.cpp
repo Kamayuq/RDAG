@@ -3,7 +3,7 @@
 
 typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DownSampleInfo = Input.GetInputDescriptor<RDAG::DownsampleInput>();
+	auto DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleInput>();
 	Texture2d::Descriptor DownsampleDescriptor;
 	DownsampleDescriptor.Name = "DownsampleRenderTarget";
 	DownsampleDescriptor.Format = DownSampleInfo.Format;
@@ -12,8 +12,8 @@ typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const 
 
 	return Seq
 	{
-		Builder.CreateOutputResource<RDAG::DownsampleResult>({ DownsampleDescriptor }),
-		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+		Builder.CreateResource<RDAG::DownsampleResult>({ DownsampleDescriptor }),
+		Builder.QueueRenderAction<RDAG::DownsampleResult>("DownsampleRenderAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("DownsampleRenderAction");
 		})

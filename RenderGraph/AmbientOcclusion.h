@@ -20,11 +20,9 @@ namespace RDAG
 
 struct AmbientOcclusionPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::SceneViewInfo, RDAG::GbufferTarget, RDAG::DepthTexture>,
-		OutputTable<RDAG::AmbientOcclusionTexture>
-	);
+	using PassInputType = ResourceTable<RDAG::SceneViewInfo, RDAG::GbufferTarget, RDAG::DepthTexture>;
+	using PassOutputType = ResourceTable<RDAG::AmbientOcclusionTexture>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

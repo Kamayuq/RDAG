@@ -38,11 +38,9 @@ namespace RDAG
 
 struct ToneMappingPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::PostProcessingInput>,
-		OutputTable<RDAG::PostProcessingResult>
-	);
+	using PassInputType = ResourceTable<RDAG::PostProcessingInput>;
+	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
@@ -50,11 +48,9 @@ struct ToneMappingPass
 
 struct PostProcessingPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::SceneViewInfo, RDAG::PostProcessingInput, RDAG::DepthTexture, RDAG::VelocityVectors>,
-		OutputTable<RDAG::PostProcessingResult>
-	);
+	using PassInputType = ResourceTable<RDAG::SceneViewInfo, RDAG::PostProcessingInput, RDAG::DepthTexture, RDAG::VelocityVectors>;
+	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

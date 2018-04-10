@@ -54,13 +54,9 @@ int main(int argc, char* argv[])
 
 	RenderPassBuilder Builder;
 
-	{
-		RESOURCE_TABLE
-		(
-			InputTable<>,
-			OutputTable<RDAG::SimpleResourceHandle>
-		)
-
+	//{
+		using PassInputType = ResourceTable<>;
+		using PassOutputType = ResourceTable<RDAG::SimpleResourceHandle>;
 		auto SimpleRenderPass = [](const RenderPassBuilder& Builder, const PassInputType& Input) -> PassOutputType
 		{
 			Texture2d::Descriptor TargetDescriptor;
@@ -71,8 +67,8 @@ int main(int argc, char* argv[])
 
 			return Seq
 			{
-				Builder.CreateOutputResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
-				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+				Builder.CreateResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
+				Builder.QueueRenderAction<RDAG::SimpleResourceHandle>("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 				{
 					Ctx.Draw("SimpleRenderAction");
 				})
@@ -81,19 +77,18 @@ int main(int argc, char* argv[])
 
 		auto val = Seq
 		{
-			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
-			Builder.RenameOutputToOutput<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
-			Builder.RenameOutputToOutput<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
-			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
+			Builder.BuildRenderPass<RDAG::SimpleResourceHandle>("SimpleRenderPass", SimpleRenderPass),
+			Builder.RenameEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
+			Builder.BuildRenderPass<RDAG::DownsamplePyramid<16>>("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
+			Builder.RenameEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
+			Builder.BuildRenderPass<RDAG::PostProcessingResult>("ToneMappingPass", ToneMappingPass::Build)
 		}(Builder.GetEmptyResourceTable());
 		(void)val;
-	}
+	//}
 
 	{
 		std::chrono::duration<long long, std::nano> minDuration(std::numeric_limits<long long>::max());
 		//minDuration = std::numeric_limits<decltype(minDuration)>::max();
-
 		for (int i = 0; i < ItterationCount; i++)
 		{
 			auto start = std::chrono::high_resolution_clock::now();
@@ -103,8 +98,8 @@ int main(int argc, char* argv[])
 
 			auto val = Seq
 			{
-				Builder.CreateInputResource<RDAG::SceneViewInfo>({}, ViewInfo),
-				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
+				Builder.CreateResource<RDAG::SceneViewInfo>({}, ViewInfo),
+				Builder.BuildRenderPass<RDAG::PostProcessingResult>("MainRenderPass", DeferredRendererPass::Build)
 			}(Builder.GetEmptyResourceTable());
 			(void)val;
 

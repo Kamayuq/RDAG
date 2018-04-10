@@ -22,11 +22,9 @@ namespace RDAG
 
 struct ShadowMapRenderPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::SceneViewInfo>,
-		OutputTable<RDAG::ShadowMapTextureArray>
-	);
+	using PassInputType = ResourceTable<RDAG::SceneViewInfo>;
+	using PassOutputType = ResourceTable<RDAG::ShadowMapTextureArray>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

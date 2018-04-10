@@ -28,11 +28,9 @@ namespace RDAG
 
 struct DepthOfFieldPass
 {
-	RESOURCE_TABLE
-	(
-		InputTable<RDAG::SceneViewInfo, RDAG::DepthOfFieldInput, RDAG::DepthTexture, RDAG::VelocityVectors>,
-		OutputTable<RDAG::DepthOfFieldOutput>
-	);
+	using PassInputType = ResourceTable<RDAG::SceneViewInfo, RDAG::DepthOfFieldInput, RDAG::DepthTexture, RDAG::VelocityVectors>;
+	using PassOutputType = ResourceTable<RDAG::DepthOfFieldOutput>;
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

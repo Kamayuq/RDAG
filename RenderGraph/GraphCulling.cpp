@@ -8,7 +8,7 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 	const auto* Pass = Action->GetRenderPassData();
 
 	U32 NumValidMutables = 0;
-	for (const ResourceTableEntry& Output : Pass->AsOutputIterator())
+	for (const ResourceTableEntry& Output : *Pass)
 	{
 		if (Output.IsMaterialized())
 		{
@@ -34,7 +34,7 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 		//Statics only need to be processed for Leafs
 		if (Action != nullptr)
 		{
-			for (const ResourceTableEntry& Input : Pass->AsInputIterator())
+			for (const ResourceTableEntry& Input : *Pass)
 			{
 				if (Input.IsValid())
 				{

@@ -3,7 +3,7 @@
 
 typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DepthInfo = Input.GetInputDescriptor<RDAG::DepthTexture>();
+	auto DepthInfo = Input.GetDescriptor<RDAG::DepthTarget>();
 	Texture2d::Descriptor VelocityDescriptor;
 	VelocityDescriptor.Name = "VelocityRenderTarget";
 	VelocityDescriptor.Format = ERenderResourceFormat::RG16F;
@@ -12,8 +12,8 @@ typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const Rend
 
 	return Seq
 	{
-		Builder.CreateOutputResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
-		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+		Builder.CreateResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
+		Builder.QueueRenderAction<RDAG::VelocityVectors>("VelocityRenderAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("VelocityRenderAction");
 		})
