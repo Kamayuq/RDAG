@@ -44,8 +44,8 @@ struct HalfResTransparencyRenderPass
 struct TransparencyRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyInput, RDAG::SceneViewInfo>;
-	using PassOutputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyResult>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassOutputType = ResourceTable<RDAG::TransparencyResult, RDAG::DepthTarget>;
+	using PassActionType = ResourceTable<RDAG::TransparencyResult, RDAG::DepthTarget, RDAG::TransparencyInput, RDAG::SceneViewInfo>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

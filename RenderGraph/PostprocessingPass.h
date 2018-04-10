@@ -40,7 +40,7 @@ struct ToneMappingPass
 {
 	using PassInputType = ResourceTable<RDAG::PostProcessingInput>;
 	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::PostProcessingResult, RDAG::PostProcessingInput>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
@@ -50,7 +50,7 @@ struct PostProcessingPass
 {
 	using PassInputType = ResourceTable<RDAG::SceneViewInfo, RDAG::PostProcessingInput, RDAG::DepthTexture, RDAG::VelocityVectors>;
 	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::PostProcessingResult, RDAG::SceneViewInfo, RDAG::PostProcessingInput, RDAG::DepthTexture, RDAG::VelocityVectors>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

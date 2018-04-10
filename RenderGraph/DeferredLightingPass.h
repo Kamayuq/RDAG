@@ -27,7 +27,7 @@ struct DeferredLightingPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthTexture, RDAG::GbufferTarget, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
 	using PassOutputType = ResourceTable<RDAG::LightingUAV>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::DepthTexture, RDAG::GbufferTarget, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

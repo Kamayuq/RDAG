@@ -48,7 +48,7 @@ struct SimpleBlendPass
 {
 	using PassInputType = ResourceTable<RDAG::BlendSource>;
 	using PassOutputType = ResourceTable<RDAG::BlendDest>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::BlendDest, RDAG::BlendSource>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

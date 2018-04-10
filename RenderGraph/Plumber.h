@@ -533,21 +533,23 @@ namespace Internal
 	template<bool B>
 	struct VisualStudioDeductionHelper
 	{
-		template<typename X, template<typename...> class RightType, typename... RS, typename RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>())>
-		static constexpr auto Select(const IResourceTableBase&, const RightType<RS...>& Rhs) -> Wrapped<RealType>
+		template<typename X, template<typename...> class RightType, typename... RS>
+		static constexpr auto Select(const IResourceTableBase&, const RightType<RS...>& Rhs)
 		{
 			// see VisualStudioDeductionHelper<false>::Select
 			// if the right table contains our result than use it 
 			// but first restore the original RealType to be able to extract it 
 			// because we checked compatible types which might not be the same
+			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Rhs.template GetWrapped<RealType>();
 		}
 
-		template<typename X, template<typename...> class RightType, typename... RS, typename RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>())>
-		static constexpr auto CollectSelect(const RightType<RS...>& Rhs) -> Wrapped<X>
+		template<typename X, template<typename...> class RightType, typename... RS>
+		static constexpr auto CollectSelect(const RightType<RS...>& Rhs)
 		{
 			//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
 			//before we cast it to the type that we want to fill the new table with
+			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Wrapped<X>::ConvertFrom(Rhs.template GetWrapped<RealType>());
 		}
 
@@ -580,13 +582,14 @@ namespace Internal
 			}
 		};
 
-		template<typename X, template<typename...> class LeftType, typename... LS, typename RealType = decltype(SetOperation<LS...>::template GetOriginalType<typename X::CompatibleType>())>
-		static constexpr auto Select(const LeftType<LS...>& Lhs, const IResourceTableBase&) -> Wrapped<RealType>
+		template<typename X, template<typename...> class LeftType, typename... LS>
+		static constexpr auto Select(const LeftType<LS...>& Lhs, const IResourceTableBase&)
 		{
 			// see VisualStudioDeductionHelper<true>::Select
 			// otherwise use the result from the left table 
 			// but first restore the original ealType to be able to extract it 
 			// because we checked compatible types which might not be the same
+			using RealType = decltype(SetOperation<LS...>::template GetOriginalType<typename X::CompatibleType>());
 			return Lhs.template GetWrapped<RealType>();
 		}
 
@@ -615,7 +618,7 @@ public:
 	friend class ResourceTable;
 
 	template<typename>
-	friend class ItterableResourceTable;
+	friend class IterableResourceTable;
 	/*                   MakeFriends                    */
 
 	/*                   Constructors                    */
@@ -678,13 +681,6 @@ public:
 		using OtherType = ResourceTable<YS...>;
 		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
 	}
-
-	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatble handles */
-	template<typename... YS>
-	static constexpr auto Collect(const ResourceTable<YS...>& Other)
-	{
-		return CollectInternal(GetSetType(), Other);
-	}
 	/*                  SetOperations                    */
 
 	/*                ElementOperations                  */
@@ -728,9 +724,7 @@ public:
 protected:
 	template<typename Handle>
 	Wrapped<Handle>& GetWrapped() 
-	{ 
-		constexpr bool contains = this->template Contains<Handle>();
-		Wrapped<Handle>::template Test<contains>();
+	{
 		return *static_cast<Wrapped<Handle>*>(this); 
 	}
 	/*                ElementOperations                  */
@@ -758,19 +752,20 @@ private:
 
 	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from */
 	template<typename... XS, typename RightType>
-	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs) -> ResourceTable<XS...>
+	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs)
 	{
 		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
 		return Internal::VisualStudioDeductionHelper<ContainsAll>::template Collect<::ResourceTable, XS...>(Rhs);
 	}
 
 	/* Populate will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
+	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
 	template<typename... XS>
 	constexpr ResourceTable<XS...> Populate() const
 	{
 		using ReturnType = ResourceTable<XS...>;
 		//collect the results otherwise fail
-		return ReturnType(ReturnType::Collect(*this));
+		return ReturnType(ReturnType::CollectInternal(ReturnType::GetSetType(), *this));
 	}
 
 protected:
@@ -794,14 +789,14 @@ protected:
 };
 
 template<typename ResourceTableType>
-class ItterableResourceTable final : public ResourceTableType, public IResourceTableInfo
+class IterableResourceTable final : public ResourceTableType, public IResourceTableInfo
 {
-	using ThisType = ItterableResourceTable<ResourceTableType>;
+	using ThisType = IterableResourceTable<ResourceTableType>;
 
 	friend struct RenderPassBuilder;
 
 public:
-	explicit ItterableResourceTable(const ResourceTableType& RTT, const char* Name, const IRenderPassAction* InAction)
+	explicit IterableResourceTable(const ResourceTableType& RTT, const char* Name, const IRenderPassAction* InAction)
 		: ResourceTableType(Name, RTT)
 		, IResourceTableInfo(InAction) {};
 

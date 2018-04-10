@@ -223,7 +223,7 @@ private:
 			Task(checked_cast<ContextType&>(RndCtx), RenderPassData);
 		}
 
-		ItterableResourceTable<RenderPassDataType> RenderPassData;
+		IterableResourceTable<RenderPassDataType> RenderPassData;
 		FunctionType Task;
 	};
 

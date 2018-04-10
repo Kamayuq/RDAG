@@ -17,7 +17,7 @@ struct VelocityRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthTarget>;
 	using PassOutputType = ResourceTable<RDAG::VelocityVectors>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::VelocityVectors, RDAG::DepthTarget>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

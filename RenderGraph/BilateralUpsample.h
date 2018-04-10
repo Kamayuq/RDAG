@@ -33,7 +33,7 @@ struct BilateralUpsampleRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::HalfResInput, RDAG::HalfResDepth, RDAG::DepthTexture>;
 	using PassOutputType = ResourceTable<RDAG::UpsampleResult>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::UpsampleResult, RDAG::HalfResInput, RDAG::HalfResDepth, RDAG::DepthTexture>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

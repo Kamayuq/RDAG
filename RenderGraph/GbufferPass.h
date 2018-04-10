@@ -24,7 +24,7 @@ struct GbufferRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthTarget>;
 	using PassOutputType = ResourceTable<RDAG::DepthTarget, RDAG::GbufferTarget>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::DepthTarget, RDAG::GbufferTarget>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

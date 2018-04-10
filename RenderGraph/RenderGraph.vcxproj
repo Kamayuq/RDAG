@@ -65,7 +65,7 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <OmitFramePointers>false</OmitFramePointers>
       <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
-      <AdditionalOptions>/std:c++latest %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/std:c++latest -Xtemplight -profiler %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>
       </MultiProcessorCompilation>
     </ClCompile>

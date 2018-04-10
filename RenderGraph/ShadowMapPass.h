@@ -24,7 +24,7 @@ struct ShadowMapRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::SceneViewInfo>;
 	using PassOutputType = ResourceTable<RDAG::ShadowMapTextureArray>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::ShadowMapTextureArray, RDAG::SceneViewInfo>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

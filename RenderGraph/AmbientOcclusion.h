@@ -22,7 +22,7 @@ struct AmbientOcclusionPass
 {
 	using PassInputType = ResourceTable<RDAG::SceneViewInfo, RDAG::GbufferTarget, RDAG::DepthTexture>;
 	using PassOutputType = ResourceTable<RDAG::AmbientOcclusionTexture>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::GbufferTarget, RDAG::DepthTexture>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

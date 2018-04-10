@@ -30,7 +30,7 @@ struct DepthOfFieldPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthOfFieldInput, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
 	using PassOutputType = ResourceTable<RDAG::DepthOfFieldOutput>;
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::DepthOfFieldOutput, RDAG::DepthOfFieldInput, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
