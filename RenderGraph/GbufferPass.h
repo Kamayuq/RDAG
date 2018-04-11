@@ -4,18 +4,21 @@
 
 namespace RDAG
 {
-	struct GbufferTarget : Texture2dResourceHandle<GbufferTarget>
+	struct GbufferTexture : RendertargetResourceHandle<GbufferTexture>
+	{
+		static constexpr const U32 ResourceCount = 4;
+		static constexpr const char* Name = "GbufferTexture";
+
+		explicit GbufferTexture() {}
+		explicit GbufferTexture(const struct GbufferTarget&) {}
+	};
+
+	struct GbufferTarget : RendertargetResourceHandle<GbufferTexture>
 	{
 		static constexpr const U32 ResourceCount = 4;
 		static constexpr const char* Name = "GbufferTarget";
 
 		explicit GbufferTarget() {}
-
-		void OnExecute(ImmediateRenderContext& Ctx, const GbufferTarget::ResourceType& Resource) const
-		{
-			Ctx.TransitionResource(Resource, EResourceTransition::Target);
-			Ctx.BindRenderTarget(Resource);
-		}
 	};
 }
 

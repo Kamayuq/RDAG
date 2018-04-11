@@ -25,18 +25,12 @@ namespace RDAG
 	struct TransparencyResult;
 	struct HalfResTransparencyResult; 
 
-	struct ForwardRenderTarget : Texture2dResourceHandle<ForwardRenderTarget>
+	struct ForwardRenderTarget : RendertargetResourceHandle<ForwardRenderTarget>
 	{
 		static constexpr const char* Name = "ForwardRenderTarget";
 		
 		explicit ForwardRenderTarget(ESortOrder::Type InSortOrder) : SortOrder(InSortOrder) {}
 		explicit ForwardRenderTarget(const TransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
-		
-		void OnExecute(ImmediateRenderContext& Ctx, const ForwardRenderTarget::ResourceType& Resource) const
-		{
-			Ctx.TransitionResource(Resource, EResourceTransition::Target);
-			Ctx.BindRenderTarget(Resource);
-		}
 
 		ESortOrder::Type SortOrder;
 	};

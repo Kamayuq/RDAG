@@ -2,101 +2,75 @@
 #include "VelocityPass.h"
 #include "TemporalAA.h"
 
+#define SIMPLE_TEX_HANDLE(HandleName)								\
+struct HandleName : Texture2dResourceHandle<HandleName>				\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+	explicit HandleName() {}										\
+	template<typename CRTP>											\
+	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
+};														
+
+#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
+struct HandleName : Uav2dResourceHandle<Compatible>					\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+	explicit HandleName() {}										\
+	template<typename CRTP>											\
+	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
+};	
+
 namespace RDAG
 {
-	struct FullresColorSetup : Texture2dResourceHandle<FullresColorSetup>
-	{
-		static constexpr const char* Name = "FullresColorSetup";
+	SIMPLE_TEX_HANDLE(FullresColorTexture);
+	SIMPLE_UAV_HANDLE(FullresColorUav, FullresColorTexture);
+	SIMPLE_TEX_HANDLE(GatherColorTexture);
+	SIMPLE_UAV_HANDLE(GatherColorUav, GatherColorTexture);
+	SIMPLE_TEX_HANDLE(CocTileTexture);
+	SIMPLE_UAV_HANDLE(CocTileUav, CocTileTexture);
+	SIMPLE_TEX_HANDLE(PrefilterTexture);
+	SIMPLE_UAV_HANDLE(PrefilterUav, PrefilterTexture);
+	SIMPLE_TEX_HANDLE(ScatteringBokehLUTTexture);
+	SIMPLE_UAV_HANDLE(ScatteringBokehLUTUav, ScatteringBokehLUTTexture);
+	SIMPLE_TEX_HANDLE(GatheringBokehLUTTexture);
+	SIMPLE_UAV_HANDLE(GatheringBokehLUTUav, GatheringBokehLUTTexture);
 
-		explicit FullresColorSetup() {}
-	};
+	SIMPLE_TEX_HANDLE(ConvolutionTexture);
+	SIMPLE_UAV_HANDLE(ConvolutionUav, ConvolutionTexture);
 
-	struct GatherColorSetup : Texture2dResourceHandle<GatherColorSetup>
-	{
-		static constexpr const char* Name = "GatherColorSetup";
+	SIMPLE_TEX_HANDLE(ForegroundConvolutionTexture);
+	SIMPLE_UAV_HANDLE(ForegroundConvolutionUav, ForegroundConvolutionTexture);
 
-		explicit GatherColorSetup() {}
-		explicit GatherColorSetup(const TemporalAAOutput&) {};
-	};
-
-	struct CocTileOutput : Texture2dResourceHandle<CocTileOutput>
-	{
-		static constexpr const char* Name = "CocTileOutput";
-
-		explicit CocTileOutput() {}
-	};
-
-	struct PrefilterOutput : Texture2dResourceHandle<PrefilterOutput>
-	{
-		static constexpr const char* Name = "PrefilterOutput";
-
-		explicit PrefilterOutput() {}
-	};
-
-
-	struct ScatteringBokehLUTOutput : Texture2dResourceHandle<ScatteringBokehLUTOutput>
-	{
-		static constexpr const char* Name = "ScatteringBokehLUTOutput";
-
-		explicit ScatteringBokehLUTOutput() {}
-	};
-
-	struct GatheringBokehLUTOutput : Texture2dResourceHandle<GatheringBokehLUTOutput>
-	{
-		static constexpr const char* Name = "GatheringBokehLUTOutput";
-
-		explicit GatheringBokehLUTOutput() {}
-	};
-
-	struct ConvolutionOutput : Texture2dResourceHandle<ConvolutionOutput>
-	{
-		static constexpr const char* Name = "ConvolutionOutput";
-
-		explicit ConvolutionOutput() {}
-		explicit ConvolutionOutput(const struct ForegroundConvolutionOutput&) {}
-		explicit ConvolutionOutput(const struct BackgroundConvolutionOutput&) {}
-	};
-
-	struct ForegroundConvolutionOutput : Texture2dResourceHandle<ForegroundConvolutionOutput>
-	{
-		static constexpr const char* Name = "ForegroundConvolutionOutput";
-
-		explicit ForegroundConvolutionOutput() {}
-		explicit ForegroundConvolutionOutput(const ConvolutionOutput&) {}
-	};
-
-
-	struct BackgroundConvolutionOutput : Texture2dResourceHandle<BackgroundConvolutionOutput>
+	struct BackgroundConvolutionTexture : Texture2dResourceHandle<BackgroundConvolutionTexture>
 	{
 		static constexpr const U32 ResourceCount = 2;
-		static constexpr const char* Name = "BackgroundConvolutionOutput";
+		static constexpr const char* Name = "BackgroundConvolutionTexture";
 
-		explicit BackgroundConvolutionOutput() {}
-		explicit BackgroundConvolutionOutput(const ConvolutionOutput&) {}
+		explicit BackgroundConvolutionTexture() {}
+		template<typename CRTP>	
+		explicit BackgroundConvolutionTexture(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
-	struct SlightOutOfFocusConvolutionOutput : Texture2dResourceHandle<SlightOutOfFocusConvolutionOutput>
+	struct BackgroundConvolutionUav : Uav2dResourceHandle<BackgroundConvolutionTexture>
 	{
-		static constexpr const char* Name = "SlightOutOfFocusConvolutionOutput";
+		static constexpr const U32 ResourceCount = 2;
+		static constexpr const char* Name = "BackgroundConvolutionUav";
 
-		explicit SlightOutOfFocusConvolutionOutput() {}
+		explicit BackgroundConvolutionUav() {}
+		template<typename CRTP>
+		explicit BackgroundConvolutionUav(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
-	struct ScatteringReduce : Texture2dResourceHandle<ScatteringReduce>
-	{
-		static constexpr const char* Name = "ScatteringReduce";
-
-		explicit ScatteringReduce() {}
-	};
-
-	struct ScatterCompilation : Texture2dResourceHandle<ScatterCompilation>
-	{
-		static constexpr const char* Name = "ScatterCompilation";
-
-		explicit ScatterCompilation() {}
-		explicit ScatterCompilation(const struct ScatteringReduce&) {}
-	};
+	SIMPLE_TEX_HANDLE(SlightOutOfFocusConvolutionTexture);
+	SIMPLE_UAV_HANDLE(SlightOutOfFocusConvolutionUav, SlightOutOfFocusConvolutionTexture);
+	SIMPLE_TEX_HANDLE(ScatteringReduceTexture);
+	SIMPLE_UAV_HANDLE(ScatteringReduceUav, ScatteringReduceTexture);
+	SIMPLE_TEX_HANDLE(ScatterCompilationTexture);
+	SIMPLE_UAV_HANDLE(ScatterCompilationUav, ScatterCompilationTexture);
 };
+
+#undef SIMPLE_TEX_HANDLE
+#undef SIMPLE_UAV_HANDLE
 
 template<typename ConvolutionOutputType>
 auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enabled)
@@ -105,20 +79,20 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor ScatteringReduceDesc;
-		ScatteringReduceDesc.Name = "ScatteringReduce";
+		ScatteringReduceDesc.Name = "ScatteringReduceTexture";
 		ScatteringReduceDesc.Format = ERenderResourceFormat::ARGB16F;
 		ScatteringReduceDesc.Height = ViewInfo.SceneHeight;
 		ScatteringReduceDesc.Width = ViewInfo.SceneWidth;
 		
 		Texture2d::Descriptor ScatterCompilationDesc;
-		ScatterCompilationDesc.Name = "ScatterCompilation";
+		ScatterCompilationDesc.Name = "ScatterCompilationTexture";
 		ScatterCompilationDesc.Format = ERenderResourceFormat::ARGB16F;
 		ScatterCompilationDesc.Height = ViewInfo.SceneHeight;
 		ScatterCompilationDesc.Width = ViewInfo.SceneWidth;
 		
-		using ScatteringReduceData = ResourceTable<RDAG::ScatteringReduce, RDAG::GatherColorSetup>;
-		using ScatterCompilationData = ResourceTable< RDAG::ScatterCompilation, RDAG::ScatteringReduce>;
-		using DOFHybridScatter = ResourceTable<ConvolutionOutputType, RDAG::ScatterCompilation, RDAG::ScatteringBokehLUTOutput>;
+		using ScatteringReduceData = ResourceTable<RDAG::ScatteringReduceUav, RDAG::GatherColorTexture>;
+		using ScatterCompilationData = ResourceTable< RDAG::ScatterCompilationUav, RDAG::ScatteringReduceTexture>;
+		using DOFHybridScatter = ResourceTable<ConvolutionOutputType, RDAG::ScatterCompilationTexture, RDAG::ScatteringBokehLUTTexture>;
 
 		using ResourceTableType = std::decay_t<decltype(s)>;
 		ResourceTableType Result = s;
@@ -126,14 +100,14 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 		{		
 			Result = Seq
 			{
-				Builder.CreateResource<RDAG::ScatteringReduce>({ ScatteringReduceDesc }),
-				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData& Resources) -> ResourceTable<RDAG::ScatteringReduce>
+				Builder.CreateResource<RDAG::ScatteringReduceTexture>({ ScatteringReduceDesc }),
+				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData& Resources) -> ResourceTable<RDAG::ScatteringReduceUav>
 				{
 					Ctx.Draw("ScatteringReduceAction");
 					return Resources;
 				}),
-				Builder.CreateResource<RDAG::ScatterCompilation>({ ScatterCompilationDesc }),
-				Builder.QueueRenderAction("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData& Resources) -> ResourceTable<RDAG::ScatterCompilation>
+				Builder.CreateResource<RDAG::ScatterCompilationTexture>({ ScatterCompilationDesc }),
+				Builder.QueueRenderAction("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData& Resources) -> ResourceTable<RDAG::ScatterCompilationUav>
 				{
 					Ctx.Draw("ScatterCompilationAction");
 					return Resources;
@@ -197,7 +171,7 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			ConvolutionOutputDesc[i].Width = ViewInfo.SceneWidth;
 		}
 		auto ConvolutionOutputTable = Builder.CreateResource<ConvolutionGatherType>(ConvolutionOutputDesc)(s);
-		using GatherPassData = ResourceTable<RDAG::ConvolutionOutput, RDAG::GatheringBokehLUTOutput, RDAG::PrefilterOutput, RDAG::CocTileOutput>;
+		using GatherPassData = ResourceTable<RDAG::ConvolutionUav, RDAG::GatheringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
 
 		if (Enabled)
 		{
@@ -205,13 +179,13 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			{
 				ConvolutionOutputTable = Seq
 				{
-					Builder.RenameEntry<ConvolutionGatherType, RDAG::ConvolutionOutput>(i, 0),
-					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::ConvolutionOutput>
+					Builder.RenameEntry<ConvolutionGatherType, RDAG::ConvolutionUav>(i, 0),
+					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::ConvolutionUav>
 					{
 						Ctx.Draw("GatherPassDataAction");
 						return Resources;
 					}),
-					Builder.RenameEntry<RDAG::ConvolutionOutput, ConvolutionGatherType>(0, i)
+					Builder.RenameEntry<RDAG::ConvolutionUav, ConvolutionGatherType>(0, i)
 				}(ConvolutionOutputTable);
 			}
 		}
@@ -253,11 +227,11 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		SlightOutOfFocusConvolutionDesc.Height = ViewInfo.SceneHeight;
 		SlightOutOfFocusConvolutionDesc.Width = ViewInfo.SceneWidth;
 
-		auto SlightlyOutOfFocusTable = Builder.CreateResource<RDAG::SlightOutOfFocusConvolutionOutput>({ SlightOutOfFocusConvolutionDesc })(s);
+		auto SlightlyOutOfFocusTable = Builder.CreateResource<RDAG::SlightOutOfFocusConvolutionUav>({ SlightOutOfFocusConvolutionDesc })(s);
 		if (ViewInfo.DofSettings.RecombineQuality > 0)
 		{
-			using GatherPassData = ResourceTable<RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ScatteringBokehLUTOutput, RDAG::PrefilterOutput, RDAG::CocTileOutput>;
-			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::SlightOutOfFocusConvolutionOutput>
+			using GatherPassData = ResourceTable<RDAG::SlightOutOfFocusConvolutionUav, RDAG::ScatteringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
+			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::SlightOutOfFocusConvolutionUav>
 			{
 				Ctx.Draw("SlightlyOutOfFocusAction");
 				return Resources;
@@ -274,71 +248,71 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 	if (ViewInfo.DepthOfFieldEnabled)
 	{
 		Texture2d::Descriptor FullresColorDesc;
-		FullresColorDesc.Name = "FullresColorSetup";
+		FullresColorDesc.Name = "FullresColorTexture";
 		FullresColorDesc.Format = ERenderResourceFormat::ARGB16F;
 		FullresColorDesc.Height = ViewInfo.SceneHeight;
 		FullresColorDesc.Width = ViewInfo.SceneWidth;
 
 		Texture2d::Descriptor GatherColorDesc;
-		GatherColorDesc.Name = "GatherColorSetup";
+		GatherColorDesc.Name = "GatherColorTexture";
 		GatherColorDesc.Format = ERenderResourceFormat::ARGB16F;
 		GatherColorDesc.Height = ViewInfo.SceneHeight >> 1;
 		GatherColorDesc.Width = ViewInfo.SceneWidth >> 1;
-		using DofSetupPassData = ResourceTable<RDAG::FullresColorSetup, RDAG::GatherColorSetup, RDAG::DepthOfFieldInput, RDAG::VelocityVectors>;
+		using DofSetupPassData = ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav, RDAG::DepthOfFieldInput, RDAG::VelocityVectors>;
 
 		Texture2d::Descriptor CocTileDesc = GatherColorDesc;
-		GatherColorDesc.Name = "CocTileOutput";
-		using CocDilateData = ResourceTable< RDAG::CocTileOutput, RDAG::GatherColorSetup>;
+		GatherColorDesc.Name = "CocTileTexture";
+		using CocDilateData = ResourceTable< RDAG::CocTileUav, RDAG::GatherColorTexture>;
 
 		Texture2d::Descriptor PrefilterOutputDesc = GatherColorDesc;
 		PrefilterOutputDesc.Name = "PrefilterOutputDesc";
-		using PreFilterData = ResourceTable<RDAG::PrefilterOutput, RDAG::GatherColorSetup>;
+		using PreFilterData = ResourceTable<RDAG::PrefilterUav, RDAG::GatherColorTexture>;
 
 		Texture2d::Descriptor OutputDesc = Input.GetDescriptor<RDAG::DepthOfFieldInput>();
 		OutputDesc.Name = "DepthOfFieldOutput";
-		using RecombineData = ResourceTable<RDAG::DepthOfFieldOutput, RDAG::ScatteringBokehLUTOutput, RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput, RDAG::FullresColorSetup>;
+		using RecombineData = ResourceTable<RDAG::DepthOfFieldOutput, RDAG::ScatteringBokehLUTTexture, RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture, RDAG::FullresColorTexture>;
 
 		return Seq
 		{
-			Builder.CreateResource<RDAG::GatherColorSetup>({ GatherColorDesc }),
-			Builder.CreateResource<RDAG::FullresColorSetup>({ FullresColorDesc }),
-			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData& Resources) -> ResourceTable<RDAG::FullresColorSetup, RDAG::GatherColorSetup>
+			Builder.CreateResource<RDAG::GatherColorUav>({ GatherColorDesc }),
+			Builder.CreateResource<RDAG::FullresColorUav>({ FullresColorDesc }),
+			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData& Resources) -> ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav>
 			{
 				Ctx.Draw("DOFSetupAction");
 				return Resources;
 			}),
 			Scope(Seq
 			{
-				Builder.RenameEntry<RDAG::GatherColorSetup, RDAG::TemporalAAInput>(),
+				Builder.RenameEntry<RDAG::GatherColorTexture, RDAG::TemporalAAInput>(),
 				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorSetup>()
+				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorTexture>()
 			}),
-			Select<RDAG::GatherColorSetup, RDAG::SceneViewInfo>(
-			Extract<RDAG::SlightOutOfFocusConvolutionOutput, RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Seq
+			Select<RDAG::GatherColorTexture, RDAG::SceneViewInfo>(
+			Extract<RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture>(Seq
 			{
-				Builder.CreateResource<RDAG::CocTileOutput>({ CocTileDesc }),
-				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData& Resources) -> ResourceTable<RDAG::CocTileOutput>
+				Builder.CreateResource<RDAG::CocTileUav>({ CocTileDesc }),
+				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData& Resources) -> ResourceTable<RDAG::CocTileUav>
 				{
 					Ctx.Draw("CocDilateAction");
 					return Resources;
 				}),
-				Builder.CreateResource<RDAG::PrefilterOutput>({ PrefilterOutputDesc }),
-				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData& Resources) -> ResourceTable<RDAG::PrefilterOutput>
+				Builder.CreateResource<RDAG::PrefilterUav>({ PrefilterOutputDesc }),
+				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData& Resources) -> ResourceTable<RDAG::PrefilterUav>
 				{
 					Ctx.Draw("PreFilterAction");
 					return Resources;
 				}),
-				BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
-				BuildBokehLut<RDAG::GatheringBokehLUTOutput>(Builder),
-				ConvolutionGatherPass<RDAG::BackgroundConvolutionOutput>(Builder),
-				ConvolutionGatherPass<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
-				DofPostfilterPass<RDAG::BackgroundConvolutionOutput>(Builder, !ViewInfo.DofSettings.GatherForeground),
-				DofPostfilterPass<RDAG::ForegroundConvolutionOutput, RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.GatherForeground),
-				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
-				HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionOutput>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
+				BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
+				BuildBokehLut<RDAG::GatheringBokehLUTUav>(Builder),
+				ConvolutionGatherPass<RDAG::BackgroundConvolutionTexture>(Builder),
+				ConvolutionGatherPass<RDAG::ForegroundConvolutionTexture>(Builder, ViewInfo.DofSettings.GatherForeground),
+				DofPostfilterPass<RDAG::BackgroundConvolutionUav>(Builder, !ViewInfo.DofSettings.GatherForeground),
+				DofPostfilterPass<RDAG::ForegroundConvolutionUav, RDAG::BackgroundConvolutionTexture>(Builder, ViewInfo.DofSettings.GatherForeground),
+				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionUav>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
+				HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionUav>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
 				SlightlyOutOfFocusPass(Builder)
 			})),
-			BuildBokehLut<RDAG::ScatteringBokehLUTOutput>(Builder),
+			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
 			Builder.CreateResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData& Resources) -> PassOutputType
 			{

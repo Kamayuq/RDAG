@@ -20,7 +20,7 @@ namespace RDAG
 		explicit DownsamplePyramid(const DownsampleInput&) {}
 	};
 
-	struct DownsampleResult : Texture2dResourceHandle<DownsampleResult>
+	struct DownsampleResult : Uav2dResourceHandle<DownsampleResult>
 	{
 		static constexpr const char* Name = "DownsampleResult";
 		explicit DownsampleResult() {}

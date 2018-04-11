@@ -96,9 +96,9 @@ public:
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(std::is_base_of_v<From, StateType>, "Source was not found in the resource table");
+			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
-			Wrapped<From> FromEntry = s.template GetWrapped<From>();
+			auto FromEntry = s.template GetWrapped<From>();
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), {});
 

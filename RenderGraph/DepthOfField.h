@@ -17,7 +17,7 @@ namespace RDAG
 		explicit DepthOfFieldInput(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
-	struct DepthOfFieldOutput : Texture2dResourceHandle<DepthOfFieldOutput>
+	struct DepthOfFieldOutput : Uav2dResourceHandle<DepthOfFieldOutput>
 	{
 		static constexpr const char* Name = "DepthOfFieldOutput";
 
@@ -30,7 +30,6 @@ struct DepthOfFieldPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthOfFieldInput, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
 	using PassOutputType = ResourceTable<RDAG::DepthOfFieldOutput>;
-	using PassActionType = ResourceTable<RDAG::DepthOfFieldOutput, RDAG::DepthOfFieldInput, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

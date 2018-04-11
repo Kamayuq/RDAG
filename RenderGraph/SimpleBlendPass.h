@@ -23,7 +23,7 @@ namespace RDAG
 	struct TransparencyResult;
 	struct HalfResTransparencyResult;
 
-	struct BlendDest : Texture2dResourceHandle<BlendDest>
+	struct BlendDest : Uav2dResourceHandle<BlendDest>
 	{
 		static constexpr const char* Name = "BlendDest";
 

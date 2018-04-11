@@ -12,8 +12,6 @@ namespace RDAG
 
 		explicit AmbientOcclusionTexture() {}
 		explicit AmbientOcclusionTexture(const struct AmbientOcclusionUAV&) {}
-
-		void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource) const;
 	};
 }
 
@@ -22,7 +20,6 @@ struct AmbientOcclusionPass
 {
 	using PassInputType = ResourceTable<RDAG::SceneViewInfo, RDAG::GbufferTarget, RDAG::DepthTexture>;
 	using PassOutputType = ResourceTable<RDAG::AmbientOcclusionTexture>;
-	using PassActionType = ResourceTable<RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::GbufferTarget, RDAG::DepthTexture>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

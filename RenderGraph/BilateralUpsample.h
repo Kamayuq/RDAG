@@ -4,7 +4,7 @@
 
 namespace RDAG
 {
-	struct UpsampleResult : Texture2dResourceHandle<UpsampleResult>
+	struct UpsampleResult : Uav2dResourceHandle<UpsampleResult>
 	{
 		static constexpr const char* Name = "UpsampleResult";
 

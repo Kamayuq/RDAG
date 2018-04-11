@@ -8,26 +8,21 @@
 
 namespace RDAG
 {
-	struct LightingUAV : Texture2dResourceHandle<LightingUAV>
+	struct LightingUAV : Uav2dResourceHandle<LightingUAV>
 	{
 		static constexpr const char* Name = "LightingUAV";
 
 		explicit LightingUAV() {}
-
-		void OnExecute(ImmediateRenderContext& Ctx, const LightingUAV::ResourceType& Resource) const
-		{
-			Ctx.TransitionResource(Resource, EResourceTransition::UAV);
-			Ctx.BindRenderTarget(Resource);
-		}
 	};
 }
 
 
 struct DeferredLightingPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTexture, RDAG::GbufferTarget, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
+	using PassInputType = ResourceTable<RDAG::DepthTexture, RDAG::
+		GbufferTexture, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
 	using PassOutputType = ResourceTable<RDAG::LightingUAV>;
-	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::DepthTexture, RDAG::GbufferTarget, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
+	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::DepthTexture, RDAG::GbufferTexture, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

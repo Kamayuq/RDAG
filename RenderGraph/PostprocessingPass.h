@@ -24,7 +24,7 @@ namespace RDAG
 		explicit PostProcessingInput(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
-	struct PostProcessingResult : ExternalTexture2dResourceHandle<PostProcessingResult>
+	struct PostProcessingResult : ExternalUav2dResourceHandle<PostProcessingResult>
 	{
 		static constexpr const char* Name = "PostProcessingResult";
 

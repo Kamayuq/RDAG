@@ -9,15 +9,23 @@ namespace RDAG
 	{
 		static constexpr const char* Name = "VelocityVectors";
 		explicit VelocityVectors() {}
+		explicit VelocityVectors(const struct VelocityVectorTarget&) {}
+	};
+
+	struct VelocityVectorTarget : RendertargetResourceHandle<VelocityVectors>
+	{
+		static constexpr const char* Name = "VelocityVectorTarget";
+		explicit VelocityVectorTarget() {}
+		explicit VelocityVectorTarget(const VelocityVectors&) {}
 	};
 }
 
 
 struct VelocityRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTarget>;
-	using PassOutputType = ResourceTable<RDAG::VelocityVectors>;
-	using PassActionType = ResourceTable<RDAG::VelocityVectors, RDAG::DepthTarget>;
+	using PassInputType = ResourceTable<RDAG::DepthTexture>;
+	using PassOutputType = ResourceTable<RDAG::VelocityVectorTarget>;
+	using PassActionType = ResourceTable<RDAG::VelocityVectorTarget, RDAG::DepthTexture>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

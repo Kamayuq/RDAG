@@ -2,23 +2,11 @@
 
 namespace RDAG
 {
-	void AmbientOcclusionTexture::OnExecute(ImmediateRenderContext& Ctx, const AmbientOcclusionTexture::ResourceType& Resource) const
-	{
-		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
-		Ctx.BindTexture(Resource);
-	}
-
-	struct AmbientOcclusionUAV : Texture2dResourceHandle<AmbientOcclusionTexture>
+	struct AmbientOcclusionUAV : Uav2dResourceHandle<AmbientOcclusionTexture>
 	{
 		static constexpr const char* Name = "AmbientOcclusionUAV";
 		explicit AmbientOcclusionUAV() {}
 		explicit AmbientOcclusionUAV(const AmbientOcclusionTexture&) {}
-
-		void OnExecute(ImmediateRenderContext& Ctx, const AmbientOcclusionUAV::ResourceType& Resource) const
-		{
-			Ctx.TransitionResource(Resource, EResourceTransition::UAV);
-			Ctx.BindTexture(Resource);
-		}
 	};
 }
 
@@ -52,7 +40,7 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::HorizonBased:
 		{
 			AoDescriptor.Name = "HorizonBasedAoTarget";
-			using HBAOTable = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTexture, RDAG::AmbientOcclusionUAV>;
+			using HBAOTable = ResourceTable<RDAG::GbufferTexture, RDAG::DepthTexture, RDAG::AmbientOcclusionUAV>;
 
 			return Seq
 			{

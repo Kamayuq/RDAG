@@ -35,6 +35,20 @@ struct ResourceHandle : ResourceHandleBase
 	using CompatibleType = CRTP;
 };
 
+/* the base class of all materialized resources */
+class MaterializedResource
+{
+	EResourceFlags::Type ResourceFlags = EResourceFlags::Default;
+
+protected:
+	MaterializedResource(EResourceFlags::Type InResourceFlags) : ResourceFlags(InResourceFlags) {}
+
+public:
+	bool IsDiscardedResource() const { return ResourceFlags == EResourceFlags::Discard; };
+	bool IsManagedResource() const { return All(EResourceFlags::Managed, ResourceFlags); };
+	bool IsExternalResource() const { return All(EResourceFlags::External, ResourceFlags); };
+};
+
 /* Transient ResourceBase */
 class TransientResource
 {
@@ -713,19 +727,19 @@ public:
 		(check(GetWrapped<TS>().IsValid()), ...);
 	}
 
-	template<typename Handle>
-	const Wrapped<Handle>& GetWrapped() const 
+	template<typename Handle, typename RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>())>
+	const Wrapped<RealType>& GetWrapped() const
 	{ 
 		constexpr bool contains = this->template Contains<Handle>();
 		Wrapped<Handle>::template Test<contains>();
-		return *static_cast<const Wrapped<Handle>*>(this); 
+		return *static_cast<const Wrapped<RealType>*>(this);
 	}
 
 protected:
-	template<typename Handle>
-	Wrapped<Handle>& GetWrapped() 
+	template<typename Handle, typename RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>())>
+	Wrapped<RealType>& GetWrapped()
 	{
-		return *static_cast<Wrapped<Handle>*>(this); 
+		return *static_cast<Wrapped<RealType>*>(this);
 	}
 	/*                ElementOperations                  */
 

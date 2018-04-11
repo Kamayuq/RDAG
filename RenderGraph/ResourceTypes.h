@@ -3,6 +3,62 @@
 #include "Plumber.h"
 #include "LinearAlloc.h"
 
+
+/* example Texture2d implementation */
+struct Texture2d : MaterializedResource
+{
+	struct Descriptor
+	{
+		const char* Name = "Noname";
+		U32 Width = 0;
+		U32 Height = 0;
+		ERenderResourceFormat::Type Format = ERenderResourceFormat::Invalid;
+
+		bool operator==(const Descriptor& Other) const
+		{
+			if (Format != Other.Format)
+				return false;
+
+			if (Width != Other.Width)
+				return false;
+
+			if (Height != Other.Height)
+				return false;
+
+			if (strcmp(Name, Other.Name) != 0)
+				return false;
+
+			return true;
+		}
+	};
+
+	explicit Texture2d(const Descriptor& InDesc, EResourceFlags::Type InResourceFlags)
+		: MaterializedResource(InResourceFlags), Desc(InDesc)
+	{
+
+	}
+
+	const char* GetName() const
+	{
+		return Desc.Name;
+	}
+
+	bool RequiresTransition(EResourceTransition::Type& OldState, EResourceTransition::Type NewState) const
+	{
+		if (NewState != CurrentState)
+		{
+			OldState = CurrentState;
+			CurrentState = NewState;
+			return true;
+		}
+		return false;
+	}
+
+private:
+	Descriptor Desc;
+	mutable EResourceTransition::Type CurrentState = EResourceTransition::Undefined;
+};
+
 template<typename CRTP>
 struct Texture2dResourceHandle : ResourceHandle<CRTP>
 {
@@ -17,6 +73,26 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 	void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
+		Ctx.BindTexture(Resource);
+	}
+};
+
+template<typename CRTP>
+struct Uav2dResourceHandle : Texture2dResourceHandle<CRTP>
+{
+	void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
+		Ctx.BindTexture(Resource);
+	}
+};
+
+template<typename CRTP>
+struct RendertargetResourceHandle : Texture2dResourceHandle<CRTP>
+{
+	void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::Target);
 		Ctx.BindTexture(Resource);
 	}
 };
@@ -66,6 +142,26 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 		}
 
 		return ExternalResourceMap[Descriptor.Index];
+	}
+};
+
+template<typename CRTP>
+struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CRTP>
+{
+	void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
+		Ctx.BindTexture(Resource);
+	}
+};
+
+template<typename CRTP>
+struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP>
+{
+	void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::Target);
+		Ctx.BindTexture(Resource);
 	}
 };
 

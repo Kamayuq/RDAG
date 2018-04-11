@@ -29,7 +29,7 @@ namespace RDAG
 		explicit TemporalAAInput(const Texture2dResourceHandle<CRTP>&) {}
 	};
 
-	struct TemporalAAOutput : ExternalTexture2dResourceHandle<TemporalAAOutput>
+	struct TemporalAAOutput : ExternalUav2dResourceHandle<TemporalAAOutput>
 	{
 		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
 		static constexpr const char* Name = "TemporalAAOutput";
