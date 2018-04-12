@@ -64,6 +64,7 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 {
 	typedef Texture2d ResourceType;
 	typedef Texture2d::Descriptor DescriptorType;
+	static constexpr bool IsReadOnlyResource = true;
 
 	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
 	{
@@ -80,6 +81,8 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 template<typename CRTP>
 struct Uav2dResourceHandle : Texture2dResourceHandle<CRTP>
 {
+	static constexpr bool IsReadOnlyResource = false;
+
 	void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
@@ -90,6 +93,8 @@ struct Uav2dResourceHandle : Texture2dResourceHandle<CRTP>
 template<typename CRTP>
 struct RendertargetResourceHandle : Texture2dResourceHandle<CRTP>
 {
+	static constexpr bool IsReadOnlyResource = false;
+
 	void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
@@ -113,6 +118,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 {
 	typedef Texture2d ResourceType;
 	typedef ExternalTexture2dDescriptor DescriptorType;
+	static constexpr bool IsReadOnlyResource = true;
 
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
@@ -148,6 +154,8 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 template<typename CRTP>
 struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CRTP>
 {
+	static constexpr bool IsReadOnlyResource = false;
+
 	void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
@@ -158,6 +166,8 @@ struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CRTP>
 template<typename CRTP>
 struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP>
 {
+	static constexpr bool IsReadOnlyResource = false;
+
 	void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource) const
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
@@ -181,6 +191,7 @@ struct CpuOnlyResourceHandle : ResourceHandle<CRTP>
 {
 	typedef CpuOnlyResource ResourceType;
 	typedef CpuOnlyResource::Descriptor DescriptorType;
+	static constexpr bool IsReadOnlyResource = true;
 
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)

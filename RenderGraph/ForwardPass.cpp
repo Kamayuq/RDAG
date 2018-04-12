@@ -8,10 +8,9 @@ typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const Render
 
 	return Seq
 	{
-		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
+		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("ForwardRenderAction");
-			return Resources;
 		})
 	}(Input);
 }

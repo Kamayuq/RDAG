@@ -13,10 +13,9 @@ typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPass
 	return Seq
 	{
 		Builder.CreateResource<RDAG::BlendDest>({ BlendDstDescriptor }),
-		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
+		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("SimpleBlendAction");
-			return Resources;
 		})
 	}(Input);
 }

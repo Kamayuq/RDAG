@@ -101,21 +101,18 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 			Result = Seq
 			{
 				Builder.CreateResource<RDAG::ScatteringReduceTexture>({ ScatteringReduceDesc }),
-				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData& Resources) -> ResourceTable<RDAG::ScatteringReduceUav>
+				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData&)
 				{
 					Ctx.Draw("ScatteringReduceAction");
-					return Resources;
 				}),
 				Builder.CreateResource<RDAG::ScatterCompilationTexture>({ ScatterCompilationDesc }),
-				Builder.QueueRenderAction("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData& Resources) -> ResourceTable<RDAG::ScatterCompilationUav>
+				Builder.QueueRenderAction("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData&)
 				{
 					Ctx.Draw("ScatterCompilationAction");
-					return Resources;
 				}),
-				Builder.QueueRenderAction("DOFHybridScatterAction", [](RenderContext& Ctx, const DOFHybridScatter& Resources) -> ResourceTable<ConvolutionOutputType>
+				Builder.QueueRenderAction("DOFHybridScatterAction", [](RenderContext& Ctx, const DOFHybridScatter&)
 				{
 					Ctx.Draw("DOFHybridScatterAction");
-					return Resources;
 				})
 			}(Result);
 		}
@@ -145,10 +142,9 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 		{
 			for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
 			{
-				LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData& Resources) -> ResourceTable<BokehLUTType>
+				LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
 				{
 					Ctx.Draw("BuildBokehLUTAction");
-					return Resources;
 				})(LutOutputTable);
 			}
 		}
@@ -180,10 +176,9 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 				ConvolutionOutputTable = Seq
 				{
 					Builder.RenameEntry<ConvolutionGatherType, RDAG::ConvolutionUav>(i, 0),
-					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::ConvolutionUav>
+					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData&)
 					{
 						Ctx.Draw("GatherPassDataAction");
-						return Resources;
 					}),
 					Builder.RenameEntry<RDAG::ConvolutionUav, ConvolutionGatherType>(0, i)
 				}(ConvolutionOutputTable);
@@ -206,10 +201,9 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 		ResourceTableType Result = s;
 		if (ViewInfo.DofSettings.EnablePostfilterMethod && GatherForeGround)
 		{
-			Result = Builder.QueueRenderAction("DOFPostfilterAction", [](RenderContext& Ctx, const DofPostfilterData& Resources) -> ResourceTable<DofPostfilterElems...>
+			Result = Builder.QueueRenderAction("DOFPostfilterAction", [](RenderContext& Ctx, const DofPostfilterData&)
 			{
 				Ctx.Draw("DOFPostfilterAction");
-				return Resources;
 			})(Result);
 		}
 		return Result;
@@ -231,10 +225,9 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		if (ViewInfo.DofSettings.RecombineQuality > 0)
 		{
 			using GatherPassData = ResourceTable<RDAG::SlightOutOfFocusConvolutionUav, RDAG::ScatteringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
-			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData& Resources) -> ResourceTable<RDAG::SlightOutOfFocusConvolutionUav>
+			SlightlyOutOfFocusTable = Builder.QueueRenderAction("SlightlyOutOfFocusAction", [](RenderContext& Ctx, const GatherPassData&)
 			{
 				Ctx.Draw("SlightlyOutOfFocusAction");
-				return Resources;
 			})(SlightlyOutOfFocusTable);
 		}
 
@@ -276,10 +269,9 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		{
 			Builder.CreateResource<RDAG::GatherColorUav>({ GatherColorDesc }),
 			Builder.CreateResource<RDAG::FullresColorUav>({ FullresColorDesc }),
-			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData& Resources) -> ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav>
+			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData&)
 			{
 				Ctx.Draw("DOFSetupAction");
-				return Resources;
 			}),
 			Scope(Seq
 			{
@@ -291,16 +283,14 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			Extract<RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture>(Seq
 			{
 				Builder.CreateResource<RDAG::CocTileUav>({ CocTileDesc }),
-				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData& Resources) -> ResourceTable<RDAG::CocTileUav>
+				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
 				{
 					Ctx.Draw("CocDilateAction");
-					return Resources;
 				}),
 				Builder.CreateResource<RDAG::PrefilterUav>({ PrefilterOutputDesc }),
-				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData& Resources) -> ResourceTable<RDAG::PrefilterUav>
+				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
 				{
 					Ctx.Draw("PreFilterAction");
-					return Resources;
 				}),
 				BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
 				BuildBokehLut<RDAG::GatheringBokehLUTUav>(Builder),
@@ -314,10 +304,9 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			})),
 			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
 			Builder.CreateResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
-			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData& Resources) -> PassOutputType
+			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
 			{
 				Ctx.Draw("RecombineAction");
-				return Resources;
 			})
 		}(Input);
 	}

@@ -24,10 +24,9 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 
 		typedef decltype(MergedTable) MergedTableType;
 
-		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext& Ctx, const MergedTableType& Resources) -> PassOutputType
+		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext& Ctx, const MergedTableType&)
 		{
 			Ctx.Draw("TemporalAAAction");
-			return Resources;
 		})(MergedTable);
 	}
 	else

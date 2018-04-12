@@ -14,10 +14,9 @@ typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass
 	return Seq
 	{
 		Builder.CreateResource<RDAG::UpsampleResult>({ UpsampleDescriptor }),
-		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
+		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("BilateralUpsampleAction");
-			return Resources;
 		})
 	}(Input);
 }

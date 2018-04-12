@@ -68,10 +68,9 @@ int main(int argc, char* argv[])
 			return Seq
 			{
 				Builder.CreateResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
-				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType& Resources) -> PassOutputType
+				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 				{
 					Ctx.Draw("SimpleRenderAction");
-					return Resources;
 				})
 			}(Input);
 		};

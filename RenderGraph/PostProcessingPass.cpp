@@ -17,10 +17,9 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	return Seq
 	{
 		Builder.CreateResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
-		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const PassActionType& Resources) -> PassOutputType
+		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const PassActionType&)
 		{
 			Ctx.Draw("ToneMappingAction");
-			return Resources;
 		})
 	}(Input);
 }

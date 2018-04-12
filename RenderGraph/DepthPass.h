@@ -18,7 +18,7 @@ namespace RDAG
 		void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource) const;
 	};
 
-	struct DepthTarget : Texture2dResourceHandle<DepthTexture>
+	struct DepthTarget : RendertargetResourceHandle<DepthTexture>
 	{
 		static constexpr const char* Name = "DepthTarget";
 		explicit DepthTarget() {}

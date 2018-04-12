@@ -64,9 +64,9 @@ public:
 		typedef Traits::function_traits<FunctionType> Traits;
 		typedef std::decay_t<typename Traits::template arg<0>::type> ContextType;
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
-		typedef std::decay_t<typename Traits::return_type> ActionReturnType;
+		typedef std::decay_t<typename Traits::return_type> VoidReturnType;
 		static_assert(Traits::arity == 2, "Queue Functions have 2 parameters: the rendercontext and the input table");
-		static_assert(std::is_base_of_v<IResourceTableBase, ActionReturnType>, "The returntype must be a resource table");
+		static_assert(std::is_same_v<void, VoidReturnType>, "The returntype must be void");
 		static_assert(std::is_base_of_v<RenderContextBase, ContextType>, "The 1st parameter must be a rendercontext type");
 		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
 
@@ -83,8 +83,9 @@ public:
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			LocalActionList.push_back(NewRenderAction);
 
+			using WritableSetType = decltype(Set::template Filter<IsWritableOp>(InputTableType::GetSetType()));
 			// merge and link (have the outputs point at this action from now on).
-			return NewRenderAction->RenderPassData.Link(ActionReturnType::GetSetType(), s);
+			return NewRenderAction->RenderPassData.Link(WritableSetType(), s);
 		};
 	}
 
@@ -194,6 +195,15 @@ public:
 	}
 
 private:
+	struct IsWritableOp
+	{
+		template<typename T>
+		static constexpr bool Test()
+		{
+			return !T::IsReadOnlyResource;
+		}
+	};
+
 	template<typename ResourceTableType>
 	static void CheckIsResourceTable(const ResourceTableType& Table)
 	{
