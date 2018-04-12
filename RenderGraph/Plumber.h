@@ -541,76 +541,6 @@ private:
 	const char* Name = nullptr;
 };
 
-namespace Internal
-{
-	/* Used to force a static error and an assigment error on cl and clang alike */
-	template<template<typename...> class Derived>
-	struct ErrorType
-	{
-		template<typename... XS>
-		static void ThrowError(const Set::Type<XS...>&)
-		{
-			//this assignment will error and therefore print the values that are missing from the table
-			static int Error = Derived<XS...>();
-			Error++;
-			static_assert(false, "missing entry: cannot collect");
-		}
-	};
-
-	//the Microsoft compiler is a bomb (it blows trying to deduce differnt return type in constexpr if)
-	template<bool B>
-	struct VisualStudioDeductionHelper
-	{
-		template<typename X, template<typename...> class RightType, typename... RS>
-		static constexpr auto Select(const IResourceTableBase&, const RightType<RS...>& Rhs)
-		{
-			// see VisualStudioDeductionHelper<false>::Select
-			// if the right table contains our result than use it 
-			// but first restore the original RealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
-			return Rhs.template GetWrapped<RealType>();
-		}
-
-		template<template<typename...> class Derived, typename... XS, typename RightType>
-		static constexpr Derived<XS...> Collect(const RightType& Rhs)
-		{
-			(void)Rhs; //silly MSVC thinks it's unreferenced
-			//for all XSs try to collect their values
-			//we know the definite type here therefore there is no need to deduce from any compatible type
-			return Derived<XS...>
-			(
-				//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
-				//before we cast it to the type that we want to fill the new table with
-				"Collect", Wrapped<XS>::ConvertFrom(Select<XS>(Rhs, Rhs))...
-			);
-		}
-	};
-
-	template<>
-	struct VisualStudioDeductionHelper<false>
-	{
-		template<typename X, template<typename...> class LeftType, typename... LS>
-		static constexpr auto Select(const LeftType<LS...>& Lhs, const IResourceTableBase&)
-		{
-			// see VisualStudioDeductionHelper<true>::Select
-			// otherwise use the result from the left table 
-			// but first restore the original ealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			using RealType = decltype(SetOperation<LS...>::template GetOriginalType<typename X::CompatibleType>());
-			return Lhs.template GetWrapped<RealType>();
-		}
-
-		template<template<typename...> class Derived, typename... XS, typename RightType>
-		static constexpr Derived<XS...> Collect(const RightType&)
-		{
-			//if the collection missed some handles we force an error and print the intersection of the missing values
-			ErrorType<Derived>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); //this will always fail with an error where the DiffTable type is visible
-			return std::declval<Derived<XS...>>();
-		}
-	};
-}
-
 /* Common interface for Table operations */
 /* ResourceTables are the main payload of the graph implementation */
 /* they are similar to compile time sets and they can be easily stored on the stack */
@@ -643,7 +573,7 @@ public:
 
 	/* assignment constructor from another resourcetable */
 	template<typename... YS>
-	ResourceTable(const ResourceTable<YS...>& RTT) : ResourceTable(RTT.template Populate<TS...>()) {}
+	ResourceTable(const ResourceTable<YS...>& RTT) : ResourceTable(RTT.template Collect<TS...>()) {}
 
 	/*                   Constructors                    */
 
@@ -738,11 +668,37 @@ protected:
 	/*                ElementOperations                  */
 
 private:
-	/* prefer select element X from right otherwise take the lefthand side */
-	template<typename X, typename LeftType, typename RightType>
-	static constexpr auto MergeSelect(const LeftType& Lhs, const RightType& Rhs)
+	template<typename X, template<typename...> class Type, typename... RS>
+	static constexpr auto SelectInternal(const Type<RS...>& Table)
 	{
-		return Internal::VisualStudioDeductionHelper<RightType::template Contains<X>()>::template Select<X>(Lhs, Rhs);
+		// see VisualStudioDeductionHelper<false>::Select
+		// if the right table contains our result than use it 
+		// but first restore the original RealType to be able to extract it 
+		// because we checked compatible types which might not be the same
+		using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
+		return Table.template GetWrapped<RealType>();
+	}
+
+	/* prefer select element X from right otherwise take the lefthand side */
+	template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
+	static constexpr auto MergeSelect(const LeftType<LS...>& Lhs, const RightType<RS...>& Rhs)
+	{
+		(void)Lhs; //silly MSVC thinks they are unreferenced
+		(void)Rhs; //silly MSVC thinks they are unreferenced
+		if constexpr (RightType<RS...>::template Contains<X>())
+		{
+			// if the right table contains our result than use it 
+			// but first restore the original RealType to be able to extract it 
+			// because we checked compatible types which might not be the same
+			return SelectInternal<X>(Rhs);
+		}
+		else
+		{
+			// otherwise use the result from the left table 
+			// but first restore the original ealType to be able to extract it 
+			// because we checked compatible types which might not be the same
+			return SelectInternal<X>(Lhs);
+		}
 	}
 
 	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge */
@@ -758,18 +714,50 @@ private:
 		};
 	}
 
+	/* Used to force a static error and an assigment error on cl and clang alike */
+	template<template<typename...> class Derived>
+	struct ErrorType
+	{
+		template<typename... XS>
+		static void ThrowError(const Set::Type<XS...>&)
+		{
+			//this assignment will error and therefore print the values that are missing from the table
+			static int Error = Derived<XS...>();
+			Error++;
+			static_assert(false, "missing entry: cannot collect");
+		}
+	};
+
 	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from */
 	template<typename... XS, typename RightType>
 	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs)
 	{
 		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
-		return Internal::VisualStudioDeductionHelper<ContainsAll>::template Collect<::ResourceTable, XS...>(Rhs);
+		if constexpr (ContainsAll)
+		{
+			(void)Rhs; //silly MSVC thinks it's unreferenced
+			//for all XSs try to collect their values
+			//we know the definite type here therefore there is no need to deduce from any compatible type
+			return ResourceTable<XS...>
+			(
+				//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
+				//before we cast it to the type that we want to fill the new table with
+				"Collect", Wrapped<XS>::ConvertFrom(SelectInternal<XS>(Rhs))...
+			);
+		}
+		else
+		{
+			//if the collection missed some handles we force an error and print the intersection of the missing values
+			//this will always fail with an error where the DiffTable type is visible
+			ErrorType<Set::Type>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); 
+			return std::declval<ResourceTable<XS...>>();
+		}
 	}
 
-	/* Populate will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
+	/* Collect will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
 	template<typename... XS>
-	constexpr ResourceTable<XS...> Populate() const
+	constexpr ResourceTable<XS...> Collect() const
 	{
 		using ReturnType = ResourceTable<XS...>;
 		//collect the results otherwise fail
