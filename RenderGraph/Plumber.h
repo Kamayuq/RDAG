@@ -671,9 +671,7 @@ private:
 	template<typename X, template<typename...> class Type, typename... RS>
 	static constexpr auto SelectInternal(const Type<RS...>& Table)
 	{
-		// see VisualStudioDeductionHelper<false>::Select
-		// if the right table contains our result than use it 
-		// but first restore the original RealType to be able to extract it 
+		// restore the original RealType to be able to extract it 
 		// because we checked compatible types which might not be the same
 		using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 		return Table.template GetWrapped<RealType>();
