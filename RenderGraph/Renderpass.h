@@ -83,9 +83,9 @@ public:
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			LocalActionList.push_back(NewRenderAction);
 
-			using WritableSetType = decltype(Set::template Filter<IsMutableOp>(InputTableType::GetSetType()));
+			auto WritableSet = Set::template Filter<IsMutableOp>(InputTableType::GetSetType());
 			// merge and link (have the outputs point at this action from now on).
-			return NewRenderAction->RenderPassData.Link(WritableSetType(), s);
+			return NewRenderAction->RenderPassData.Link(WritableSet, s);
 		};
 	}
 
