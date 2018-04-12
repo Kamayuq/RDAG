@@ -119,8 +119,8 @@ private:
 
 	/* After itteration return the third parameter which contains the accumulated results */
 	template<typename FilterOp, template<typename...> class ConstructorType = Set::Type, typename... RS, typename... LS>
-	static constexpr auto Recurse(const Type<>&, const Type<RS...>&, const Type<LS...>&)
+	static constexpr auto Recurse(const Type<>&, const Type<RS...>&, const Type<LS...>&) -> ConstructorType<LS..., RS...>
 	{
-		return ConstructorType<LS..., RS...>();
+		return {};
 	}
 };
