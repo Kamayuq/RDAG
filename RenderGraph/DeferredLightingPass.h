@@ -19,8 +19,7 @@ namespace RDAG
 
 struct DeferredLightingPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTexture, RDAG::
-		GbufferTexture, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
+	using PassInputType = ResourceTable<RDAG::DepthTexture, RDAG::GbufferTexture, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
 	using PassOutputType = ResourceTable<RDAG::LightingUAV>;
 	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::DepthTexture, RDAG::GbufferTexture, RDAG::AmbientOcclusionTexture, RDAG::SceneViewInfo, RDAG::ShadowMapTextureArray>;
 
