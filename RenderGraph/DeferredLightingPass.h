@@ -8,7 +8,7 @@
 
 namespace RDAG
 {
-	struct LightingUAV : Uav2dResourceHandle<LightingUAV>
+	struct LightingUAV : Uav2dResourceHandle<SceneColorTexture>
 	{
 		static constexpr const char* Name = "LightingUAV";
 

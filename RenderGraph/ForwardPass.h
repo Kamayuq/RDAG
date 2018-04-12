@@ -22,15 +22,12 @@ namespace ESortOrder
 
 namespace RDAG
 {
-	struct TransparencyResult;
-	struct HalfResTransparencyResult; 
-
 	struct ForwardRenderTarget : RendertargetResourceHandle<ForwardRenderTarget>
 	{
 		static constexpr const char* Name = "ForwardRenderTarget";
 		
 		explicit ForwardRenderTarget(ESortOrder::Type InSortOrder) : SortOrder(InSortOrder) {}
-		explicit ForwardRenderTarget(const TransparencyResult&) : SortOrder(ESortOrder::BackToFront) {}
+		explicit ForwardRenderTarget(const struct TransparencyTarget&) : SortOrder(ESortOrder::BackToFront) {}
 
 		ESortOrder::Type SortOrder;
 	};

@@ -3,50 +3,63 @@
 #include "BilateralUpsample.h"
 #include "SimpleBlendPass.h"
 
-
-typename HalfResTransparencyRenderPass::PassOutputType HalfResTransparencyRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+namespace RDAG
 {
-	auto TransparencyInfo = Input.GetDescriptor<RDAG::TransparencyInput>();
-	Texture2d::Descriptor HalfResTransparencyDescriptor;
-	HalfResTransparencyDescriptor.Name = "HalfResTransparencyRenderTarget";
-	HalfResTransparencyDescriptor.Format = TransparencyInfo.Format;
-	HalfResTransparencyDescriptor.Height = TransparencyInfo.Height >> 1;
-	HalfResTransparencyDescriptor.Width = TransparencyInfo.Width >> 1;
-
-	return Seq
+	struct HalfResTransparencyResult : Texture2dResourceHandle<HalfResTransparencyResult>
 	{
-		Extract<RDAG::HalfResInput, RDAG::HalfResDepth>(Seq
-		{
-			Scope(Seq
-			{
-				Builder.RenameEntry<RDAG::DepthTarget, RDAG::DownsampleInput>(),
-				Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
-				Builder.RenameEntry<RDAG::DownsampleResult, RDAG::DepthTarget>()
-			}),
-			Builder.RenameEntry<RDAG::DepthTarget, RDAG::DepthTarget>(),
-			Builder.CreateResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }, ESortOrder::BackToFront),
-			Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
-			Builder.RenameEntry<RDAG::DepthTarget, RDAG::HalfResDepth>(),
-			Builder.RenameEntry<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()
-		}),
-		//Builder.RenameInputToOutput<RDAG::DepthTarget, RDAG::DepthTarget>(), //restore original depth from before the forward pass
-		Builder.BuildRenderPass("HalfResTransparency_BilateralUpsampleRenderPass", BilateralUpsampleRenderPass::Build),
-		Builder.RenameEntry<RDAG::UpsampleResult, RDAG::HalfResTransparencyResult>()
-	}(Input);
+		static constexpr const char* Name = "HalfResTransparencyResult";
+		explicit HalfResTransparencyResult() {}
+		explicit HalfResTransparencyResult(const struct UpsampleResult&) {}
+	};
 }
+
+struct HalfResTransparencyRenderPass
+{
+	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyTarget>;
+	using PassOutputType = ResourceTable<RDAG::HalfResTransparencyResult>;
+
+	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+	{
+		auto TransparencyInfo = Input.GetDescriptor<RDAG::TransparencyTarget>();
+		Texture2d::Descriptor HalfResTransparencyDescriptor;
+		HalfResTransparencyDescriptor.Name = "HalfResTransparencyRenderTarget";
+		HalfResTransparencyDescriptor.Format = TransparencyInfo.Format;
+		HalfResTransparencyDescriptor.Height = TransparencyInfo.Height >> 1;
+		HalfResTransparencyDescriptor.Width = TransparencyInfo.Width >> 1;
+
+		return Seq
+		{
+			Extract<RDAG::HalfResInput, RDAG::HalfResDepth>(Seq
+			{
+				Scope(Seq
+				{
+					Builder.RenameEntry<RDAG::DepthTarget, RDAG::DownsampleInput>(),
+					Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
+					Builder.RenameEntry<RDAG::DownsampleResult, RDAG::DepthTarget>()
+				}),
+				Builder.CreateResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }, ESortOrder::BackToFront),
+				Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
+				Builder.RenameEntry<RDAG::DepthTarget, RDAG::HalfResDepth>(),
+				Builder.RenameEntry<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()
+			}),
+			Builder.BuildRenderPass("HalfResTransparency_BilateralUpsampleRenderPass", BilateralUpsampleRenderPass::Build),
+			Builder.RenameEntry<RDAG::UpsampleResult, RDAG::HalfResTransparencyResult>()
+		}(Input);
+	}
+};
 
 typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto Output = Builder.RenameEntry<RDAG::TransparencyInput, RDAG::TransparencyResult>()(Input);
+	auto Output = Input;
 
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	if (ViewInfo.TransparencyEnabled)
 	{
 		Output = Seq
 		{
-			Builder.RenameEntry<RDAG::TransparencyResult, RDAG::ForwardRenderTarget>(),
+			Builder.RenameEntry<RDAG::TransparencyTarget, RDAG::ForwardRenderTarget>(),
 			Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build),
-			Builder.RenameEntry<RDAG::ForwardRenderTarget, RDAG::TransparencyResult>()
+			Builder.RenameEntry<RDAG::ForwardRenderTarget, RDAG::TransparencyTarget>()
 		}(Output);
 	}
 
@@ -55,10 +68,10 @@ typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(co
 		Output = Seq
 		{
 			Builder.BuildRenderPass("HalfResTransparencyRenderPass", HalfResTransparencyRenderPass::Build),
-			Builder.RenameEntry<RDAG::TransparencyResult, RDAG::BlendSource>(0, 0),
+			Builder.RenameEntry<RDAG::TransparencyTarget, RDAG::BlendSource>(0, 0),
 			Builder.RenameEntry<RDAG::HalfResTransparencyResult, RDAG::BlendSource>(0, 1),
 			Builder.BuildRenderPass("Transparency_FSimpleBlendPass", SimpleBlendPass::Build),
-			Builder.RenameEntry<RDAG::BlendDest, RDAG::TransparencyResult>()
+			Builder.RenameEntry<RDAG::BlendDest, RDAG::TransparencyTarget>()
 		}(Output);
 	}
 	return Output;

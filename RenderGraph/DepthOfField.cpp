@@ -238,6 +238,8 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
+	auto Output = Input;
+
 	if (ViewInfo.DepthOfFieldEnabled)
 	{
 		Texture2d::Descriptor FullresColorDesc;
@@ -251,7 +253,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		GatherColorDesc.Format = ERenderResourceFormat::ARGB16F;
 		GatherColorDesc.Height = ViewInfo.SceneHeight >> 1;
 		GatherColorDesc.Width = ViewInfo.SceneWidth >> 1;
-		using DofSetupPassData = ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav, RDAG::DepthOfFieldInput, RDAG::VelocityVectors>;
+		using DofSetupPassData = ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav, RDAG::DepthOfFieldUav, RDAG::VelocityVectors>;
 
 		Texture2d::Descriptor CocTileDesc = GatherColorDesc;
 		GatherColorDesc.Name = "CocTileTexture";
@@ -260,12 +262,9 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		Texture2d::Descriptor PrefilterOutputDesc = GatherColorDesc;
 		PrefilterOutputDesc.Name = "PrefilterOutputDesc";
 		using PreFilterData = ResourceTable<RDAG::PrefilterUav, RDAG::GatherColorTexture>;
+		using RecombineData = ResourceTable<RDAG::DepthOfFieldUav, RDAG::ScatteringBokehLUTTexture, RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture, RDAG::FullresColorTexture>;
 
-		Texture2d::Descriptor OutputDesc = Input.GetDescriptor<RDAG::DepthOfFieldInput>();
-		OutputDesc.Name = "DepthOfFieldOutput";
-		using RecombineData = ResourceTable<RDAG::DepthOfFieldOutput, RDAG::ScatteringBokehLUTTexture, RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture, RDAG::FullresColorTexture>;
-
-		return Seq
+		Output = Seq
 		{
 			Builder.CreateResource<RDAG::GatherColorUav>({ GatherColorDesc }),
 			Builder.CreateResource<RDAG::FullresColorUav>({ FullresColorDesc }),
@@ -303,15 +302,12 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				SlightlyOutOfFocusPass(Builder)
 			})),
 			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
-			Builder.CreateResource<RDAG::DepthOfFieldOutput>({ OutputDesc }),
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
 			{
 				Ctx.Draw("RecombineAction");
 			})
-		}(Input);
+		}(Output);
 	}
-	else
-	{
-		return Builder.RenameEntry<RDAG::DepthOfFieldInput, RDAG::DepthOfFieldOutput>()(Input);
-	}
+
+	return Output;
 }

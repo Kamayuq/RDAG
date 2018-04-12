@@ -20,9 +20,6 @@ namespace EBlendMode
 
 namespace RDAG
 {
-	struct TransparencyResult;
-	struct HalfResTransparencyResult;
-
 	struct BlendDest : Uav2dResourceHandle<BlendDest>
 	{
 		static constexpr const char* Name = "BlendDest";
@@ -36,8 +33,8 @@ namespace RDAG
 		static constexpr const char* Name = "BlendSource";
 
 		explicit BlendSource(EBlendMode::Type InBlendMode) : BlendMode(InBlendMode) {}
-		explicit BlendSource(const TransparencyResult&) : BlendMode(EBlendMode::Modulate) {}
-		explicit BlendSource(const HalfResTransparencyResult&) : BlendMode(EBlendMode::Modulate) {}
+		explicit BlendSource(const struct TransparencyTarget&) : BlendMode(EBlendMode::Modulate) {}
+		explicit BlendSource(const struct HalfResTransparencyResult&) : BlendMode(EBlendMode::Modulate) {}
 
 		EBlendMode::Type BlendMode;
 	};

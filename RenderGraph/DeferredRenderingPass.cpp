@@ -14,25 +14,23 @@ typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const 
 	return Seq
 	{
 		Builder.BuildRenderPass("DepthRenderPass", DepthRenderPass::Build),
-		Extract<RDAG::TransparencyInput>(Seq
+		Extract<RDAG::SceneColorTexture>(Seq
 		{
 			Builder.BuildRenderPass("GbufferRenderPass", GbufferRenderPass::Build),
 			Builder.BuildRenderPass("AmbientOcclusionPass", AmbientOcclusionPass::Build),
 			Builder.BuildRenderPass("ShadowMapRenderPass", ShadowMapRenderPass::Build),
 			Builder.BuildRenderPass("DeferredLightingPass", DeferredLightingPass::Build),
-			Builder.RenameEntry<RDAG::LightingUAV, RDAG::TransparencyInput>(),
 		}),
 		Builder.BuildRenderPass("TransparencyRenderPass", TransparencyRenderPass::Build),
 		Builder.BuildRenderPass("VelocityRenderPass", VelocityRenderPass::Build),
-		Select<RDAG::VelocityVectors, RDAG::TransparencyResult, RDAG::DepthTarget, RDAG::SceneViewInfo>(Seq
+		Select<RDAG::VelocityVectors, RDAG::SceneColorTexture, RDAG::DepthTarget, RDAG::SceneViewInfo>(Seq
 		{
 			Scope(Seq
 			{
-				Builder.RenameEntry<RDAG::TransparencyResult, RDAG::TemporalAAInput>(),
+				Builder.RenameEntry<RDAG::SceneColorTexture, RDAG::TemporalAAInput>(),
 				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
-				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::TransparencyResult>()
+				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::SceneColorTexture>()
 			}),
-			Builder.RenameEntry<RDAG::TransparencyResult, RDAG::PostProcessingInput>(),
 			Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build)
 		})
 	}(Input);

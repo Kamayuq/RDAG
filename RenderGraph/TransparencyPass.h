@@ -6,46 +6,23 @@
 
 namespace RDAG
 {
-	struct TransparencyInput : Texture2dResourceHandle<TransparencyInput>
+	struct TransparencyTarget : RendertargetResourceHandle<SceneColorTexture>
 	{
-		static constexpr const char* Name = "TransparencyInput";
-		explicit TransparencyInput() {}
-		explicit TransparencyInput(const struct LightingUAV&) {}
-	};
+		static constexpr const char* Name = "TransparencyTarget";
+		explicit TransparencyTarget() {}
 
-	struct TransparencyResult : Texture2dResourceHandle<TransparencyResult>
-	{
-		static constexpr const char* Name = "TransparencyResult";
-		explicit TransparencyResult() {}
-		explicit TransparencyResult(const TransparencyInput&) {}
-		explicit TransparencyResult(const struct ForwardRenderTarget&) {}
-		explicit TransparencyResult(const struct BlendDest&) {}
-		explicit TransparencyResult(const struct TemporalAAOutput&) {}
-	};
-
-	struct HalfResTransparencyResult : Texture2dResourceHandle<HalfResTransparencyResult>
-	{
-		static constexpr const char* Name = "HalfResTransparencyResult";
-		explicit HalfResTransparencyResult() {}
-		explicit HalfResTransparencyResult(const struct UpsampleResult&) {}
+		explicit TransparencyTarget(const struct SceneColorTexture&) {}
+		explicit TransparencyTarget(const struct ForwardRenderTarget&) {}
+		explicit TransparencyTarget(const struct BlendDest&) {}
+		explicit TransparencyTarget(const struct TemporalAAOutput&) {}
 	};
 }
 
-
-struct HalfResTransparencyRenderPass
-{
-	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyInput>;
-	using PassOutputType = ResourceTable<RDAG::HalfResTransparencyResult>;
-
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
-};
-
-
 struct TransparencyRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyInput, RDAG::SceneViewInfo>;
-	using PassOutputType = ResourceTable<RDAG::TransparencyResult, RDAG::DepthTarget>;
-	using PassActionType = ResourceTable<RDAG::TransparencyResult, RDAG::DepthTarget, RDAG::TransparencyInput, RDAG::SceneViewInfo>;
+	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyTarget, RDAG::SceneViewInfo>;
+	using PassOutputType = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
+	using PassActionType = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget, RDAG::SceneViewInfo>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

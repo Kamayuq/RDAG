@@ -7,8 +7,6 @@
 
 namespace RDAG
 {
-	struct TransparencyResult;
-
 	struct TemporalAAHistory : ExternalTexture2dResourceHandle<TemporalAAHistory>
 	{
 		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
@@ -23,7 +21,7 @@ namespace RDAG
 		static constexpr const char* Name = "TemporalAAInput";
 
 		explicit TemporalAAInput() {}
-		explicit TemporalAAInput(const TransparencyResult&) {}
+		explicit TemporalAAInput(const struct TransparencyTarget&) {}
 
 		template<typename CRTP>
 		explicit TemporalAAInput(const Texture2dResourceHandle<CRTP>&) {}

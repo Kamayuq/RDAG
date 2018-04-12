@@ -11,7 +11,7 @@ namespace RDAG
 
 	struct TemporalAAOutput;
 
-	struct PostProcessingInput : Texture2dResourceHandle<PostProcessingInput>
+	struct PostProcessingInput : Texture2dResourceHandle<SceneColorTexture>
 	{
 		static constexpr const char* Name = "PostProcessingInput";
 

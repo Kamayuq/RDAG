@@ -97,6 +97,7 @@ public:
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
+			static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
 			auto FromEntry = s.template GetWrapped<From>();
@@ -141,6 +142,7 @@ public:
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
+			static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 			static_assert(std::is_base_of_v<From, StateType>, "Source was not found in the resource table");
 
 			Wrapped<From> FromEntry = s.template GetWrapped<From>();

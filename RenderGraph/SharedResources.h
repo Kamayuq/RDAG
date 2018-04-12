@@ -49,4 +49,14 @@ namespace RDAG
 		
 		DepthOfFieldSettings DofSettings;
 	};
+
+	struct SceneColorTexture : Texture2dResourceHandle<SceneColorTexture>
+	{
+		static constexpr const char* Name = "SceneColorTexture";
+
+		explicit SceneColorTexture() {}
+
+		template<typename CRTP>
+		explicit SceneColorTexture(const Texture2dResourceHandle<CRTP>&) {}
+	}; 
 }

@@ -7,29 +7,24 @@
 
 namespace RDAG
 {
-	struct DepthOfFieldInput : Texture2dResourceHandle<DepthOfFieldInput>
+	template<int>
+	struct DownsamplePyramid;
+
+	struct DepthOfFieldUav: Uav2dResourceHandle<SceneColorTexture>
 	{
-		static constexpr const char* Name = "DepthOfFieldInput";
+		static constexpr const char* Name = "DepthOfFieldUav";
 
-		explicit DepthOfFieldInput() {}
+		explicit DepthOfFieldUav() {}
 
-		template<typename CRTP>
-		explicit DepthOfFieldInput(const Texture2dResourceHandle<CRTP>&) {}
-	};
-
-	struct DepthOfFieldOutput : Uav2dResourceHandle<DepthOfFieldOutput>
-	{
-		static constexpr const char* Name = "DepthOfFieldOutput";
-
-		explicit DepthOfFieldOutput() {}
-		explicit DepthOfFieldOutput(const DepthOfFieldInput&) {}
+		template<int Count>
+		explicit DepthOfFieldUav(const DownsamplePyramid<Count>&) {}
 	};
 }
 
 struct DepthOfFieldPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthOfFieldInput, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
-	using PassOutputType = ResourceTable<RDAG::DepthOfFieldOutput>;
+	using PassInputType = ResourceTable<RDAG::DepthOfFieldUav, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
+	using PassOutputType = ResourceTable<RDAG::DepthOfFieldUav>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
