@@ -543,6 +543,20 @@ private:
 
 namespace Internal
 {
+	/* Used to force a static error and an assigment error on cl and clang alike */
+	template<template<typename...> class Derived>
+	struct ErrorType
+	{
+		template<typename... XS>
+		static void ThrowError(const Set::Type<XS...>&)
+		{
+			//this assignment will error and therefore print the values that are missing from the table
+			static int Error = Derived<XS...>();
+			Error++;
+			static_assert(false, "missing entry: cannot collect");
+		}
+	};
+
 	//the Microsoft compiler is a bomb (it blows trying to deduce differnt return type in constexpr if)
 	template<bool B>
 	struct VisualStudioDeductionHelper
@@ -558,15 +572,6 @@ namespace Internal
 			return Rhs.template GetWrapped<RealType>();
 		}
 
-		template<typename X, template<typename...> class RightType, typename... RS>
-		static constexpr auto CollectSelect(const RightType<RS...>& Rhs)
-		{
-			//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
-			//before we cast it to the type that we want to fill the new table with
-			using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
-			return Wrapped<X>::ConvertFrom(Rhs.template GetWrapped<RealType>());
-		}
-
 		template<template<typename...> class Derived, typename... XS, typename RightType>
 		static constexpr Derived<XS...> Collect(const RightType& Rhs)
 		{
@@ -575,7 +580,9 @@ namespace Internal
 			//we know the definite type here therefore there is no need to deduce from any compatible type
 			return Derived<XS...>
 			(
-				"Collect", CollectSelect<XS>(Rhs)...
+				//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
+				//before we cast it to the type that we want to fill the new table with
+				"Collect", Wrapped<XS>::ConvertFrom(Select<XS>(Rhs, Rhs))...
 			);
 		}
 	};
@@ -583,19 +590,6 @@ namespace Internal
 	template<>
 	struct VisualStudioDeductionHelper<false>
 	{
-		template<template<typename...> class Derived>
-		struct ErrorType
-		{
-			template<typename... XS>
-			static void ThrowError(const Set::Type<XS...>&)
-			{
-				//this assignment will error and therefore print the values that are missing from the table
-				static int Error = Derived<XS...>();
-				Error++;
-				static_assert(false, "missing entry: cannot collect");
-			}
-		};
-
 		template<typename X, template<typename...> class LeftType, typename... LS>
 		static constexpr auto Select(const LeftType<LS...>& Lhs, const IResourceTableBase&)
 		{
