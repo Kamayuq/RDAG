@@ -683,10 +683,9 @@ private:
 	template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
 	static constexpr auto MergeSelect(const LeftType<LS...>& Lhs, const RightType<RS...>& Rhs)
 	{
-		(void)Lhs; //silly MSVC thinks they are unreferenced
-		(void)Rhs; //silly MSVC thinks they are unreferenced
 		if constexpr (RightType<RS...>::template Contains<X>())
 		{
+			(void)Lhs; //silly MSVC thinks they are unreferenced
 			// if the right table contains our result than use it 
 			// but first restore the original RealType to be able to extract it 
 			// because we checked compatible types which might not be the same
@@ -694,6 +693,7 @@ private:
 		}
 		else
 		{
+			(void)Rhs; //silly MSVC thinks they are unreferenced
 			// otherwise use the result from the left table 
 			// but first restore the original ealType to be able to extract it 
 			// because we checked compatible types which might not be the same
@@ -705,8 +705,6 @@ private:
 	template<typename... XS, typename LeftType, typename RightType>
 	static constexpr auto MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
 	{
-		(void)Lhs; //silly MSVC thinks they are unreferenced
-		(void)Rhs; //silly MSVC thinks they are unreferenced
 		using ReturnType = ResourceTable<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>;
 		return ReturnType
 		{
@@ -735,7 +733,6 @@ private:
 		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
 		if constexpr (ContainsAll)
 		{
-			(void)Rhs; //silly MSVC thinks it's unreferenced
 			//for all XSs try to collect their values
 			//we know the definite type here therefore there is no need to deduce from any compatible type
 			return ResourceTable<XS...>
@@ -747,6 +744,7 @@ private:
 		}
 		else
 		{
+			(void)Rhs; //silly MSVC thinks it's unreferenced
 			//if the collection missed some handles we force an error and print the intersection of the missing values
 			//this will always fail with an error where the DiffTable type is visible
 			ErrorType<Set::Type>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); 
@@ -768,7 +766,6 @@ protected:
 	/* forward OnExecute callback for all the handles the Table contains */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		(void)Ctx; //silly MSVC thinks it's unreferenced
 		(GetWrapped<TS>().OnExecute(Ctx), ...);
 	}
 
