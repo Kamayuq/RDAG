@@ -32,11 +32,11 @@ struct Set final
 	{
 		if constexpr(sizeof...(YS) < sizeof...(XS))
 		{
-			return Recurse<ContainsOp<true, XS...>, ConstructorType>(Type<YS...>(), Type<XS...>(), Type<>());
+			return Meld<ConstructorType>(Recurse<ContainsOp<true, XS...>>(Type<YS...>(), Type<>()), Type<XS...>());
 		}
 		else
 		{
-			return Recurse<ContainsOp<true, YS...>, ConstructorType>(Type<XS...>(), Type<>(), Type<YS...>());
+			return Meld<ConstructorType>(Recurse<ContainsOp<true, YS...>>(Type<XS...>(), Type<>()), Type<YS...>());
 		}
 	}
 
@@ -46,11 +46,11 @@ struct Set final
 	{
 		if constexpr(sizeof...(XS) < sizeof...(YS))
 		{
-			return Recurse<ContainsOp<false, YS...>, ConstructorType>(Type<XS...>(), Type<>(), Type<>());
+			return Meld<ConstructorType>(Recurse<ContainsOp<false, YS...>>(Type<XS...>(), Type<>()), Type<>());
 		}
 		else
 		{
-			return Recurse<ContainsOp<false, XS...>, ConstructorType>(Type<YS...>(), Type<>(), Type<>());
+			return Meld<ConstructorType>(Recurse<ContainsOp<false, XS...>>(Type<YS...>(), Type<>()), Type<>());
 		}
 	}
 
@@ -58,14 +58,14 @@ struct Set final
 	template<template<typename...> class ConstructorType = Set::Type, typename... XS, typename... YS>
 	static constexpr auto LeftDifference(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<ContainsOp<true, YS...>, ConstructorType>(Type<XS...>(), Type<>(), Type<>());
+		return  Meld<ConstructorType>(Recurse<ContainsOp<true, YS...>>(Type<XS...>(), Type<>()), Type<>());
 	}
 
 	/* The right Set without the left one */
 	template<template<typename...> class ConstructorType = Set::Type, typename... XS, typename... YS>
 	static constexpr auto RightDifference(const Type<XS...>&, const Type<YS...>&)
 	{
-		return Recurse<ContainsOp<true, XS...>, ConstructorType>(Type<YS...>(), Type<>(), Type<>());
+		return  Meld<ConstructorType>(Recurse<ContainsOp<true, XS...>>(Type<YS...>(), Type<>()), Type<>());
 	}
 
 	/* Two Sets combined without their Intersection */
@@ -79,7 +79,7 @@ struct Set final
 	template<typename FilterOp, template<typename...> class ConstructorType = Set::Type, typename... XS>
 	static constexpr auto Filter(const Type<XS...>&)
 	{
-		return Recurse<FilterOp, ConstructorType>(Type<XS...>(), Type<>(), Type<>());
+		return  Meld<ConstructorType>(Recurse<FilterOp>(Type<XS...>(), Type<>()), Type<>());
 	}
 
 private:
@@ -95,32 +95,32 @@ private:
 	};
 
 	/* meld 2 disjunct Sets */
-	template<template<typename...> class ConstructorType = Set::Type, typename... RS, typename... LS>
-	static constexpr auto Meld(const Type<LS...>&, const Type<RS...>&)
+	template<template<typename...> class ConstructorType = Set::Type, typename... LS, typename... RS>
+	static constexpr auto Meld(const Type<LS...>&, const Type<RS...>&) -> ConstructorType<LS..., RS...>
 	{
-		return Type<LS..., RS...>();
+		return {};
 	}
 
 	/* Recursively itterate through the first argument checking it against the second and accumulating the results in the third */
-	template<typename FilterOp, template<typename...> class ConstructorType = Set::Type, typename T, typename... TS, typename... RS, typename... LS>
-	static constexpr auto Recurse(const Type<T, TS...>&, const Type<RS...>&, const Type<LS...>&)
+	template<typename FilterOp, typename T, typename... TS, typename... LS>
+	static constexpr auto Recurse(const Type<T, TS...>&, const Type<LS...>&)
 	{
 		if constexpr (FilterOp::template Test<T>())
 		{
 			//add the element T to the accumulation 
-			return Recurse<FilterOp>(Type<TS...>(), Type<RS...>(), Type<LS..., T>());
+			return Recurse<FilterOp>(Type<TS...>(), Type<LS..., T>());
 		}
 		else
 		{
 			//skip over element T 
-			return Recurse<FilterOp>(Type<TS...>(), Type<RS...>(), Type<LS...>());
+			return Recurse<FilterOp>(Type<TS...>(), Type<LS...>());
 		}
 	}
 
 	/* After itteration return the third parameter which contains the accumulated results */
-	template<typename FilterOp, template<typename...> class ConstructorType = Set::Type, typename... RS, typename... LS>
-	static constexpr auto Recurse(const Type<>&, const Type<RS...>&, const Type<LS...>&) -> ConstructorType<LS..., RS...>
+	template<typename FilterOp, typename... LS>
+	static constexpr auto Recurse(const Type<>&, const Type<LS...>&)
 	{
-		return {};
+		return Type<LS...>{};
 	}
 };
