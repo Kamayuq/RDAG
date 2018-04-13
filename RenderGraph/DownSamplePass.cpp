@@ -10,6 +10,7 @@ typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const 
 	DownsampleDescriptor.Height = DownSampleInfo.Height >> 1;
 	DownsampleDescriptor.Width = DownSampleInfo.Width >> 1;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::DownsampleResult>({ DownsampleDescriptor }),

@@ -25,6 +25,7 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 	DepthDescriptor.Height = ViewInfo.SceneHeight;
 	DepthDescriptor.Width = ViewInfo.SceneWidth;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::DepthTarget>({ DepthDescriptor }),

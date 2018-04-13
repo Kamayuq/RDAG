@@ -10,6 +10,7 @@ typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const Rend
 	VelocityDescriptor.Height = DepthInfo.Height;
 	VelocityDescriptor.Width = DepthInfo.Width;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::VelocityVectors>({ VelocityDescriptor }),

@@ -11,6 +11,7 @@ typename BilateralUpsampleRenderPass::PassOutputType BilateralUpsampleRenderPass
 	UpsampleDescriptor.Height = DepthTarget.Height;
 	UpsampleDescriptor.Width = DepthTarget.Width;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::UpsampleResult>({ UpsampleDescriptor }),

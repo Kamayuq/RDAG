@@ -48,7 +48,6 @@ struct DownsampleRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DownsampleInput>;
 	using PassOutputType = ResourceTable<RDAG::DownsampleResult>;
-	using PassActionType = ResourceTable<RDAG::DownsampleResult, RDAG::DownsampleInput>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
@@ -69,7 +68,6 @@ struct PyramidDownSampleRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DownsampleInput>;
 	using PassOutputType = ResourceTable<RDAG::DownsamplePyramid<Count>>;
-	using PassActionType = ResourceTable<RDAG::DownsamplePyramid<Count>, RDAG::DownsampleInput>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 	{

@@ -14,6 +14,7 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	ResultDescriptor.Height = PPfxInfo.Height;
 	ResultDescriptor.Width = PPfxInfo.Width;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::PostProcessingResult>({ ResultDescriptor }),

@@ -10,6 +10,7 @@ typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPass
 	BlendDstDescriptor.Height = BlendSrcInfo.Height;
 	BlendDstDescriptor.Width = BlendSrcInfo.Width;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::BlendDest>({ BlendDstDescriptor }),

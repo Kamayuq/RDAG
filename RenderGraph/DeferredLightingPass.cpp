@@ -10,6 +10,7 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	LightingDescriptor.Height = DepthInfo.Height;
 	LightingDescriptor.Width = DepthInfo.Width;
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::LightingUAV>({ LightingDescriptor }),

@@ -40,7 +40,6 @@ struct DepthRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::SceneViewInfo>;
 	using PassOutputType = ResourceTable<RDAG::DepthTarget>;
-	using PassActionType = ResourceTable<RDAG::DepthTarget, RDAG::SceneViewInfo>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

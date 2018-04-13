@@ -23,7 +23,7 @@ namespace RDAG
 
 struct DepthOfFieldPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthOfFieldUav, RDAG::SceneViewInfo, RDAG::DepthTexture, RDAG::VelocityVectors>;
+	using PassInputType = ResourceTable<RDAG::DepthOfFieldUav, RDAG::VelocityVectors, RDAG::DepthTexture, RDAG::SceneViewInfo>;
 	using PassOutputType = ResourceTable<RDAG::DepthOfFieldUav>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);

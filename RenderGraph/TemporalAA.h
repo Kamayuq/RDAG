@@ -40,9 +40,8 @@ namespace RDAG
 
 struct TemporalAARenderPass
 {
-	using PassInputType = ResourceTable<RDAG::TemporalAAInput, RDAG::DepthTexture, RDAG::VelocityVectors, RDAG::SceneViewInfo>;
+	using PassInputType = ResourceTable<RDAG::TemporalAAInput, RDAG::VelocityVectors, RDAG::DepthTexture, RDAG::SceneViewInfo>;
 	using PassOutputType = ResourceTable<RDAG::TemporalAAOutput>;
-	using PassActionType = ResourceTable<RDAG::TemporalAAOutput, RDAG::TemporalAAInput, RDAG::DepthTexture, RDAG::VelocityVectors, RDAG::SceneViewInfo>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

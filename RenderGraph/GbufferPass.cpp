@@ -11,6 +11,7 @@ typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const Render
 		GbufferDescriptors[i].Format = ERenderResourceFormat::ARGB16F;
 	}
 
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::GbufferTarget>(GbufferDescriptors),
