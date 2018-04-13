@@ -545,7 +545,7 @@ private:
 /* ResourceTables are the main payload of the graph implementation */
 /* they are similar to compile time sets and they can be easily stored on the stack */
 template<typename... TS>
-class ResourceTable : protected Wrapped<TS>..., public IResourceTableBase
+class ResourceTable : public IResourceTableBase, protected Wrapped<TS>...
 {
 	using ThisType = ResourceTable<TS...>;
 
@@ -561,19 +561,23 @@ public:
 
 	/*                   Constructors                    */
 	ResourceTable(const ThisType& RTT)
-		: ResourceTable(RTT.GetName(), RTT) {};
+		: ResourceTable(RTT.GetName(), RTT)
+	{}
 
 	explicit ResourceTable(const char* Name, const ThisType& RTT)
-		: ResourceTable(Name, RTT.GetWrapped<TS>()...) {};
+		: ResourceTable(Name, RTT.GetWrapped<TS>()...) 
+	{}
 
 	explicit ResourceTable(const char* Name, const Wrapped<TS>&... xs)
-		: Wrapped<TS>(xs)...
-		, IResourceTableBase(Name)
-	{};
+		: IResourceTableBase(Name)
+		, Wrapped<TS>(xs)...
+	{}
 
 	/* assignment constructor from another resourcetable */
 	template<typename... YS>
-	ResourceTable(const ResourceTable<YS...>& RTT) : ResourceTable(RTT.template Collect<TS...>()) {}
+	ResourceTable(const ResourceTable<YS...>& RTT) 
+		: ResourceTable(CollectFrom(RTT)) 
+	{}
 
 	/*                   Constructors                    */
 
@@ -713,33 +717,34 @@ private:
 	}
 
 	/* Used to force a static error and an assigment error on cl and clang alike */
-	template<template<typename...> class Derived>
 	struct ErrorType
 	{
 		template<typename... XS>
 		static void ThrowError(const Set::Type<XS...>&)
 		{
 			//this assignment will error and therefore print the values that are missing from the table
-			static int Error = Derived<XS...>();
+			static int Error = Set::Type<XS...>();
 			Error++;
 			static_assert(false, "missing entry: cannot collect");
 		}
 	};
 
+	/* CollectFrom will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
+	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
 	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from */
-	template<typename... XS, typename RightType>
-	static constexpr auto CollectInternal(const Set::Type<XS...>&, const RightType& Rhs)
+	template<typename RightType>
+	static constexpr ThisType CollectFrom(const RightType& Rhs)
 	{
-		constexpr bool ContainsAll = (RightType::template Contains<XS>() && ...);
+		constexpr bool ContainsAll = (RightType::template Contains<TS>() && ...);
 		if constexpr (ContainsAll)
 		{
 			//for all XSs try to collect their values
 			//we know the definite type here therefore there is no need to deduce from any compatible type
-			return ResourceTable<XS...>
+			return ThisType
 			(
 				//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
 				//before we cast it to the type that we want to fill the new table with
-				"Collect", Wrapped<XS>::ConvertFrom(SelectInternal<XS>(Rhs))...
+				"CollectFrom", Wrapped<TS>::ConvertFrom(SelectInternal<TS>(Rhs))...
 			);
 		}
 		else
@@ -747,19 +752,9 @@ private:
 			(void)Rhs; //silly MSVC thinks it's unreferenced
 			//if the collection missed some handles we force an error and print the intersection of the missing values
 			//this will always fail with an error where the DiffTable type is visible
-			ErrorType<Set::Type>::ThrowError(Set::LeftDifference(Set::Type<XS...>(), RightType::GetCompatibleSetType())); 
-			return std::declval<ResourceTable<XS...>>();
+			ErrorType::ThrowError(Set::LeftDifference(GetCompatibleSetType(), RightType::GetCompatibleSetType()));
+			return std::declval<ThisType>();
 		}
-	}
-
-	/* Collect will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
-	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
-	template<typename... XS>
-	constexpr ResourceTable<XS...> Collect() const
-	{
-		using ReturnType = ResourceTable<XS...>;
-		//collect the results otherwise fail
-		return ReturnType(ReturnType::CollectInternal(ReturnType::GetSetType(), *this));
 	}
 
 protected:

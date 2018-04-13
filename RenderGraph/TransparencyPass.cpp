@@ -15,7 +15,7 @@ namespace RDAG
 
 struct HalfResTransparencyRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTarget, RDAG::TransparencyTarget>;
+	using PassInputType = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
 	using PassOutputType = ResourceTable<RDAG::HalfResTransparencyResult>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)

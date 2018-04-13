@@ -238,7 +238,7 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
-	auto Output = Input;
+	PassOutputType Output = Input;
 
 	if (ViewInfo.DepthOfFieldEnabled)
 	{
@@ -306,7 +306,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			{
 				Ctx.Draw("RecombineAction");
 			})
-		}(Output);
+		}(Input);
 	}
 
 	return Output;
