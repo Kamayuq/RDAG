@@ -723,7 +723,7 @@ private:
 		static void ThrowError(const Set::Type<XS...>&)
 		{
 			//this assignment will error and therefore print the values that are missing from the table
-			static int Error = Set::Type<XS...>();
+			static int Error = ResourceTable<XS...>();
 			Error++;
 			static_assert(false, "missing entry: cannot collect");
 		}
