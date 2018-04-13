@@ -731,7 +731,7 @@ private:
 
 	/* CollectFrom will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
-	/* use the first argument to define the list of elements we are looking for, the second argument contains the table we collect from */
+	/* the argument contains the table we collect from */
 	template<typename RightType>
 	static constexpr ThisType CollectFrom(const RightType& Rhs)
 	{
