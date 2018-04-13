@@ -651,25 +651,27 @@ public:
 		(check(GetWrapped<TS>().IsValid()), ...);
 	}
 
-	template<typename Handle, typename RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>())>
-	const Wrapped<RealType>& GetWrapped() const
+	template<typename Handle>
+	const auto& GetWrapped() const
 	{ 
 		constexpr bool contains = this->template Contains<Handle>();
 		Wrapped<Handle>::template Test<contains>();
+		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
 		return *static_cast<const Wrapped<RealType>*>(this);
 	}
 
 protected:
-	template<typename Handle, typename RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>())>
-	Wrapped<RealType>& GetWrapped()
+	template<typename Handle>
+	auto& GetWrapped()
 	{
+		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
 		return *static_cast<Wrapped<RealType>*>(this);
 	}
 	/*                ElementOperations                  */
 
 private:
-	template<typename X, template<typename...> class Type, typename... RS>
-	static constexpr auto SelectInternal(const Type<RS...>& Table)
+	template<typename X, template<typename...> class TableType, typename... RS>
+	static constexpr auto SelectInternal(const TableType<RS...>& Table)
 	{
 		// restore the original RealType to be able to extract it 
 		// because we checked compatible types which might not be the same
@@ -678,10 +680,10 @@ private:
 	}
 
 	/* prefer select element X from right otherwise take the lefthand side */
-	template<typename X, template<typename...> class LeftType, typename... LS, template<typename...> class RightType, typename... RS>
-	static constexpr auto MergeSelect(const LeftType<LS...>& Lhs, const RightType<RS...>& Rhs)
+	template<typename X, typename LeftType, typename RightType>
+	static constexpr auto MergeSelect(const LeftType& Lhs, const RightType& Rhs)
 	{
-		if constexpr (RightType<RS...>::template Contains<X>())
+		if constexpr (RightType::template Contains<X>())
 		{
 			(void)Lhs; //silly MSVC thinks they are unreferenced
 			// if the right table contains our result than use it 
