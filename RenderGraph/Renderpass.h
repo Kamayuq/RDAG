@@ -48,7 +48,7 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableBase, NestedOutputTableType>, "The returntype must be a resource table");
 
 		const RenderPassBuilder* Self = this;
-		return [&, Self, Name](const auto& s)
+		return Seq([&, Self, Name](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
 			InputTableType input = s;
@@ -56,7 +56,7 @@ public:
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
 			NestedOutputTableType NestedRenderPassData(Name, BuildFunction(*Self, input, Args...));
 			return s.Union(NestedRenderPassData);
-		};
+		});
 	}
 
 	template<typename FunctionType>
@@ -73,7 +73,7 @@ public:
 		static_assert(std::is_same_v<void, VoidReturnType>, "The returntype must be void");
 		
 		auto& LocalActionList = ActionList;
-		return [&LocalActionList, QueuedTask, Name](const auto& s)
+		return Seq([&LocalActionList, QueuedTask, Name](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
@@ -88,7 +88,7 @@ public:
 			auto WritableSet = Set::template Filter<IsMutableOp>(InputTableType::GetSetType());
 			// merge and link (have the outputs point at this action from now on).
 			return NewRenderAction->RenderPassData.Link(WritableSet, s);
-		};
+		});
 	}
 
 	/* this function moves a Handle between the OutputList the destination is overwitten and the Source stays */
@@ -96,7 +96,7 @@ public:
 	auto RenameEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
-		return [FromIndex, ToIndex](const auto& s)
+		return Seq([FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -133,7 +133,7 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		};
+		});
 	}
 
 	/* this function moves all Handles from the InputList into the OutputList the destination is overwitten and the Source stays */
@@ -142,7 +142,7 @@ public:
 	{
 		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
-		return [](const auto& s)
+		return Seq([](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -161,7 +161,7 @@ public:
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
-		};
+		});
 	}
 	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
 	template<typename Handle, typename... ARGS>
@@ -175,12 +175,12 @@ public:
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
-		return [WrappedResource](const auto& s)
+		return Seq([WrappedResource](const auto& s)
 		{	
 			CheckIsValidResourceTable(s);
 			auto NewResourceTable = ResourceTable<Handle>("CreateResource", WrappedResource);
 			return s.Union(NewResourceTable);
-		};
+		});
 	}
 
 	/* returns the empty resourcetable */

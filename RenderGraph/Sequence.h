@@ -48,7 +48,10 @@ struct Seq : SequenceType
 	Seq(const ARGS&... Args) : SequenceType(Internal::Seq(Args...)) {}
 };
 
-//C++17 deduction helper
+//C++17 deduction helpers
+template<typename ARG>
+Seq(const ARG& Arg) -> Seq<ARG, ARG>;
+
 template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 

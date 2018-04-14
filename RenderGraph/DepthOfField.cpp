@@ -59,7 +59,7 @@ namespace RDAG
 template<typename ConvolutionOutputType>
 auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enabled)
 {
-	return [&Builder, Enabled](const auto& s)
+	return Seq([&Builder, Enabled](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
@@ -102,13 +102,13 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 			}(Result);
 		}
 		return Result;
-	};
+	});
 }
 
 template<typename BokehLUTType>
 auto BuildBokehLut(const RenderPassBuilder& Builder)
 {
-	return [&Builder](const auto& s)
+	return Seq([&Builder](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
@@ -136,13 +136,13 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 			}
 		}
 		return LutOutputTable;
-	};
+	});
 }
 
 template<typename ConvolutionGatherType>
 auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true)
 {
-	return [&Builder, Enabled](const auto& s)
+	return Seq([&Builder, Enabled](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
@@ -174,13 +174,13 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			}
 		}
 		return ConvolutionOutputTable;
-	};
+	});
 }
 
 template<typename... DofPostfilterElems>
 auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 {
-	return [&Builder, GatherForeGround](const auto& s)
+	return Seq([&Builder, GatherForeGround](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
@@ -197,12 +197,12 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 			})(Result);
 		}
 		return Result;
-	};
+	});
 }
 
 auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 {
-	return [&Builder](const auto& s)
+	return Seq([&Builder](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
@@ -224,7 +224,7 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 		}
 
 		return SlightlyOutOfFocusTable;
-	};
+	});
 };
 
 typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
