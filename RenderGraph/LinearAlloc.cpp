@@ -35,6 +35,7 @@ struct SimpleLinearAllocator
 
 	void Reset()
 	{
+		memset(Base, 0xCD, Size);
 		Offset = 0;
 	}
 
@@ -64,7 +65,7 @@ private:
 	const U64 Alignment;
 };
 
-static SimpleLinearAllocator* LinearAllocator = new SimpleLinearAllocator(4 * 1024 * 1024);
+static SimpleLinearAllocator* LinearAllocator = new SimpleLinearAllocator(32 * 1024 * 1024);
 void* LinearAlloc(U64 InSize)
 {
 	return LinearAllocator->Alloc(InSize);

@@ -13,7 +13,7 @@
 #include "DownSamplePass.h"
 #include "PostprocessingPass.h"
 
-int ItterationCount = 10000;
+int ItterationCount = 1000;
 
 namespace RDAG
 {
@@ -91,9 +91,10 @@ int main(int argc, char* argv[])
 		//minDuration = std::numeric_limits<decltype(minDuration)>::max();
 		for (int i = 0; i < ItterationCount; i++)
 		{
+			LinearReset();
+
 			auto start = std::chrono::high_resolution_clock::now();
 
-			LinearReset();
 			Builder.Reset();
 
 			auto val = Seq
