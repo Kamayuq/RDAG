@@ -9,8 +9,6 @@ namespace RDAG
 	template<int Count>
 	struct DownsamplePyramid;
 
-	struct TemporalAAOutput;
-
 	struct PostProcessingInput : Texture2dResourceHandle<SceneColorTexture>
 	{
 		static constexpr const char* Name = "PostProcessingInput";
@@ -35,7 +33,6 @@ namespace RDAG
 	};
 }
 
-
 struct ToneMappingPass
 {
 	using PassInputType = ResourceTable<RDAG::PostProcessingInput>;
@@ -43,7 +40,6 @@ struct ToneMappingPass
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };
-
 
 struct PostProcessingPass
 {

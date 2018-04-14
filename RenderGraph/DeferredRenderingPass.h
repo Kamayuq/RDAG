@@ -4,7 +4,6 @@
 #include "SharedResources.h"
 #include "PostprocessingPass.h"
 
-
 struct DeferredRendererPass
 {
 	using PassInputType = ResourceTable<RDAG::SceneViewInfo>;

@@ -1,6 +1,5 @@
 #include "SimpleBlendPass.h"
 
-
 typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	auto BlendSrcInfo = Input.GetDescriptor<RDAG::BlendSource>(0);

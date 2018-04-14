@@ -4,7 +4,7 @@
 
 namespace RDAG
 {
-	struct GbufferTexture : RendertargetResourceHandle<GbufferTexture>
+	struct GbufferTexture : Texture2dResourceHandle<GbufferTexture>
 	{
 		static constexpr const U32 ResourceCount = 4;
 		static constexpr const char* Name = "GbufferTexture";
@@ -12,21 +12,12 @@ namespace RDAG
 		explicit GbufferTexture() {}
 		explicit GbufferTexture(const struct GbufferTarget&) {}
 	};
-
-	struct GbufferTarget : RendertargetResourceHandle<GbufferTexture>
-	{
-		static constexpr const U32 ResourceCount = 4;
-		static constexpr const char* Name = "GbufferTarget";
-
-		explicit GbufferTarget() {}
-	};
 }
-
 
 struct GbufferRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthTarget>;
-	using PassOutputType = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTarget>;
+	using PassOutputType = ResourceTable<RDAG::GbufferTexture, RDAG::DepthTarget>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

@@ -1,5 +1,14 @@
 #include "VelocityPass.h"
 
+namespace RDAG
+{
+	struct VelocityVectorTarget : RendertargetResourceHandle<VelocityVectors>
+	{
+		static constexpr const char* Name = "VelocityVectorTarget";
+		explicit VelocityVectorTarget() {}
+		explicit VelocityVectorTarget(const VelocityVectors&) {}
+	};
+}
 
 typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
@@ -10,7 +19,7 @@ typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const Rend
 	VelocityDescriptor.Height = DepthInfo.Height;
 	VelocityDescriptor.Width = DepthInfo.Width;
 
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::VelocityVectorTarget, RDAG::DepthTexture>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::VelocityVectors>({ VelocityDescriptor }),

@@ -1,5 +1,15 @@
 #include "TemporalAA.h"
 
+namespace RDAG
+{
+	struct TemporalAAHistory : ExternalTexture2dResourceHandle<TemporalAAHistory>
+	{
+		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
+		static constexpr const char* Name = "TemporalAAHistory";
+
+		explicit TemporalAAHistory() {}
+	};
+}
 
 typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {

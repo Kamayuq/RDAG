@@ -11,20 +11,12 @@ namespace RDAG
 		explicit VelocityVectors() {}
 		explicit VelocityVectors(const struct VelocityVectorTarget&) {}
 	};
-
-	struct VelocityVectorTarget : RendertargetResourceHandle<VelocityVectors>
-	{
-		static constexpr const char* Name = "VelocityVectorTarget";
-		explicit VelocityVectorTarget() {}
-		explicit VelocityVectorTarget(const VelocityVectors&) {}
-	};
 }
-
 
 struct VelocityRenderPass
 {
 	using PassInputType = ResourceTable<RDAG::DepthTexture>;
-	using PassOutputType = ResourceTable<RDAG::VelocityVectorTarget>;
+	using PassOutputType = ResourceTable<RDAG::VelocityVectors>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
 };

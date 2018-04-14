@@ -6,7 +6,7 @@ typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const Render
 	auto ForwardInfo = Input.GetHandle<RDAG::ForwardRenderTarget>();
 	(void)ForwardInfo;
 
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::ForwardRenderTarget, RDAG::DepthTarget>;
 	return Seq
 	{
 		Builder.QueueRenderAction("ForwardRenderAction", [](RenderContext& Ctx, const PassActionType&)

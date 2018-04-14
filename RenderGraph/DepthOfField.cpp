@@ -19,6 +19,7 @@ struct HandleName : Uav2dResourceHandle<Compatible>					\
 	static constexpr const U32 ResourceCount = Num;					\
 	static constexpr const char* Name = #HandleName;				\
 	explicit HandleName() {}										\
+	explicit HandleName(const Compatible&) {}						\
 	template<typename CRTP>											\
 	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
 };	
@@ -26,6 +27,7 @@ struct HandleName : Uav2dResourceHandle<Compatible>					\
 
 namespace RDAG
 {
+	SIMPLE_UAV_HANDLE(DepthOfFieldUav, SceneColorTexture);
 	SIMPLE_TEX_HANDLE(FullresColorTexture);
 	SIMPLE_UAV_HANDLE(FullresColorUav, FullresColorTexture);
 	SIMPLE_TEX_HANDLE(GatherColorTexture);
@@ -234,6 +236,9 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 
 	if (ViewInfo.DepthOfFieldEnabled)
 	{
+		Texture2d::Descriptor DofResultDesc = Input.GetDescriptor<RDAG::SceneColorTexture>();
+		DofResultDesc.Name = "DofResultTexture";
+
 		Texture2d::Descriptor FullresColorDesc;
 		FullresColorDesc.Name = "FullresColorTexture";
 		FullresColorDesc.Format = ERenderResourceFormat::ARGB16F;
@@ -245,7 +250,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 		GatherColorDesc.Format = ERenderResourceFormat::ARGB16F;
 		GatherColorDesc.Height = ViewInfo.SceneHeight >> 1;
 		GatherColorDesc.Width = ViewInfo.SceneWidth >> 1;
-		using DofSetupPassData = ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav, RDAG::DepthOfFieldUav, RDAG::VelocityVectors>;
+		using DofSetupPassData = ResourceTable<RDAG::FullresColorUav, RDAG::GatherColorUav, RDAG::SceneColorTexture, RDAG::VelocityVectors>;
 
 		Texture2d::Descriptor CocTileDesc = GatherColorDesc;
 		GatherColorDesc.Name = "CocTileTexture";
@@ -294,6 +299,7 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				SlightlyOutOfFocusPass(Builder)
 			})),
 			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
+			Builder.CreateResource<RDAG::DepthOfFieldUav>({ DofResultDesc }), //recreation is equal to fully overwrite re-setting transition state
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
 			{
 				Ctx.Draw("RecombineAction");

@@ -124,7 +124,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
 		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CRTP>::template OnCreate<Handle>(InDescriptor);
-		if (InDescriptor.Index != -1)
+		if (InDescriptor.Index >= 0)
 		{
 			Ret->Materialize();
 		}

@@ -1,5 +1,14 @@
 #include "DeferredLightingPass.h"
 
+namespace RDAG
+{
+	struct LightingUAV : Uav2dResourceHandle<SceneColorTexture>
+	{
+		static constexpr const char* Name = "LightingUAV";
+
+		explicit LightingUAV() {}
+	};
+}
 
 typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
@@ -10,7 +19,7 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	LightingDescriptor.Height = DepthInfo.Height;
 	LightingDescriptor.Width = DepthInfo.Width;
 
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture, RDAG::SceneViewInfo>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::LightingUAV>({ LightingDescriptor }),

@@ -40,7 +40,6 @@ namespace RDAG
 	};
 }
 
-
 struct SimpleBlendPass
 {
 	using PassInputType = ResourceTable<RDAG::BlendSource>;

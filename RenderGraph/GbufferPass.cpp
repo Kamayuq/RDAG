@@ -1,5 +1,15 @@
 #include "GbufferPass.h"
 
+namespace RDAG
+{
+	struct GbufferTarget : RendertargetResourceHandle<GbufferTexture>
+	{
+		static constexpr const U32 ResourceCount = 4;
+		static constexpr const char* Name = "GbufferTarget";
+
+		explicit GbufferTarget() {}
+	};
+}
 
 typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
@@ -11,7 +21,7 @@ typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const Render
 		GbufferDescriptors[i].Format = ERenderResourceFormat::ARGB16F;
 	}
 
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using PassActionType = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTarget>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::GbufferTarget>(GbufferDescriptors),
