@@ -4,7 +4,7 @@
 
 typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {	
-	auto Output = Builder.CreateResource<RDAG::ShadowMapTextureArray>({})(Input);
+	auto Output = Builder.CreateResource<RDAG::ShadowMapTextureArray>()(Input);
 
 	RDAG::SceneViewInfo ShadowViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	ShadowViewInfo.SceneWidth = ShadowViewInfo.ShadowResolution;

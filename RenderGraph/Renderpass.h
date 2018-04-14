@@ -181,17 +181,31 @@ public:
 		});
 	}
 
+	template<typename Handle, typename... ARGS>
+	auto CreateResource(const ARGS&... Args) const
+	{
+		return CreateResourceInternal<Handle>(nullptr, 0, Args...);
+	}
+
 	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
 	template<typename Handle, typename... ARGS, unsigned ResourceCount>
 	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[ResourceCount], const ARGS&... Args) const
 	{
-		return CreateResource<Handle>(&InDescriptors[0], ResourceCount, Args...);
+		return CreateResourceInternal<Handle>(&InDescriptors[0], ResourceCount, Args...);
 	}
 
-	template<typename Handle, typename... ARGS>
-	auto CreateResource(const std::vector<typename Handle::DescriptorType>& InDescriptors, const ARGS&... Args) const
+	template
+	<
+		typename Handle, typename VectorType, typename... ARGS,
+		typename = std::void_t //use SFINAE to check for supported interface of VectorType
+		<
+			decltype(std::declval<VectorType>().data()), //requires member function data()
+			decltype(std::declval<VectorType>().size())  //requires member function size()
+		>
+	>
+	auto CreateResource(const VectorType& InDescriptors, const ARGS&... Args) const
 	{
-		return CreateResource<Handle>(InDescriptors.data(), (U32)InDescriptors.size(), Args...);
+		return CreateResourceInternal<Handle>(InDescriptors.data(), (U32)InDescriptors.size(), Args...);
 	}
 
 	/* returns the empty resourcetable */
@@ -214,7 +228,7 @@ public:
 private:
 	/* this function adds a new resource to the resourcetable all descriptors have to be provided */
 	template<typename Handle, typename... ARGS>
-	auto CreateResource(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount, const ARGS&... Args) const
+	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount, const ARGS&... Args) const
 	{
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), InDescriptors, ResourceCount);
 		return Seq([WrappedResource](const auto& s)

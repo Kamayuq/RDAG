@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
 
 			auto val = Seq
 			{
-				Builder.CreateResource<RDAG::SceneViewInfo>({}, ViewInfo),
+				Builder.CreateResource<RDAG::SceneViewInfo>(ViewInfo),
 				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
 			}(Builder.GetEmptyResourceTable());
 			(void)val;
