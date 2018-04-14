@@ -7,13 +7,20 @@ void* LinearAlloc(U64 InSize);
 bool AllocContains(const void* Ptr);
 
 template<typename T>
-T* LinearAlloc()
+inline T* LinearAlloc(U32 Count = 1)
 {
-	return reinterpret_cast<T*>(LinearAlloc(sizeof(T)));
+	if (Count != 0)
+	{
+		return reinterpret_cast<T*>(LinearAlloc(sizeof(T) * Count));
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
 template<typename T, typename... ARGS>
-T* LinearNew(ARGS&&... Args)
+inline T* LinearNew(ARGS&&... Args)
 {
 	return new (LinearAlloc(sizeof(T))) T(std::forward<ARGS>(Args)...);
 }

@@ -4,7 +4,6 @@ namespace RDAG
 {
 	struct TemporalAAHistory : ExternalTexture2dResourceHandle<TemporalAAHistory>
 	{
-		static constexpr const U32 ResourceCount = RDAG::SceneViewInfo::TemporalAAResourceCount;
 		static constexpr const char* Name = "TemporalAAHistory";
 
 		explicit TemporalAAHistory() {}
@@ -16,14 +15,14 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	if (ViewInfo.TemporalAaEnabled)
 	{
-		ExternalTexture2dDescriptor OutputDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
-		ExternalTexture2dDescriptor HistoryDescriptors[RDAG::SceneViewInfo::TemporalAAResourceCount];
-		for (U32 i = 0; i < RDAG::SceneViewInfo::TemporalAAResourceCount; i++)
+		std::vector<ExternalTexture2dDescriptor> OutputDescriptors;
+		std::vector<ExternalTexture2dDescriptor> HistoryDescriptors;
+		for (U32 i = 0; i < Input.GetResourceCount<RDAG::TemporalAAInput>(); i++)
 		{
-			HistoryDescriptors[i] = Input.GetDescriptor<RDAG::TemporalAAInput>();
+			HistoryDescriptors.push_back(ExternalTexture2dDescriptor(Input.GetDescriptor<RDAG::TemporalAAInput>()));
 			HistoryDescriptors[i].Index = Input.IsUndefined<RDAG::TemporalAAInput>(i) ? -1 : i;
 			HistoryDescriptors[i].Name = "TemporalAAHistory";
-			OutputDescriptors[i] = HistoryDescriptors[i];
+			OutputDescriptors.push_back(HistoryDescriptors[i]);
 		}
 
 		auto MergedTable = Seq

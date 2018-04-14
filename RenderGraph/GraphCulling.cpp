@@ -36,7 +36,7 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 		{
 			for (const ResourceTableEntry& Input : *Pass)
 			{
-				if (Input.IsValid())
+				if (!Input.IsUndefined())
 				{
 					if (const IRenderPassAction* Parent = Input.GetParent() ? Input.GetParent()->GetAction() : nullptr)
 					{

@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
 		{
 			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
 			Builder.RenameEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass<16>::Build),
-			Builder.RenameEntry<RDAG::DownsamplePyramid<16>, RDAG::PostProcessingInput>(2, 0),
+			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
+			Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::PostProcessingInput>(2, 0),
 			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 		}(Builder.GetEmptyResourceTable());
 		(void)val;

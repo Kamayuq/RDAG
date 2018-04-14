@@ -6,17 +6,13 @@
 
 namespace RDAG
 {
-	template<int Count>
-	struct DownsamplePyramid;
-
 	struct PostProcessingInput : Texture2dResourceHandle<SceneColorTexture>
 	{
 		static constexpr const char* Name = "PostProcessingInput";
 
 		explicit PostProcessingInput() {}
 
-		template<int I>
-		explicit PostProcessingInput(const DownsamplePyramid<I>&) {}
+		explicit PostProcessingInput(const struct DownsamplePyramid&) {}
 
 		template<typename CRTP>
 		explicit PostProcessingInput(const Texture2dResourceHandle<CRTP>&) {}

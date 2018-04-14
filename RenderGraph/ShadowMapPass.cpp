@@ -11,7 +11,6 @@ typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const Re
 	ShadowViewInfo.SceneHeight = ShadowViewInfo.ShadowResolution;
 	ShadowViewInfo.DepthFormat = ShadowViewInfo.ShadowFormat;
 
-	check(ShadowViewInfo.ShadowCascades <= RDAG::ShadowMapTextureArray::ResourceCount);
 	for (U32 i = 0; i < ShadowViewInfo.ShadowCascades; i++)
 	{
 		Output = Seq

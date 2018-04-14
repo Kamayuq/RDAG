@@ -29,7 +29,6 @@ namespace RDAG
 
 	struct BlendSource : Texture2dResourceHandle<BlendSource>
 	{
-		static constexpr const U32 ResourceCount = 2;
 		static constexpr const char* Name = "BlendSource";
 
 		explicit BlendSource(EBlendMode::Type InBlendMode) : BlendMode(InBlendMode) {}

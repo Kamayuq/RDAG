@@ -6,7 +6,6 @@ namespace RDAG
 {
 	struct GbufferTexture : Texture2dResourceHandle<GbufferTexture>
 	{
-		static constexpr const U32 ResourceCount = 4;
 		static constexpr const char* Name = "GbufferTexture";
 
 		explicit GbufferTexture() {}

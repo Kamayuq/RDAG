@@ -89,11 +89,7 @@ struct PinStyle
 		, PinColorStyle(ColorStyle::Grey)
 		, PinFontColorStyle(ColorStyle::Grey)
 	{
-		if (!Entry.IsValid())
-		{
-			PinDrawStyle = DrawStyle(DrawStyle::Ellipse, DrawStyle::Invis);
-		}
-		else if (Entry.IsExternal())
+		if (Entry.IsExternal())
 		{
 			PinDrawStyle = DrawStyle(DrawStyle::Hexagon, DrawStyle::Solid);
 		}

@@ -2,28 +2,24 @@
 #include "VelocityPass.h"
 #include "TemporalAA.h"
 
-#define SIMPLE_TEX_HANDLE_ARRAY(HandleName, Num)					\
+#define SIMPLE_TEX_HANDLE(HandleName)								\
 struct HandleName : Texture2dResourceHandle<HandleName>				\
 {																	\
-	static constexpr const U32 ResourceCount = Num;					\
 	static constexpr const char* Name = #HandleName;				\
 	explicit HandleName() {}										\
 	template<typename CRTP>											\
 	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
-};														
-#define SIMPLE_TEX_HANDLE(HandleName) SIMPLE_TEX_HANDLE_ARRAY(HandleName, 1)
+};
 
-#define SIMPLE_UAV_HANDLE_ARRAY(HandleName, Compatible, Num)		\
+#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
 struct HandleName : Uav2dResourceHandle<Compatible>					\
 {																	\
-	static constexpr const U32 ResourceCount = Num;					\
 	static constexpr const char* Name = #HandleName;				\
 	explicit HandleName() {}										\
 	explicit HandleName(const Compatible&) {}						\
 	template<typename CRTP>											\
 	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
-};	
-#define SIMPLE_UAV_HANDLE(HandleName, Compatible) SIMPLE_UAV_HANDLE_ARRAY(HandleName, Compatible, 1)
+};
 
 namespace RDAG
 {
@@ -50,8 +46,8 @@ namespace RDAG
 	SIMPLE_UAV_HANDLE(ScatteringReduceUav, ScatteringReduceTexture);
 	SIMPLE_TEX_HANDLE(ScatterCompilationTexture);
 	SIMPLE_UAV_HANDLE(ScatterCompilationUav, ScatterCompilationTexture);
-	SIMPLE_TEX_HANDLE_ARRAY(BackgroundConvolutionTexture, 2);
-	SIMPLE_UAV_HANDLE_ARRAY(BackgroundConvolutionUav, BackgroundConvolutionTexture, 2);
+	SIMPLE_TEX_HANDLE(BackgroundConvolutionTexture);
+	SIMPLE_UAV_HANDLE(BackgroundConvolutionUav, BackgroundConvolutionTexture);
 };
 #undef SIMPLE_TEX_HANDLE
 #undef SIMPLE_TEX_HANDLE_ARRAY
@@ -115,33 +111,27 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 		CheckIsValidResourceTable(s);
 
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
-		typename BokehLUTType::DescriptorType LutOutputDesc[BokehLUTType::ResourceCount];
-		for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
-		{
-			LutOutputDesc[i].Name = BokehLUTType::Name;
-			LutOutputDesc[i].Format = ERenderResourceFormat::ARGB16F;
-			LutOutputDesc[i].Height = ViewInfo.SceneHeight;
-			LutOutputDesc[i].Width = ViewInfo.SceneWidth;
-		}
+		typename BokehLUTType::DescriptorType LutOutputDesc;
+		LutOutputDesc.Name = BokehLUTType::Name;
+		LutOutputDesc.Format = ERenderResourceFormat::ARGB16F;
+		LutOutputDesc.Height = ViewInfo.SceneHeight;
+		LutOutputDesc.Width = ViewInfo.SceneWidth;
 
-		auto LutOutputTable = Builder.CreateResource<BokehLUTType>(LutOutputDesc)(s);
+		auto LutOutputTable = Builder.CreateResource<BokehLUTType>({ LutOutputDesc })(s);
 
 		if (!ViewInfo.DofSettings.BokehShapeIsCircle)
 		{
-			for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
+			using BuildBokehLUTData = ResourceTable<BokehLUTType>;
+			LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
 			{
-				using BuildBokehLUTData = ResourceTable<BokehLUTType>;
-				LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
-				{
-					Ctx.Draw("BuildBokehLUTAction");
-				})(LutOutputTable);
-			}
+				Ctx.Draw("BuildBokehLUTAction");
+			})(LutOutputTable);
 		}
 		return LutOutputTable;
 	});
 }
 
-template<typename ConvolutionGatherType>
+template<typename ConvolutionGatherType, unsigned ResourceCount>
 auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true)
 {
 	return Seq([&Builder, Enabled](const auto& s)
@@ -149,8 +139,8 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 		CheckIsValidResourceTable(s);
 
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
-		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ConvolutionGatherType::ResourceCount];
-		for (U32 i = 0; i < ConvolutionGatherType::ResourceCount; i++)
+		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ResourceCount];
+		for (U32 i = 0; i < ResourceCount; i++)
 		{
 			ConvolutionOutputDesc[i].Name = ConvolutionGatherType::Name;
 			ConvolutionOutputDesc[i].Format = ERenderResourceFormat::ARGB16F;
@@ -161,7 +151,7 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 
 		if (Enabled)
 		{
-			for (U32 i = 0; i < ConvolutionGatherType::ResourceCount; i++)
+			for (U32 i = 0; i < ResourceCount; i++)
 			{
 				using GatherPassData = ResourceTable<RDAG::ConvolutionUav, RDAG::GatheringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
 				ConvolutionOutputTable = Seq
@@ -290,8 +280,8 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				}),
 				BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
 				BuildBokehLut<RDAG::GatheringBokehLUTUav>(Builder),
-				ConvolutionGatherPass<RDAG::BackgroundConvolutionTexture>(Builder),
-				ConvolutionGatherPass<RDAG::ForegroundConvolutionTexture>(Builder, ViewInfo.DofSettings.GatherForeground),
+				ConvolutionGatherPass<RDAG::BackgroundConvolutionTexture, 2>(Builder),
+				ConvolutionGatherPass<RDAG::ForegroundConvolutionTexture, 1>(Builder, ViewInfo.DofSettings.GatherForeground),
 				DofPostfilterPass<RDAG::BackgroundConvolutionUav>(Builder, !ViewInfo.DofSettings.GatherForeground),
 				DofPostfilterPass<RDAG::ForegroundConvolutionUav, RDAG::BackgroundConvolutionTexture>(Builder, ViewInfo.DofSettings.GatherForeground),
 				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionUav>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),

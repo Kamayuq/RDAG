@@ -15,7 +15,6 @@ class TransientResourceImpl;
 struct ResourceHandleBase
 {
 	static constexpr const char* Name = nullptr;
-	static constexpr const U32 ResourceCount = 0;
 
 	/* Callback to specialize TransientResourceImpl creation from a Descriptor */
 	template<typename Handle>
@@ -29,7 +28,6 @@ struct ResourceHandleBase
 template<typename CRTP>
 struct ResourceHandle : ResourceHandleBase
 {
-	static constexpr const U32 ResourceCount = 1;
 	/* Compatible types are used for automatic casting between each other */
 	/* each set can only contain unique Compatible Types */
 	using CompatibleType = CRTP;
@@ -127,16 +125,12 @@ struct Wrapped : private Handle
 	using HandleType = Handle;
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
-	static constexpr U32 ResourceCount = Handle::ResourceCount;
-	
-	/* each resource carries it's own revision */
-	typedef ResourceRevision RevisionArray[ResourceCount];
 
 	/* make friends with other classes as we are unrelated to each other */
 	template<typename>
 	friend struct Wrapped;
 
-	template<typename, int, typename...>
+	template<typename, typename...>
 	friend class ResourceTableIterator;
 
 	friend struct RenderPassBuilder;
@@ -144,14 +138,35 @@ struct Wrapped : private Handle
 	template<typename...>
 	friend class ResourceTable;
 
-	Wrapped() = default;
+	Wrapped(const Handle& handle, U32 InResourceCount)
+		: Handle(handle)
+		, Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
+		, ResourceCount(InResourceCount)
+	{
+		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
+		for (U32 i = 0; i < ResourceCount; i++)
+		{
+			Revisions[i].ImaginaryResource = nullptr;
+			Revisions[i].Parent = nullptr;
+		}
+	}
 
 	/* Wrapped resources need a handle and a resource array (which they could copy or compose from other handles) */
-	Wrapped(const Handle& handle, const RevisionArray& InRevisions)
-		: Handle(handle)
+	Wrapped(const Handle& handle, const DescriptorType* InDescriptors, U32 InResourceCount)
+		: Wrapped(handle, InResourceCount)
 	{
 		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work"); 
+		for (U32 i = 0; i < ResourceCount; i++)
+		{
+			Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
+			check(Revisions[i].ImaginaryResource);
+		}
+	}
 
+	Wrapped(const Handle& handle, const ResourceRevision* InRevisions, U32 InResourceCount)
+		: Wrapped(handle, InResourceCount)
+	{
+		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
 			Revisions[i] = InRevisions[i];
@@ -168,7 +183,12 @@ struct Wrapped : private Handle
 		{
 			//check that the set has not been tampered with between pass creation and linkage
 			check(Revisions[i].ImaginaryResource == Source.Revisions[i].ImaginaryResource);
-			
+		}
+
+		Revisions = LinearAlloc<ResourceRevision>(ResourceCount);
+		for (U32 i = 0; i < ResourceCount; i++)
+		{
+			Revisions[i].ImaginaryResource = Source.Revisions[i].ImaginaryResource;
 			//point to the new parent
 			Revisions[i].Parent = Parent;		
 		}
@@ -197,6 +217,11 @@ struct Wrapped : private Handle
 		}
 	}
 
+	const U32 GetResourceCount() const
+	{
+		return ResourceCount;
+	}
+
 	/* Handles can get undefined when they never have been written to */
 	constexpr bool IsUndefined(U32 i = 0) const
 	{
@@ -210,7 +235,7 @@ struct Wrapped : private Handle
 	{
 		// During casting of Handles try to call the conversion constructor otherwise fail 
 		// if conversion is not allowed by the user
-		return { Handle(Source.GetHandle()), Source.Revisions };
+		return { Handle(Source.GetHandle()), Source.Revisions, Source.ResourceCount };
 	}
 	
 protected:
@@ -218,7 +243,7 @@ protected:
 	and should not be possible due to the strong type safty of the implementation */
 	constexpr void CheckAllValid() const
 	{
-		for (int i = 0; i < ResourceCount; i++)
+		for (U32 i = 0; i < ResourceCount; i++)
 		{
 			check(Revisions[i].ImaginaryResource != nullptr);
 		}
@@ -241,7 +266,8 @@ private:
 		}
 	}
 
-	RevisionArray Revisions;
+	ResourceRevision* Revisions = nullptr;
+	U32 ResourceCount = 0;
 };
 
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
@@ -277,11 +303,6 @@ struct ResourceTableEntry
 	const IResourceTableInfo* GetOwner() const
 	{
 		return Owner;
-	}
-
-	bool IsValid() const
-	{
-		return Revision.ImaginaryResource != nullptr;
 	}
 	
 	bool IsUndefined() const
@@ -344,8 +365,9 @@ public:
 class IResourceTableIterator
 {
 protected:
-	const void* TablePtr;
-	const ResourceTableEntry Entry;
+	const void* TablePtr = nullptr;
+	ResourceTableEntry Entry;
+	U32 ResourceIndex = 0;
 	IResourceTableIterator(const void* InTablePtr, const ResourceTableEntry& InEntry) : TablePtr(InTablePtr), Entry(InEntry)
 	{}
 	
@@ -377,42 +399,50 @@ public:
 };
 
 /* Itterator Implementation to itterate over ResourceTables with for-each*/
-template<typename TableType, int Index, typename... XS>
+template<typename TableType, typename... XS>
 class ResourceTableIterator;
 
 /* a non empty Itterator */
-template<typename TableType, int Index, typename X, typename... XS>
-class ResourceTableIterator<TableType, Index, X, XS...> : public IResourceTableIterator
+template<typename TableType, typename X, typename... XS>
+class ResourceTableIterator<TableType, X, XS...> : public IResourceTableIterator
 {
 	/* helper function to build a ResourceTableEntry for the base class */
-	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner)
+	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner, U32 InResourceIndex)
 	{
 		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
-		return ResourceTableEntry(Wrap.Revisions[Index], Owner, Wrap.GetHandle());
+		if (Wrap.ResourceCount > 0)
+		{
+			return ResourceTableEntry(Wrap.Revisions[InResourceIndex], Owner, Wrap.GetHandle());
+		}
+		else
+		{
+			return ResourceTableEntry(ResourceRevision(nullptr), Owner, Wrap.GetHandle());
+		}
 	}
 
 public:
-	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo* Owner) : IResourceTableIterator(InTablePtr, Get(InTablePtr, Owner))
+	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo* Owner) 
+		: IResourceTableIterator(InTablePtr, Get(InTablePtr, Owner, 0))
 	{}
 
 	IResourceTableIterator* Next() override
 	{
-		if constexpr (Index + 1 < X::ResourceCount)
+		const TableType* RealTablePtr = static_cast<const TableType*>(TablePtr);
+		U32 ResourceCount = RealTablePtr->template GetWrapped<X>().ResourceCount;
+		if (ResourceIndex + 1 < ResourceCount)
 		{
 			//as long as there are still resources in this handle itterate over them
-			//sanity check sizes before sliceing the type
-			static_assert(sizeof(ResourceTableIterator<TableType, Index + 1, X, XS...>) == sizeof(ResourceTableIterator<TableType, Index, X, XS...>), "Size don't Match for inplace storage");
-			//sliceing the type so that the next vtable call will point to the next element
-			new (this) ResourceTableIterator<TableType, Index + 1, X, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
+			ResourceIndex++;
+			Entry = Get(RealTablePtr, Entry.GetOwner(), ResourceIndex);
 			return this;
 		}
 		else
 		{
 			//move to the next handle in the list
 			//sanity check sizes before sliceing the type
-			static_assert(sizeof(ResourceTableIterator<TableType, 0, XS...>) == sizeof(ResourceTableIterator<TableType, Index, X, XS...>), "Size don't Match for inplace storage");
+			static_assert(sizeof(ResourceTableIterator<TableType, XS...>) == sizeof(ResourceTableIterator<TableType, X, XS...>), "Size don't Match for inplace storage");
 			//sliceing the type so that the next vtable call will point to the next element
-			new (this) ResourceTableIterator<TableType, 0, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
+			new (this) ResourceTableIterator<TableType, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
 			return this;
 		}
 	}
@@ -420,7 +450,7 @@ public:
 
 /* an empty Itterator */
 template<typename TableType>
-class ResourceTableIterator<TableType, 0> : public IResourceTableIterator
+class ResourceTableIterator<TableType> : public IResourceTableIterator
 {
 	/* helper function to build an empty ResourceTableEntry for the base class */
 	static ResourceTableEntry Get()
@@ -429,7 +459,8 @@ class ResourceTableIterator<TableType, 0> : public IResourceTableIterator
 	}
 
 public:
-	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo*) : IResourceTableIterator(InTablePtr, Get())
+	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo*)
+		: IResourceTableIterator(InTablePtr, Get())
 	{}
 
 	IResourceTableIterator* Next() override
@@ -455,7 +486,7 @@ public:
 		typedef const ResourceTableEntry& reference;
 		typedef std::input_iterator_tag iterator_category;
 
-		char* ItteratorStorage[sizeof(ResourceTableIterator<void, 0>)];
+		char* ItteratorStorage[sizeof(ResourceTableIterator<void>)];
 
 	public:
 		Iterator& operator++() 
@@ -483,8 +514,8 @@ public:
 		static Iterator MakeIterator(const TableType* InTableType, const IResourceTableInfo* Owner)
 		{
 			Iterator RetVal;
-			static_assert(sizeof(ResourceTableIterator<TableType, 0, TS...>) == sizeof(ResourceTableIterator<void, 0>), "Size don't Match for inplace storage");
-			new (RetVal.ItteratorStorage) ResourceTableIterator<TableType, 0, TS...>(InTableType, Owner);
+			static_assert(sizeof(ResourceTableIterator<TableType, TS...>) == sizeof(ResourceTableIterator<void>), "Size don't Match for inplace storage");
+			new (RetVal.ItteratorStorage) ResourceTableIterator<TableType, TS...>(InTableType, Owner);
 			return RetVal;
 		}
 	};
@@ -645,6 +676,12 @@ public:
 	const auto& GetDescriptor(U32 i = 0) const
 	{
 		return GetWrapped<Handle>().GetDescriptor(i);
+	}
+
+	template<typename Handle>
+	const U32 GetResourceCount() const
+	{
+		return GetWrapped<Handle>().GetResourceCount();
 	}
 
 	void CheckAllValid() const

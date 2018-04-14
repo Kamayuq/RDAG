@@ -106,11 +106,8 @@ struct ExternalTexture2dDescriptor : Texture2d::Descriptor
 {
 	I32 Index = -1;
 public:
-	Descriptor & operator= (const Texture2d::Descriptor& Other)
-	{
-		(*static_cast<Texture2d::Descriptor*>(this)) = Other;
-		return *this;
-	};
+	ExternalTexture2dDescriptor() = default;
+	ExternalTexture2dDescriptor(const Texture2d::Descriptor& Other) : Texture2d::Descriptor(Other) {};
 };
 
 template<typename CRTP>

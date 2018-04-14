@@ -103,21 +103,42 @@ public:
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
 			auto FromEntry = s.template GetWrapped<From>();
-			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), {});
+			U32 ResourceCount = (ToIndex + 1);
 
 			if constexpr (s.template Contains<To>())
 			{
-				//copy over the old revisions to not loose entries
 				const auto& Destination = s.template GetWrapped<To>();
-				for (U32 i = 0; i < To::ResourceCount; i++)
+				ResourceCount = ResourceCount > Destination.ResourceCount ? ResourceCount : Destination.ResourceCount;
+			}
+
+			//make a new destination and use the conversion constructor to check if the conversion is valid
+			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), ResourceCount);
+
+			if constexpr (s.template Contains<To>())
+			{
+				const auto& Destination = s.template GetWrapped<To>();
+
+				//coper over the previous results
+				for (U32 i = 0; i < ResourceCount; i++)
 				{
-					ToEntry.Revisions[i] = Destination.Revisions[i];
+					if (i < Destination.ResourceCount)
+					{
+						ToEntry.Revisions[i] = Destination.Revisions[i];
+					}
+					else
+					{
+						if (i != ToIndex)
+						{
+							//create undefined dummy resources with the same descriptor
+							ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+							check(ToEntry.Revisions[i].ImaginaryResource);
+						}
+					}
 				}
 			}
 			else
 			{
-				for (U32 i = 0; i < To::ResourceCount; i++)
+				for (U32 i = 0; i < ResourceCount; i++)
 				{
 					if (i != ToIndex)
 					{
@@ -128,8 +149,10 @@ public:
 				}
 			}
 
+			check(FromIndex < FromEntry.ResourceCount);
+			check(ToIndex < ResourceCount);
 			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
-			ResourceTable<To> DestTable { "RenameEntry", ToEntry };
+			ResourceTable<To> DestTable{ "RenameEntry", ToEntry };
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
@@ -140,7 +163,6 @@ public:
 	template<typename From, typename To>
 	auto RenameAllEntries() const
 	{
-		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 		return Seq([](const auto& s)
 		{
@@ -151,36 +173,25 @@ public:
 			Wrapped<From> FromEntry = s.template GetWrapped<From>();
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), {});
-
-			for (U32 i = 0; i < To::ResourceCount; i++)
-			{
-				ToEntry.Revisions[i] = FromEntry.Revisions[i];
-			}
+			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), FromEntry.Revisions, FromEntry.ResourceCount);
 			ResourceTable<To> DestTable{ "RenameAllEntries", ToEntry };
 
 			//remove the old output and copy it into the new destination
 			return s.Union(DestTable);
 		});
 	}
-	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
-	template<typename Handle, typename... ARGS>
-	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[Handle::ResourceCount], const ARGS&... Args) const
-	{
-		ResourceRevision Revisions[Handle::ResourceCount];
-		for (U32 i = 0; i < Handle::ResourceCount; i++)
-		{
-			Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
-			check(Revisions[i].ImaginaryResource);
-		}
-		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
-		return Seq([WrappedResource](const auto& s)
-		{	
-			CheckIsValidResourceTable(s);
-			auto NewResourceTable = ResourceTable<Handle>("CreateResource", WrappedResource);
-			return s.Union(NewResourceTable);
-		});
+	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
+	template<typename Handle, typename... ARGS, unsigned ResourceCount>
+	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[ResourceCount], const ARGS&... Args) const
+	{
+		return CreateResource<Handle>(&InDescriptors[0], ResourceCount, Args...);
+	}
+
+	template<typename Handle, typename... ARGS>
+	auto CreateResource(const std::vector<typename Handle::DescriptorType>& InDescriptors, const ARGS&... Args) const
+	{
+		return CreateResource<Handle>(InDescriptors.data(), (U32)InDescriptors.size(), Args...);
 	}
 
 	/* returns the empty resourcetable */
@@ -201,6 +212,19 @@ public:
 	}
 
 private:
+	/* this function adds a new resource to the resourcetable all descriptors have to be provided */
+	template<typename Handle, typename... ARGS>
+	auto CreateResource(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount, const ARGS&... Args) const
+	{
+		auto WrappedResource = Wrapped<Handle>(Handle(Args...), InDescriptors, ResourceCount);
+		return Seq([WrappedResource](const auto& s)
+		{
+			CheckIsValidResourceTable(s);
+			auto NewResourceTable = ResourceTable<Handle>("CreateResource", WrappedResource);
+			return s.Union(NewResourceTable);
+		});
+	}
+
 	struct IsMutableOp
 	{
 		template<typename T>
