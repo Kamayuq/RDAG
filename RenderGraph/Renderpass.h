@@ -3,6 +3,7 @@
 #include "Sequence.h"
 #include "Plumber.h"
 #include "RHI.h"
+#include "Sequence.h"
 
 #include <vector>
 
@@ -49,7 +50,7 @@ public:
 		const RenderPassBuilder* Self = this;
 		return [&, Self, Name](const auto& s)
 		{
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			InputTableType input = s;
 			
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
@@ -74,7 +75,7 @@ public:
 		auto& LocalActionList = ActionList;
 		return [&LocalActionList, QueuedTask, Name](const auto& s)
 		{
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
 			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
@@ -97,7 +98,7 @@ public:
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 		return [FromIndex, ToIndex](const auto& s)
 		{
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
@@ -143,7 +144,7 @@ public:
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 		return [](const auto& s)
 		{
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
@@ -176,7 +177,7 @@ public:
 
 		return [WrappedResource](const auto& s)
 		{	
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			auto NewResourceTable = ResourceTable<Handle>("CreateResource", WrappedResource);
 			return s.Union(NewResourceTable);
 		};
@@ -208,13 +209,6 @@ private:
 			return !T::IsReadOnlyResource;
 		}
 	};
-
-	template<typename ResourceTableType>
-	static void CheckIsResourceTable(const ResourceTableType& Table)
-	{
-		static_assert(std::is_base_of<IResourceTableBase, ResourceTableType>(), "Table is not a ResorceTable");
-		Table.CheckAllValid();
-	}
 
 	template<typename ContextType, typename RenderPassDataType, typename FunctionType>
 	struct TRenderPassAction final : IRenderPassAction

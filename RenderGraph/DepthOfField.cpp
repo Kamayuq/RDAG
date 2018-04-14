@@ -61,6 +61,8 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 {
 	return [&Builder, Enabled](const auto& s)
 	{
+		CheckIsValidResourceTable(s);
+
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor ScatteringReduceDesc;
 		ScatteringReduceDesc.Name = "ScatteringReduceTexture";
@@ -108,6 +110,8 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 {
 	return [&Builder](const auto& s)
 	{
+		CheckIsValidResourceTable(s);
+
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		typename BokehLUTType::DescriptorType LutOutputDesc[BokehLUTType::ResourceCount];
 		for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
@@ -140,6 +144,8 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 {
 	return [&Builder, Enabled](const auto& s)
 	{
+		CheckIsValidResourceTable(s);
+
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ConvolutionGatherType::ResourceCount];
 		for (U32 i = 0; i < ConvolutionGatherType::ResourceCount; i++)
@@ -176,6 +182,8 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 {
 	return [&Builder, GatherForeGround](const auto& s)
 	{
+		CheckIsValidResourceTable(s);
+
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 
 		using ResourceTableType = std::decay_t<decltype(s)>;
@@ -196,6 +204,8 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 {
 	return [&Builder](const auto& s)
 	{
+		CheckIsValidResourceTable(s);
+
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor SlightOutOfFocusConvolutionDesc;
 		SlightOutOfFocusConvolutionDesc.Name = "SlightOutOfFocusConvolution";

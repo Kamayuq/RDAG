@@ -3,21 +3,21 @@
 
 struct IResourceTableBase;
 
+template<typename ResourceTableType>
+static inline void CheckIsValidResourceTable(const ResourceTableType& Table)
+{
+	static_assert(std::is_base_of<IResourceTableBase, ResourceTableType>(), "Table is not a ResorceTable");
+	Table.CheckAllValid();
+}
+
 namespace Internal
 {
-	template<typename ResourceTableType>
-	static inline void CheckIsResourceTable(const ResourceTableType& Table)
-	{
-		static_assert(std::is_base_of<IResourceTableBase, ResourceTableType>(), "Table is not a ResorceTable");
-		Table.CheckAllValid();
-	}
-
 	/* the empty Sequence just returns the result */
 	constexpr auto Seq()
 	{
 		return [=](const auto& s) constexpr 
 		{ 
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			return s; 
 		};
 	}
@@ -35,7 +35,7 @@ namespace Internal
 	{
 		return [=](const auto& s) constexpr 
 		{ 
-			CheckIsResourceTable(s);
+			CheckIsValidResourceTable(s);
 			return Seq(xs...)(x(s)); 
 		};
 	}
@@ -60,7 +60,7 @@ auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 	//this is a lambda from type of s -> to type of s
 	return Seq([=](const auto& s)
 	{
-		Internal::CheckIsResourceTable(s);
+		CheckIsValidResourceTable(s);
 		//the return type is limited to the input (s)
 		using ReturnType = std::decay_t<decltype(s)>;
 		ReturnType Ret = seq(s);
@@ -78,7 +78,7 @@ auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	return Seq([=](const auto& s)
 	{
-		Internal::CheckIsResourceTable(s);
+		CheckIsValidResourceTable(s);
 		using ExtractionTable = ResourceTable<EXTRACTIONS...>;
 		ExtractionTable ExtractedResult = seq(s);
 		//the return type will always contain the input (s)
@@ -93,7 +93,7 @@ auto Select(const Seq<SequenceType, SequenceArgs...>& seq)
 {
 	return Seq([=](const auto& s)
 	{
-		Internal::CheckIsResourceTable(s);
+		CheckIsValidResourceTable(s);
 		using SelectionTable = ResourceTable<SELECTIONS...>;
 		auto SelectionResult = seq(SelectionTable(s));
 		//the return type will always contain the input (s)
