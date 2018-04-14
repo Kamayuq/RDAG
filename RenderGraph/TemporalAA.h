@@ -1,6 +1,6 @@
 #pragma once
 #include "Renderpass.h"
-#include "ResourceTypes.h"
+#include "ExampleResourceTypes.h"
 #include "DepthPass.h"
 #include "VelocityPass.h"
 

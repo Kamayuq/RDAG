@@ -1,6 +1,6 @@
 #pragma once
 #include "Plumber.h"
-#include "ResourceTypes.h"
+#include "ExampleResourceTypes.h"
 #include "Renderpass.h"
 
 namespace RDAG

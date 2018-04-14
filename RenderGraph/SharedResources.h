@@ -1,5 +1,5 @@
 #pragma once
-#include "SharedResources.h"
+#include "ExampleResourceTypes.h"
 
 namespace EAmbientOcclusionType
 {

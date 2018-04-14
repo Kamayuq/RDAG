@@ -123,10 +123,9 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = nullptr;
+		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CRTP>::template OnCreate<Handle>(InDescriptor);
 		if (InDescriptor.Index != -1)
 		{
-			Ret = Texture2dResourceHandle<CRTP>::template OnCreate<Handle>(InDescriptor);
 			Ret->Materialize();
 		}
 		return Ret;
@@ -135,7 +134,10 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
 	{
 		static std::vector<ResourceType*> ExternalResourceMap;
-		check(Descriptor.Index >= 0);
+		if (Descriptor.Index < 0)
+		{
+			return nullptr;
+		}
 
 		if (ExternalResourceMap.size() <= (size_t)Descriptor.Index)
 		{

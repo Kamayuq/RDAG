@@ -1,7 +1,7 @@
 #pragma once
 #include "Renderpass.h"
 #include "Plumber.h"
-#include "ResourceTypes.h"
+#include "ExampleResourceTypes.h"
 #include "GbufferPass.h"
 
 namespace RDAG

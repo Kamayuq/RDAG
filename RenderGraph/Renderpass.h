@@ -38,12 +38,13 @@ public:
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
 		typedef Traits::function_traits<FunctionType> Traits;
-		//typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
-		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
-		typedef std::decay_t<typename Traits::return_type> NestedOutputTableType;
 		static_assert(Traits::arity >= 2, "Build Functions have at least 2 parameters: the builder and the input table");
-		static_assert(std::is_base_of_v<IResourceTableBase, NestedOutputTableType>, "The returntype must be a resource table");
+		typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
+		static_assert(std::is_same_v<RenderPassBuilder, BuilderType>, "The 1st parameter must be a builder");
+		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
 		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
+		typedef std::decay_t<typename Traits::return_type> NestedOutputTableType;
+		static_assert(std::is_base_of_v<IResourceTableBase, NestedOutputTableType>, "The returntype must be a resource table");
 
 		const RenderPassBuilder* Self = this;
 		return [&, Self, Name](const auto& s)
@@ -61,15 +62,15 @@ public:
 	auto QueueRenderAction(const char* Name, const FunctionType& QueuedTask) const
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
-		typedef Traits::function_traits<FunctionType> Traits;
-		typedef std::decay_t<typename Traits::template arg<0>::type> ContextType;
-		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
-		typedef std::decay_t<typename Traits::return_type> VoidReturnType;
+		typedef Traits::function_traits<FunctionType> Traits; 
 		static_assert(Traits::arity == 2, "Queue Functions have 2 parameters: the rendercontext and the input table");
-		static_assert(std::is_same_v<void, VoidReturnType>, "The returntype must be void");
+		typedef std::decay_t<typename Traits::template arg<0>::type> ContextType;
 		static_assert(std::is_base_of_v<RenderContextBase, ContextType>, "The 1st parameter must be a rendercontext type");
+		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
 		static_assert(std::is_base_of_v<IResourceTableBase, InputTableType>, "The 2nd parameter must be a resource table");
-
+		typedef std::decay_t<typename Traits::return_type> VoidReturnType;
+		static_assert(std::is_same_v<void, VoidReturnType>, "The returntype must be void");
+		
 		auto& LocalActionList = ActionList;
 		return [&LocalActionList, QueuedTask, Name](const auto& s)
 		{
@@ -93,11 +94,11 @@ public:
 	template<typename From, typename To>
 	auto RenameEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
 	{
+		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 		return [FromIndex, ToIndex](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
 			auto FromEntry = s.template GetWrapped<From>();
@@ -121,6 +122,7 @@ public:
 					{
 						//create undefined dummy resources with the same descriptor
 						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
 				}
 			}
@@ -138,12 +140,12 @@ public:
 	auto RenameAllEntries() const
 	{
 		static_assert(From::ResourceCount == To::ResourceCount, "ResourceCounts must match");
+		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
 		return [](const auto& s)
 		{
 			CheckIsResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
-			static_assert(std::is_base_of_v<From, StateType>, "Source was not found in the resource table");
+			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
 			Wrapped<From> FromEntry = s.template GetWrapped<From>();
 
@@ -168,6 +170,7 @@ public:
 		for (U32 i = 0; i < Handle::ResourceCount; i++)
 		{
 			Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
+			check(Revisions[i].ImaginaryResource);
 		}
 		auto WrappedResource = Wrapped<Handle>(Handle(Args...), Revisions);
 
@@ -186,7 +189,7 @@ public:
 	}
 
 	/* after the builing finished return all the actions recorded */
-	const std::vector<const IRenderPassAction*>& GetActionList() //this should never be const
+	const std::vector<const IRenderPassAction*>& GetActionList() const
 	{
 		return ActionList;
 	}

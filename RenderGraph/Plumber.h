@@ -190,19 +190,11 @@ struct Wrapped : private Handle
 	{
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
-			if (IsValid(i) && Revisions[i].ImaginaryResource->IsMaterialized())
+			if (!IsUndefined(i) && Revisions[i].ImaginaryResource->IsMaterialized())
 			{
 				Handle::OnExecute(RndCtx, GetResource(i));
 			}
 		}
-	}
-
-	/* Handles should always be valid, invalid handles were a concept in the past 
-	and should not be possible due to the strong type safty of the implementation */
-	constexpr bool IsValid(U32 i = 0) const
-	{
-		check(i < ResourceCount);
-		return Revisions[i].ImaginaryResource != nullptr;
 	}
 
 	/* Handles can get undefined when they never have been written to */
@@ -221,10 +213,21 @@ struct Wrapped : private Handle
 		return { Handle(Source.GetHandle()), Source.Revisions };
 	}
 	
+protected:
+	/* Handles should always be valid, invalid handles were a concept in the past
+	and should not be possible due to the strong type safty of the implementation */
+	constexpr void CheckAllValid() const
+	{
+		for (int i = 0; i < ResourceCount; i++)
+		{
+			check(Revisions[i].ImaginaryResource != nullptr);
+		}
+	}
+
 private:
 	const ResourceType& GetResource(U32 i = 0) const
 	{
-		check(IsValid(i) && Revisions[i].ImaginaryResource->IsMaterialized());
+		check(Revisions[i].ImaginaryResource != nullptr && Revisions[i].ImaginaryResource->IsMaterialized());
 		return static_cast<const ResourceType&>(*Revisions[i].ImaginaryResource->GetResource());
 	}
 
@@ -627,12 +630,6 @@ public:
 
 	/*                ElementOperations                  */
 	template<typename Handle>
-	constexpr bool IsValid(U32 i = 0) const
-	{
-		return GetWrapped<Handle>().IsValid(i);
-	}
-
-	template<typename Handle>
 	constexpr bool IsUndefined(U32 i = 0) const
 	{
 		return GetWrapped<Handle>().IsUndefined(i);
@@ -652,7 +649,7 @@ public:
 
 	void CheckAllValid() const
 	{
-		(check(GetWrapped<TS>().IsValid()), ...);
+		(GetWrapped<TS>().CheckAllValid(), ...);
 	}
 
 	template<typename Handle>

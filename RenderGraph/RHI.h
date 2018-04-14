@@ -1,7 +1,7 @@
 #pragma once
 #include "Assert.h"
 #include "Types.h"
-#include "ResourceTypes.h"
+#include "ExampleResourceTypes.h"
 #include <iostream>
 
 struct RenderResourceBase;

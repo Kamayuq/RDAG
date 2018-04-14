@@ -1,7 +1,7 @@
 #pragma once
 #include "Plumber.h"
 #include "Renderpass.h"
-#include "ResourceTypes.h"
+#include "ExampleResourceTypes.h"
 
 namespace EBlendMode
 {

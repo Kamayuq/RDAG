@@ -1,6 +1,5 @@
 #pragma once
 #include "Renderpass.h"
-#include "ResourceTypes.h"
 #include "Plumber.h"
 #include "SharedResources.h"
 

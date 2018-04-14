@@ -2,23 +2,27 @@
 #include "VelocityPass.h"
 #include "TemporalAA.h"
 
-#define SIMPLE_TEX_HANDLE(HandleName)								\
+#define SIMPLE_TEX_HANDLE_ARRAY(HandleName, Num)					\
 struct HandleName : Texture2dResourceHandle<HandleName>				\
 {																	\
+	static constexpr const U32 ResourceCount = Num;					\
 	static constexpr const char* Name = #HandleName;				\
 	explicit HandleName() {}										\
 	template<typename CRTP>											\
 	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
 };														
+#define SIMPLE_TEX_HANDLE(HandleName) SIMPLE_TEX_HANDLE_ARRAY(HandleName, 1)
 
-#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
+#define SIMPLE_UAV_HANDLE_ARRAY(HandleName, Compatible, Num)		\
 struct HandleName : Uav2dResourceHandle<Compatible>					\
 {																	\
+	static constexpr const U32 ResourceCount = Num;					\
 	static constexpr const char* Name = #HandleName;				\
 	explicit HandleName() {}										\
 	template<typename CRTP>											\
 	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
 };	
+#define SIMPLE_UAV_HANDLE(HandleName, Compatible) SIMPLE_UAV_HANDLE_ARRAY(HandleName, Compatible, 1)
 
 namespace RDAG
 {
@@ -34,43 +38,23 @@ namespace RDAG
 	SIMPLE_UAV_HANDLE(ScatteringBokehLUTUav, ScatteringBokehLUTTexture);
 	SIMPLE_TEX_HANDLE(GatheringBokehLUTTexture);
 	SIMPLE_UAV_HANDLE(GatheringBokehLUTUav, GatheringBokehLUTTexture);
-
 	SIMPLE_TEX_HANDLE(ConvolutionTexture);
 	SIMPLE_UAV_HANDLE(ConvolutionUav, ConvolutionTexture);
-
 	SIMPLE_TEX_HANDLE(ForegroundConvolutionTexture);
 	SIMPLE_UAV_HANDLE(ForegroundConvolutionUav, ForegroundConvolutionTexture);
-
-	struct BackgroundConvolutionTexture : Texture2dResourceHandle<BackgroundConvolutionTexture>
-	{
-		static constexpr const U32 ResourceCount = 2;
-		static constexpr const char* Name = "BackgroundConvolutionTexture";
-
-		explicit BackgroundConvolutionTexture() {}
-		template<typename CRTP>	
-		explicit BackgroundConvolutionTexture(const Texture2dResourceHandle<CRTP>&) {}
-	};
-
-	struct BackgroundConvolutionUav : Uav2dResourceHandle<BackgroundConvolutionTexture>
-	{
-		static constexpr const U32 ResourceCount = 2;
-		static constexpr const char* Name = "BackgroundConvolutionUav";
-
-		explicit BackgroundConvolutionUav() {}
-		template<typename CRTP>
-		explicit BackgroundConvolutionUav(const Texture2dResourceHandle<CRTP>&) {}
-	};
-
 	SIMPLE_TEX_HANDLE(SlightOutOfFocusConvolutionTexture);
 	SIMPLE_UAV_HANDLE(SlightOutOfFocusConvolutionUav, SlightOutOfFocusConvolutionTexture);
 	SIMPLE_TEX_HANDLE(ScatteringReduceTexture);
 	SIMPLE_UAV_HANDLE(ScatteringReduceUav, ScatteringReduceTexture);
 	SIMPLE_TEX_HANDLE(ScatterCompilationTexture);
 	SIMPLE_UAV_HANDLE(ScatterCompilationUav, ScatterCompilationTexture);
+	SIMPLE_TEX_HANDLE_ARRAY(BackgroundConvolutionTexture, 2);
+	SIMPLE_UAV_HANDLE_ARRAY(BackgroundConvolutionUav, BackgroundConvolutionTexture, 2);
 };
-
 #undef SIMPLE_TEX_HANDLE
+#undef SIMPLE_TEX_HANDLE_ARRAY
 #undef SIMPLE_UAV_HANDLE
+#undef SIMPLE_UAV_HANDLE_ARRAY
 
 template<typename ConvolutionOutputType>
 auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enabled)
@@ -90,14 +74,13 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 		ScatterCompilationDesc.Height = ViewInfo.SceneHeight;
 		ScatterCompilationDesc.Width = ViewInfo.SceneWidth;
 		
-		using ScatteringReduceData = ResourceTable<RDAG::ScatteringReduceUav, RDAG::GatherColorTexture>;
-		using ScatterCompilationData = ResourceTable< RDAG::ScatterCompilationUav, RDAG::ScatteringReduceTexture>;
-		using DOFHybridScatter = ResourceTable<ConvolutionOutputType, RDAG::ScatterCompilationTexture, RDAG::ScatteringBokehLUTTexture>;
-
 		using ResourceTableType = std::decay_t<decltype(s)>;
 		ResourceTableType Result = s;
 		if(Enabled)
-		{		
+		{
+			using ScatteringReduceData = ResourceTable<RDAG::ScatteringReduceUav, RDAG::GatherColorTexture>;
+			using ScatterCompilationData = ResourceTable< RDAG::ScatterCompilationUav, RDAG::ScatteringReduceTexture>;
+			using DOFHybridScatter = ResourceTable<ConvolutionOutputType, RDAG::ScatterCompilationTexture, RDAG::ScatteringBokehLUTTexture>;
 			Result = Seq
 			{
 				Builder.CreateResource<RDAG::ScatteringReduceTexture>({ ScatteringReduceDesc }),
@@ -136,12 +119,12 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 		}
 
 		auto LutOutputTable = Builder.CreateResource<BokehLUTType>(LutOutputDesc)(s);
-		using BuildBokehLUTData = ResourceTable<BokehLUTType>;
 
 		if (!ViewInfo.DofSettings.BokehShapeIsCircle)
 		{
 			for (U32 i = 0; i < BokehLUTType::ResourceCount; i++)
 			{
+				using BuildBokehLUTData = ResourceTable<BokehLUTType>;
 				LutOutputTable = Builder.QueueRenderAction("BuildBokehLUTAction", [](RenderContext& Ctx, const BuildBokehLUTData&)
 				{
 					Ctx.Draw("BuildBokehLUTAction");
@@ -167,12 +150,12 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 			ConvolutionOutputDesc[i].Width = ViewInfo.SceneWidth;
 		}
 		auto ConvolutionOutputTable = Builder.CreateResource<ConvolutionGatherType>(ConvolutionOutputDesc)(s);
-		using GatherPassData = ResourceTable<RDAG::ConvolutionUav, RDAG::GatheringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
 
 		if (Enabled)
 		{
 			for (U32 i = 0; i < ConvolutionGatherType::ResourceCount; i++)
 			{
+				using GatherPassData = ResourceTable<RDAG::ConvolutionUav, RDAG::GatheringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
 				ConvolutionOutputTable = Seq
 				{
 					Builder.RenameEntry<ConvolutionGatherType, RDAG::ConvolutionUav>(i, 0),
@@ -191,8 +174,6 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 template<typename... DofPostfilterElems>
 auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 {
-	using DofPostfilterData = ResourceTable<DofPostfilterElems...>;
-
 	return [&Builder, GatherForeGround](const auto& s)
 	{
 		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
@@ -201,6 +182,7 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 		ResourceTableType Result = s;
 		if (ViewInfo.DofSettings.EnablePostfilterMethod && GatherForeGround)
 		{
+			using DofPostfilterData = ResourceTable<DofPostfilterElems...>;
 			Result = Builder.QueueRenderAction("DOFPostfilterAction", [](RenderContext& Ctx, const DofPostfilterData&)
 			{
 				Ctx.Draw("DOFPostfilterAction");

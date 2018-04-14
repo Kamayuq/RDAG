@@ -2,7 +2,7 @@
 #include <vector>
 #include "Plumber.h"
 #include "Renderpass.h"
-#include "ResourceTypes.h"
+#include "ExampleResourceTypes.h"
 #include "SharedResources.h"
 
 namespace RDAG
