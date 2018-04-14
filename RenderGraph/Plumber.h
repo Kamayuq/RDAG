@@ -222,13 +222,6 @@ struct Wrapped : private Handle
 		return ResourceCount;
 	}
 
-	/* Handles can get undefined when they never have been written to */
-	constexpr bool IsUndefined(U32 i = 0) const
-	{
-		check(i < ResourceCount);
-		return Revisions[i].ImaginaryResource == nullptr || Revisions[i].Parent == nullptr;
-	}
-
 	/* Convert Handles between each other */
 	template<typename SourceType>
 	static constexpr Wrapped<Handle> ConvertFrom(const Wrapped<SourceType>& Source)
@@ -250,6 +243,13 @@ protected:
 	}
 
 private:
+	/* Handles can get undefined when they never have been written to */
+	constexpr bool IsUndefined(U32 i = 0) const
+	{
+		check(i < ResourceCount);
+		return Revisions[i].ImaginaryResource == nullptr || Revisions[i].Parent == nullptr;
+	}
+
 	const ResourceType& GetResource(U32 i = 0) const
 	{
 		check(Revisions[i].ImaginaryResource != nullptr && Revisions[i].ImaginaryResource->IsMaterialized());
@@ -661,18 +661,6 @@ public:
 
 	/*                ElementOperations                  */
 	template<typename Handle>
-	constexpr bool IsUndefined(U32 i = 0) const
-	{
-		return GetWrapped<Handle>().IsUndefined(i);
-	}
-
-	template<typename Handle>
-	const auto& GetHandle() const
-	{
-		return GetWrapped<Handle>().GetHandle();
-	}
-
-	template<typename Handle>
 	const auto& GetDescriptor(U32 i = 0) const
 	{
 		return GetWrapped<Handle>().GetDescriptor(i);
@@ -682,6 +670,12 @@ public:
 	const U32 GetResourceCount() const
 	{
 		return GetWrapped<Handle>().GetResourceCount();
+	}
+
+	template<typename Handle>
+	const auto& GetHandle() const
+	{
+		return GetWrapped<Handle>().GetHandle();
 	}
 
 	void CheckAllValid() const
