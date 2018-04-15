@@ -153,18 +153,23 @@ struct Wrapped : private Handle
 
 	/* Wrapped resources need a handle and a resource array (which they could copy or compose from other handles) */
 	Wrapped(const Handle& handle, const DescriptorType* InDescriptors, U32 InResourceCount)
-		: Wrapped(handle, InResourceCount)
+		: Handle(handle)
+		, Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
+		, ResourceCount(InResourceCount)
 	{
 		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work"); 
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
 			Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
+			Revisions[i].Parent = nullptr;
 			check(Revisions[i].ImaginaryResource);
 		}
 	}
 
 	Wrapped(const Handle& handle, const ResourceRevision* InRevisions, U32 InResourceCount)
-		: Wrapped(handle, InResourceCount)
+		: Handle(handle)
+		, Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
+		, ResourceCount(InResourceCount)
 	{
 		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
 		for (U32 i = 0; i < ResourceCount; i++)
@@ -179,19 +184,17 @@ struct Wrapped : private Handle
 	{
 		static_assert(std::is_same_v<typename SourceType::CompatibleType, CompatibleType>, "Incompatible Types during linking");
 		check(AllocContains(Parent)); // make sure the parent is on the linear heap
+		
+		ResourceRevision* NewRevisions = LinearAlloc<ResourceRevision>(ResourceCount);
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
 			//check that the set has not been tampered with between pass creation and linkage
 			check(Revisions[i].ImaginaryResource == Source.Revisions[i].ImaginaryResource);
-		}
-
-		Revisions = LinearAlloc<ResourceRevision>(ResourceCount);
-		for (U32 i = 0; i < ResourceCount; i++)
-		{
-			Revisions[i].ImaginaryResource = Source.Revisions[i].ImaginaryResource;
+			NewRevisions[i].ImaginaryResource = Source.Revisions[i].ImaginaryResource;
 			//point to the new parent
-			Revisions[i].Parent = Parent;		
+			NewRevisions[i].Parent = Parent;
 		}
+		Revisions = NewRevisions;
 	}
 
 	const Handle& GetHandle() const

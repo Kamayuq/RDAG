@@ -19,7 +19,7 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 		std::vector<ExternalTexture2dDescriptor> HistoryDescriptors;
 		for (U32 i = 0; i < Input.GetResourceCount<RDAG::TemporalAAInput>(); i++)
 		{
-			HistoryDescriptors.push_back(ExternalTexture2dDescriptor(Input.GetDescriptor<RDAG::TemporalAAInput>()));
+			HistoryDescriptors.push_back(ExternalTexture2dDescriptor(Input.GetDescriptor<RDAG::TemporalAAInput>(i)));
 			HistoryDescriptors[i].Index = i;
 			HistoryDescriptors[i].Name = "TemporalAAHistory";
 			OutputDescriptors.push_back(HistoryDescriptors[i]);
