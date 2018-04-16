@@ -39,7 +39,7 @@ public:
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
 		typedef Traits::function_traits<FunctionType> Traits;
-		static_assert(Traits::arity >= 2, "Build Functions have at least 2 parameters: the builder and the input table");
+		static_assert(Traits::arity == (2 + sizeof...(Args)), "Build Functions have at least 2 parameters (the builder and the input table) plus the extra arguments");
 		typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
 		static_assert(std::is_same_v<RenderPassBuilder, BuilderType>, "The 1st parameter must be a builder");
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
@@ -85,8 +85,9 @@ public:
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			LocalActionList.push_back(NewRenderAction);
 
+			//extract the resources which can be written to (like UAVs and Rendertargets)
 			auto WritableSet = Set::template Filter<IsMutableOp>(InputTableType::GetSetType());
-			// merge and link (have the outputs point at this action from now on).
+			// merge and link (have the outputs point at this new action from now on).
 			return NewRenderAction->RenderPassData.Link(WritableSet, s);
 		});
 	}
