@@ -114,29 +114,26 @@ public:
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), ResourceCount);
 
-			if constexpr (s.template Contains<To>())
+			if constexpr (s.template Contains<To>()) // destination already in the table
 			{
 				const auto& Destination = s.template GetWrapped<To>();
 
-				//coper over the previous results
+				//copy over the previous entries
 				for (U32 i = 0; i < ResourceCount; i++)
 				{
 					if (i < Destination.ResourceCount)
 					{
 						ToEntry.Revisions[i] = Destination.Revisions[i];
 					}
-					else
+					else if (i != ToIndex)
 					{
-						if (i != ToIndex)
-						{
-							//create undefined dummy resources with the same descriptor
-							ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
-							check(ToEntry.Revisions[i].ImaginaryResource);
-						}
+						//create undefined dummy resources with the same descriptor
+						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
 				}
 			}
-			else
+			else // destination not in the table and need to be created
 			{
 				for (U32 i = 0; i < ResourceCount; i++)
 				{
