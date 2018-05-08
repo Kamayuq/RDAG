@@ -55,12 +55,7 @@ typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(co
 	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	if (ViewInfo.TransparencyEnabled)
 	{
-		Output = Seq
-		{
-			Builder.RenameEntry<RDAG::TransparencyTarget, RDAG::ForwardRenderTarget>(),
-			Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build),
-			Builder.RenameEntry<RDAG::ForwardRenderTarget, RDAG::TransparencyTarget>()
-		}(Output);
+		Output = Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build)(Output);
 	}
 
 	if (ViewInfo.TransparencySeperateEnabled)

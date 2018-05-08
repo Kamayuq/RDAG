@@ -48,14 +48,11 @@ public:
 		static_assert(std::is_base_of_v<IResourceTableBase, NestedOutputTableType>, "The returntype must be a resource table");
 
 		const RenderPassBuilder* Self = this;
-		return Seq([&, Self, Name](const auto& s)
+		return Seq([&, Self, Name](const InputTableType& input)
 		{
-			CheckIsValidResourceTable(s);
-			InputTableType input = s;
-			
+			CheckIsValidResourceTable(input);		
 			//no heap allocation just run the build and merge the results (no linking as these are not real types!)
-			NestedOutputTableType NestedRenderPassData(Name, BuildFunction(*Self, input, Args...));
-			return s.Union(NestedRenderPassData);
+			return NestedOutputTableType(Name, BuildFunction(*Self, input, Args...));
 		});
 	}
 
@@ -73,13 +70,12 @@ public:
 		static_assert(std::is_same_v<void, VoidReturnType>, "The returntype must be void");
 		
 		auto& LocalActionList = ActionList;
-		return Seq([&LocalActionList, QueuedTask, Name](const auto& s)
+		return Seq([&LocalActionList, QueuedTask, Name](const InputTableType& input)
 		{
-			CheckIsValidResourceTable(s);
+			CheckIsValidResourceTable(input);
 			//typedef typename std::decay<decltype(s)>::type StateType;
 
 			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
-			InputTableType input = s;
 
 			/* create some space on the heap for the action as those are nodes of our graph */
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
@@ -87,7 +83,7 @@ public:
 
 			auto WritableSet = Set::template Filter<IsMutableOp>(InputTableType::GetSetType());
 			// merge and link (have the outputs point at this action from now on).
-			return NewRenderAction->RenderPassData.Link(WritableSet, s);
+			return NewRenderAction->RenderPassData.Link(WritableSet);
 		});
 	}
 
@@ -152,10 +148,9 @@ public:
 			check(FromIndex < FromEntry.ResourceCount);
 			check(ToIndex < ResourceCount);
 			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
-			ResourceTable<To> DestTable{ "RenameEntry", ToEntry };
 
 			//remove the old output and copy it into the new destination
-			return s.Union(DestTable);
+			return ResourceTable<To>{ "RenameEntry", ToEntry };
 		});
 	}
 
@@ -164,7 +159,7 @@ public:
 	auto RenameAllEntries() const
 	{
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
-		return Seq([](const auto& s)
+		return Seq([](const auto& s) 
 		{
 			CheckIsValidResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
@@ -174,10 +169,9 @@ public:
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), FromEntry.Revisions, FromEntry.ResourceCount);
-			ResourceTable<To> DestTable{ "RenameAllEntries", ToEntry };
-
+			
 			//remove the old output and copy it into the new destination
-			return s.Union(DestTable);
+			return ResourceTable<To>{ "RenameAllEntries", ToEntry };
 		});
 	}
 
@@ -234,8 +228,7 @@ private:
 		return Seq([WrappedResource](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
-			auto NewResourceTable = ResourceTable<Handle>("CreateResource", WrappedResource);
-			return s.Union(NewResourceTable);
+			return ResourceTable<Handle>{ "CreateResource", WrappedResource };
 		});
 	}
 

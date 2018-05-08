@@ -1,6 +1,21 @@
 #pragma once
 #include <utility>
 
+template<typename F, typename V, typename = std::void_t<>> 
+struct IsCallable : std::false_type {};
+
+template<typename F, typename V>
+struct IsCallable<F, V, std::void_t<decltype(std::declval<F>()(std::declval<V>()))>> : std::true_type {};
+
+template<typename>
+struct FalseType
+{
+	static constexpr bool value = false;
+};
+
+template<typename>
+class DebugResourceTable;
+
 struct IResourceTableBase;
 
 template<typename ResourceTableType>
@@ -22,21 +37,29 @@ namespace Internal
 		};
 	}
 
-	/* Single Element optimization */
-	template<typename X>
-	constexpr auto Seq(const X& x)
-	{
-		return x;
-	}
-
 	/* A Sequence recursively applies the input to all the elements in the Sequence (unil the Sequence is empty) */
 	template<typename X, typename... XS>
 	constexpr auto Seq(const X& x, const XS&... xs)
 	{
-		return [=](const auto& s) constexpr 
+		return [=](const auto& s0) constexpr 
 		{ 
-			CheckIsValidResourceTable(s);
-			return Seq(xs...)(x(s)); 
+			using InputType = decltype(s0);
+			CheckIsValidResourceTable(s0);
+			if constexpr (IsCallable<X, InputType>::value)
+			{
+				auto s1 = s0.Union(x(s0));
+				CheckIsValidResourceTable(s1);
+				return s1.Union(Seq(xs...)(s1));
+			}
+			else
+			{
+				auto s1 = s0.Union(x(DebugResourceTable(s0)));
+				CheckIsValidResourceTable(s1);
+				auto r = s1.Union(Seq(xs...)(s1));
+				//comment out this line to get more detailed information about which handle type is missing on MSVC
+				static_assert(FalseType<decltype(x(DebugResourceTable(s0)))>::value, "No suitable conversion between tables, are you maybe missing an entry?");
+				return r;
+			}
 		};
 	}
 }
@@ -47,10 +70,6 @@ struct Seq : SequenceType
 {
 	Seq(const ARGS&... Args) : SequenceType(Internal::Seq(Args...)) {}
 };
-
-//C++17 deduction helpers
-template<typename ARG>
-Seq(const ARG& Arg) -> Seq<ARG, ARG>;
 
 template<typename... ARGS>
 Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;

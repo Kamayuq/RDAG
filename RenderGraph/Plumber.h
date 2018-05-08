@@ -578,6 +578,9 @@ private:
 	const char* Name = nullptr;
 };
 
+template<typename ResourceTableType>
+class DebugResourceTable;
+
 /* Common interface for Table operations */
 /* ResourceTables are the main payload of the graph implementation */
 /* they are similar to compile time sets and they can be easily stored on the stack */
@@ -610,10 +613,16 @@ public:
 		, Wrapped<TS>(xs)...
 	{}
 
-	/* assignment constructor from another resourcetable */
-	template<typename... YS>
+	/* assignment constructor from another resourcetable with SINFAE*/
+	template<typename... YS, typename = std::enable_if_t<std::is_same_v<ThisType, decltype(CollectFrom(std::declval<ResourceTable<YS...>>()))>>>
 	ResourceTable(const ResourceTable<YS...>& RTT) 
 		: ResourceTable(CollectFrom(RTT)) 
+	{}
+
+	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
+	template<typename DebugType>
+	ResourceTable(const DebugResourceTable<DebugType>& RTT)
+		: ResourceTable(CollectFrom(static_cast<const DebugType&>(RTT)))
 	{}
 
 	/*                   Constructors                    */
@@ -753,10 +762,10 @@ private:
 		template<typename... XS>
 		static void ThrowError(const Set::Type<XS...>&)
 		{
-			//this assignment will error and therefore print the values that are missing from the table
-			static int Error = ResourceTable<XS...>();
-			Error++;
-			static_assert(false, "missing entry: cannot collect");
+			//this will error and therefore print the values that are missing from the table
+			static_assert(false, "cannot collect table because a table entry is missing");
+			bool a = Set::Type<XS...>();
+			(void)a;		
 		}
 	};
 
@@ -764,8 +773,9 @@ private:
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
 	/* the argument contains the table we collect from */
 	template<typename RightType>
-	static constexpr ThisType CollectFrom(const RightType& Rhs)
+	static constexpr auto CollectFrom(const RightType& Rhs)
 	{
+		(void)Rhs; //silly MSVC thinks it's unreferenced
 		constexpr bool ContainsAll = (RightType::template Contains<TS>() && ...);
 		if constexpr (ContainsAll)
 		{
@@ -780,11 +790,10 @@ private:
 		}
 		else
 		{
-			(void)Rhs; //silly MSVC thinks it's unreferenced
 			//if the collection missed some handles we force an error and print the intersection of the missing values
 			//this will always fail with an error where the DiffTable type is visible
 			ErrorType::ThrowError(Set::LeftDifference(GetCompatibleSetType(), RightType::GetCompatibleSetType()));
-			return std::declval<ThisType>();
+			return Set::LeftDifference(GetCompatibleSetType(), RightType::GetCompatibleSetType());
 		}
 	}
 
@@ -805,6 +814,14 @@ protected:
 	{
 		return IResourceTableInfo::Iterator::MakeIterator<ThisType>(this, nullptr);
 	};
+};
+
+template<typename ResourceTableType>
+class DebugResourceTable final : public ResourceTableType
+{
+public:
+	DebugResourceTable(const ResourceTableType& RTT) : ResourceTableType(RTT) 
+	{}
 };
 
 template<typename ResourceTableType>
@@ -838,21 +855,20 @@ public:
 private:
 	/* First the tables are merged and than the results are linked to track the history */
 	/* Linking is used to update the Resourcetable-entries to point to the previous action */
-	template<typename... XS, typename... YS>
-	constexpr auto Link(const Set::Type<XS...>&, const ResourceTable<YS...>& Parent) const
+	template<typename... XS>
+	constexpr auto Link(const Set::Type<XS...>&) const
 	{
-		auto MergedOutput = Parent.Union(*this);
+		auto MergedOutput = *this;
 		/* incrementally link all the Handles from the intersecting set*/
-		(LinkInternal<XS>(MergedOutput, *this), ...);
+		(LinkInternal<XS>(MergedOutput), ...);
 		return MergedOutput;
 	}
 
-	template<typename X, typename... ZS, typename... TS>
-	constexpr void LinkInternal(ResourceTable<ZS...>& MergedOutput, const ResourceTable<TS...>& /* this */) const
+	template<typename X, typename... ZS>
+	constexpr void LinkInternal(ResourceTable<ZS...>& MergedOutput) const
 	{
-		using RealDestType = decltype(SetOperation<ZS...>::template GetOriginalType<typename X::CompatibleType>());
-		using RealSrcType = decltype(SetOperation<TS...>::template GetOriginalType<typename X::CompatibleType>());
-		MergedOutput.template GetWrapped<RealDestType>().Link(this->template GetWrapped<RealSrcType>(), this);
+		using RealType = decltype(SetOperation<ZS...>::template GetOriginalType<typename X::CompatibleType>());
+		MergedOutput.template GetWrapped<RealType>().Link(this->template GetWrapped<RealType>(), this);
 	}
 
 	/* Entry point for OnExecute callbacks */

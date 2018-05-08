@@ -22,7 +22,7 @@ namespace ESortOrder
 
 namespace RDAG
 {
-	struct ForwardRenderTarget : RendertargetResourceHandle<ForwardRenderTarget>
+	struct ForwardRenderTarget : RendertargetResourceHandle<SceneColorTexture>
 	{
 		static constexpr const char* Name = "ForwardRenderTarget";
 		
