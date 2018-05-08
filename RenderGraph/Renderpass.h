@@ -39,7 +39,7 @@ public:
 	{
 		/* sanity checking if the passed in variables make sense, otherwise fail early */
 		typedef Traits::function_traits<FunctionType> Traits;
-		static_assert(Traits::arity >= 2, "Build Functions have at least 2 parameters: the builder and the input table");
+		static_assert(Traits::arity == (2 + sizeof...(Args)), "Build Functions have at least 2 parameters (the builder and the input table) plus the extra arguments");
 		typedef std::decay_t<typename Traits::template arg<0>::type> BuilderType;
 		static_assert(std::is_same_v<RenderPassBuilder, BuilderType>, "The 1st parameter must be a builder");
 		typedef std::decay_t<typename Traits::template arg<1>::type> InputTableType;
@@ -81,6 +81,7 @@ public:
 			RenderActionType* NewRenderAction = new (LinearAlloc<RenderActionType>()) RenderActionType(Name, input, QueuedTask);
 			LocalActionList.push_back(NewRenderAction);
 
+			//extract the resources which can be written to (like UAVs and Rendertargets)
 			auto WritableSet = Set::template Filter<IsMutableOp>(InputTableType::GetSetType());
 			// merge and link (have the outputs point at this action from now on).
 			return NewRenderAction->RenderPassData.Link(WritableSet);
@@ -110,29 +111,26 @@ public:
 			//make a new destination and use the conversion constructor to check if the conversion is valid
 			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), ResourceCount);
 
-			if constexpr (s.template Contains<To>())
+			if constexpr (s.template Contains<To>()) // destination already in the table
 			{
 				const auto& Destination = s.template GetWrapped<To>();
 
-				//coper over the previous results
+				//copy over the previous entries
 				for (U32 i = 0; i < ResourceCount; i++)
 				{
 					if (i < Destination.ResourceCount)
 					{
 						ToEntry.Revisions[i] = Destination.Revisions[i];
 					}
-					else
+					else if (i != ToIndex)
 					{
-						if (i != ToIndex)
-						{
-							//create undefined dummy resources with the same descriptor
-							ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
-							check(ToEntry.Revisions[i].ImaginaryResource);
-						}
+						//create undefined dummy resources with the same descriptor
+						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
 				}
 			}
-			else
+			else // destination not in the table and need to be created
 			{
 				for (U32 i = 0; i < ResourceCount; i++)
 				{
