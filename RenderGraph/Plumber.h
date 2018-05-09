@@ -819,7 +819,6 @@ class DebugResourceTable final : public SourceResourceTableType
 public:
 	DebugResourceTable(const SourceResourceTableType& RTT, const FunctionType&) : SourceResourceTableType(RTT)
 	{}
-	//: ResourceTable(CollectFrom(static_cast<const DebugType&>(RTT)))
 
 	template<typename DestinationResourceTableType>
 	static constexpr DestinationResourceTableType CompileTimeError(const DestinationResourceTableType&)
