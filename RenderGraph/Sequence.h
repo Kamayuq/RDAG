@@ -1,5 +1,6 @@
 #pragma once
 #include <utility>
+#include <type_traits>
 
 template<typename F, typename V, typename = std::void_t<>> 
 struct IsCallable : std::false_type {};
@@ -79,8 +80,16 @@ auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 		CheckIsValidResourceTable(s);
 		//the return type is limited to the input (s)
 		using ReturnType = std::decay_t<decltype(s)>;
-		ReturnType Ret = seq(s);
-		return Ret;
+		if constexpr (std::is_assignable<ReturnType, decltype(seq(s))>::value)
+		{
+			ReturnType Ret = seq(s);
+			return Ret;
+		}
+		else
+		{
+			static_assert(sizeof(decltype(seq(s))) == 0, "The seq returned a type that is did not contain it's inputs");
+			return s.Union(seq(s));
+		}
 	});
 }
 
@@ -96,9 +105,17 @@ auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 	{
 		CheckIsValidResourceTable(s);
 		using ExtractionTable = ResourceTable<EXTRACTIONS...>;
-		ExtractionTable ExtractedResult = seq(s);
-		//the return type will always contain the input (s)
-		return s.Union(ExtractedResult);
+		if constexpr (std::is_assignable<ExtractionTable, decltype(seq(s))>::value)
+		{
+			ExtractionTable ExtractedResult = seq(s);
+			//the return type will always contain the input (s)
+			return s.Union(ExtractedResult);
+		}
+		else
+		{
+			static_assert(sizeof(decltype(seq(s))) == 0, "The requested types could not be extracted from the seq");
+			return s.Union(seq(s));
+		}
 	});
 }
 
@@ -111,8 +128,16 @@ auto Select(const Seq<SequenceType, SequenceArgs...>& seq)
 	{
 		CheckIsValidResourceTable(s);
 		using SelectionTable = ResourceTable<SELECTIONS...>;
-		auto SelectionResult = seq(SelectionTable(s));
-		//the return type will always contain the input (s)
-		return s.Union(SelectionResult);
+		if constexpr (std::is_assignable<SelectionTable, decltype(s)>::value)
+		{
+			auto SelectionResult = seq(SelectionTable(s));
+			//the return type will always contain the input (s)
+			return s.Union(SelectionResult);
+		}
+		else
+		{
+			static_assert(sizeof(decltype(seq(s))) == 0, "The requested types could not be found in the input sequence");
+			return s.Union(seq(s));
+		}
 	});
 }
