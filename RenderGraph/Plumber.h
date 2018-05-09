@@ -578,7 +578,7 @@ private:
 	const char* Name = nullptr;
 };
 
-template<typename ResourceTableType>
+template<typename, typename>
 class DebugResourceTable;
 
 /* Common interface for Table operations */
@@ -620,9 +620,9 @@ public:
 	{}
 
 	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
-	template<typename DebugType>
-	ResourceTable(const DebugResourceTable<DebugType>& RTT)
-		: ResourceTable(CollectFrom(static_cast<const DebugType&>(RTT)))
+	template<typename DebugType, typename FunctionType>
+	ResourceTable(const DebugResourceTable<DebugType, FunctionType>&)
+		: ResourceTable(DebugResourceTable<DebugType, FunctionType>::CompileTimeError(*this))
 	{}
 
 	/*                   Constructors                    */
@@ -756,19 +756,6 @@ private:
 		};
 	}
 
-	/* Used to force a static error and an assigment error on cl and clang alike */
-	struct ErrorType
-	{
-		template<typename... XS>
-		static void ThrowError(const Set::Type<XS...>&)
-		{
-			//this will error and therefore print the values that are missing from the table
-			static_assert(false, "cannot collect table because a table entry is missing");
-			bool a = Set::Type<XS...>();
-			(void)a;		
-		}
-	};
-
 	/* CollectFrom will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
 	/* the argument contains the table we collect from */
@@ -790,10 +777,7 @@ private:
 		}
 		else
 		{
-			//if the collection missed some handles we force an error and print the intersection of the missing values
-			//this will always fail with an error where the DiffTable type is visible
-			ErrorType::ThrowError(Set::LeftDifference(GetCompatibleSetType(), RightType::GetCompatibleSetType()));
-			return Set::LeftDifference(GetCompatibleSetType(), RightType::GetCompatibleSetType());
+			return;
 		}
 	}
 
@@ -816,13 +800,38 @@ protected:
 	};
 };
 
-template<typename ResourceTableType>
-class DebugResourceTable final : public ResourceTableType
+template<typename SourceResourceTableType, typename FunctionType>
+class DebugResourceTable final : public SourceResourceTableType
 {
+	template<typename FunctionType2>
+	struct ErrorType
+	{
+		template<typename... XS>
+		static constexpr auto ThrowError(const Set::Type<XS...>&)
+		{
+			//this will error and therefore print the values that are missing from the table
+			static_assert(sizeof(Set::Type<XS...>) == 0, "A table entry is missing and the following error will print the types after: TheTypesMissingWere");
+			using NotAvailable = decltype(Set::Type<XS...>::TheTypesMissingWere);
+			return NotAvailable();
+		}
+	};
+
 public:
-	DebugResourceTable(const ResourceTableType& RTT) : ResourceTableType(RTT) 
+	DebugResourceTable(const SourceResourceTableType& RTT, const FunctionType&) : SourceResourceTableType(RTT)
 	{}
+	//: ResourceTable(CollectFrom(static_cast<const DebugType&>(RTT)))
+
+	template<typename DestinationResourceTableType>
+	static constexpr DestinationResourceTableType CompileTimeError(const DestinationResourceTableType&)
+	{
+		ErrorType<FunctionType>::ThrowError(Set::LeftDifference(DestinationResourceTableType::GetCompatibleSetType(), SourceResourceTableType::GetCompatibleSetType()));
+		return std::declval<DestinationResourceTableType>();
+	}
 };
+
+template<typename SourceResourceTableType, typename FunctionType>
+DebugResourceTable(const SourceResourceTableType&, const FunctionType&) -> DebugResourceTable<SourceResourceTableType, FunctionType>;
+
 
 template<typename ResourceTableType>
 class IterableResourceTable final : public ResourceTableType, public IResourceTableInfo

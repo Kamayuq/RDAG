@@ -7,13 +7,7 @@ struct IsCallable : std::false_type {};
 template<typename F, typename V>
 struct IsCallable<F, V, std::void_t<decltype(std::declval<F>()(std::declval<V>()))>> : std::true_type {};
 
-template<typename>
-struct FalseType
-{
-	static constexpr bool value = false;
-};
-
-template<typename>
+template<typename, typename>
 class DebugResourceTable;
 
 struct IResourceTableBase;
@@ -43,7 +37,7 @@ namespace Internal
 	{
 		return [=](const auto& s0) constexpr 
 		{ 
-			using InputType = decltype(s0);
+			using InputType = std::decay_t<decltype(s0)>;
 			CheckIsValidResourceTable(s0);
 			if constexpr (IsCallable<X, InputType>::value)
 			{
@@ -53,12 +47,12 @@ namespace Internal
 			}
 			else
 			{
-				auto s1 = s0.Union(x(DebugResourceTable(s0)));
+				auto s1 = s0.Union(x(DebugResourceTable(s0, x)));
+#ifdef __clang__ //MSVC only prints the depth first static_assert while clang needs this to print the source of the error
+				static_assert(sizeof(DebugResourceTable<InputType, X>) == 0, "The Sequence causing the error can be found at the bottom of this template error stack");
+#endif
 				CheckIsValidResourceTable(s1);
-				auto r = s1.Union(Seq(xs...)(s1));
-				//comment out this line to get more detailed information about which handle type is missing on MSVC
-				static_assert(FalseType<decltype(x(DebugResourceTable(s0)))>::value, "No suitable conversion between tables, are you maybe missing an entry?");
-				return r;
+				return s1.Union(Seq(xs...)(s1));
 			}
 		};
 	}
@@ -72,7 +66,7 @@ struct Seq : SequenceType
 };
 
 template<typename... ARGS>
-Seq(const ARGS&... Args) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
+Seq(const ARGS&...) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
 /* Scope Filters on Output based on its Input*/
 /* this will scope the changes done to the entries passed into the Sequence and where the input type (s) is the same as its return type but changes are are carried on*/
