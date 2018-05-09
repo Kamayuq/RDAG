@@ -12,17 +12,7 @@ template<typename Handle>
 class TransientResourceImpl;
 
 /* Base of all ResourceHandles this class should never be used directly: use ResourceHandle instead */
-struct ResourceHandleBase
-{
-	static constexpr const char* Name = nullptr;
-
-	/* Callback to specialize TransientResourceImpl creation from a Descriptor */
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreate(const typename Handle::DescriptorType& InDescriptor) 
-	{
-		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
-	}
-};
+struct ResourceHandleBase {};
 
 /* A ResourceHande is used to implement and specialize your own Resources and callbacks */
 template<typename CRTP>
@@ -455,10 +445,15 @@ public:
 template<typename TableType>
 class ResourceTableIterator<TableType> : public IResourceTableIterator
 {
+	struct DummyResourceHandle
+	{
+		static constexpr const char* Name = nullptr;
+	};
+
 	/* helper function to build an empty ResourceTableEntry for the base class */
 	static ResourceTableEntry Get()
 	{
-		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, ResourceHandleBase());
+		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, DummyResourceHandle());
 	}
 
 public:

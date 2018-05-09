@@ -66,9 +66,15 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 	typedef Texture2d::Descriptor DescriptorType;
 	static constexpr bool IsReadOnlyResource = true;
 
+	template<typename Handle>
+	static TransientResourceImpl<Handle>* OnCreate(const typename Handle::DescriptorType& InDescriptor)
+	{
+		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
+	}
+
 	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
 	{
-		return new (LinearAlloc<ResourceType>()) ResourceType(Descriptor, EResourceFlags::Managed);
+		return LinearNew<ResourceType>(Descriptor, EResourceFlags::Managed);
 	}
 
 	void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource) const
@@ -195,7 +201,7 @@ struct CpuOnlyResourceHandle : ResourceHandle<CRTP>
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = ResourceHandleBase::OnCreate<Handle>(InDescriptor);
+		TransientResourceImpl<Handle>* Ret = LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
 		Ret->Materialize();
 		return Ret;
 	}
