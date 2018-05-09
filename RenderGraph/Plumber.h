@@ -775,10 +775,6 @@ private:
 				"CollectFrom", Wrapped<TS>::ConvertFrom(SelectInternal<TS>(Rhs))...
 			);
 		}
-		else
-		{
-			return;
-		}
 	}
 
 protected:
