@@ -87,9 +87,6 @@
     <ClInclude Include="GraphCulling.h">
       <Filter>Core\Tool</Filter>
     </ClInclude>
-    <ClInclude Include="ResourceTypes.h">
-      <Filter>Core\Plumber</Filter>
-    </ClInclude>
     <ClInclude Include="SharedResources.h">
       <Filter>Lego</Filter>
     </ClInclude>
@@ -98,6 +95,9 @@
     </ClInclude>
     <ClInclude Include="DepthOfField.h">
       <Filter>Lego</Filter>
+    </ClInclude>
+    <ClInclude Include="ExampleResourceTypes.h">
+      <Filter>Core\Plumber</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

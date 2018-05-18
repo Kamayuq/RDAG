@@ -6,6 +6,13 @@
 
 #include <iterator>
 
+template<typename F, typename T, typename = std::void_t<>>
+struct IsCompatible : std::false_type {};
+
+template<typename F, typename T>
+struct IsCompatible<F, T, std::void_t<decltype(F(std::declval<T>()))>> : std::true_type {};
+
+
 /* Specialized Transient resource Implementation */
 /* Handle is of ResourceHandle Type */
 template<typename Handle>
@@ -174,7 +181,8 @@ struct Wrapped : private Handle
 	{
 		static_assert(std::is_same_v<typename SourceType::CompatibleType, CompatibleType>, "Incompatible Types during linking");
 		check(AllocContains(Parent)); // make sure the parent is on the linear heap
-		
+		check(ResourceCount == Source.ResourceCount);
+
 		ResourceRevision* NewRevisions = LinearAlloc<ResourceRevision>(ResourceCount);
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
@@ -240,7 +248,8 @@ private:
 	constexpr bool IsUndefined(U32 i = 0) const
 	{
 		check(i < ResourceCount);
-		return Revisions[i].ImaginaryResource == nullptr || Revisions[i].Parent == nullptr;
+		check(Revisions[i].ImaginaryResource != nullptr);
+		return Revisions[i].Parent == nullptr;
 	}
 
 	const ResourceType& GetResource(U32 i = 0) const
@@ -696,6 +705,7 @@ public:
 		constexpr bool contains = this->template Contains<Handle>();
 		Wrapped<Handle>::template Test<contains>();
 		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
+		static_assert(IsCompatible<Handle, RealType>::value, "no valid conversion constructor available");
 		return *static_cast<const Wrapped<RealType>*>(this);
 	}
 
@@ -704,17 +714,19 @@ protected:
 	auto& GetWrapped()
 	{
 		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
+		static_assert(IsCompatible<Handle, RealType>::value, "no valid conversion constructor available");
 		return *static_cast<Wrapped<RealType>*>(this);
 	}
 	/*                ElementOperations                  */
 
 private:
-	template<typename X, template<typename...> class TableType, typename... RS>
-	static constexpr auto SelectInternal(const TableType<RS...>& Table)
+	template<typename X, typename... RS>
+	static constexpr auto SelectInternal(const ResourceTable<RS...>& Table)
 	{
 		// restore the original RealType to be able to extract it 
 		// because we checked compatible types which might not be the same
 		using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
+		static_assert(IsCompatible<X, RealType>::value, "no valid conversion constructor available");
 		return Table.template GetWrapped<RealType>();
 	}
 
@@ -754,11 +766,11 @@ private:
 	/* CollectFrom will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
 	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
 	/* the argument contains the table we collect from */
-	template<typename RightType>
-	static constexpr auto CollectFrom(const RightType& Rhs)
+	template<typename SourceTableType>
+	static constexpr auto CollectFrom(const SourceTableType& Rhs)
 	{
 		(void)Rhs; //silly MSVC thinks it's unreferenced
-		constexpr bool ContainsAll = (RightType::template Contains<TS>() && ...);
+		constexpr bool ContainsAll = (SourceTableType::template Contains<TS>() && ...);
 		if constexpr (ContainsAll)
 		{
 			//for all XSs try to collect their values
@@ -867,6 +879,7 @@ private:
 	constexpr void LinkInternal(ResourceTable<ZS...>& MergedOutput) const
 	{
 		using RealType = decltype(SetOperation<ZS...>::template GetOriginalType<typename X::CompatibleType>());
+		static_assert(IsCompatible<X, RealType>::value, "no valid conversion constructor available");
 		MergedOutput.template GetWrapped<RealType>().Link(this->template GetWrapped<RealType>(), this);
 	}
 

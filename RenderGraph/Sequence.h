@@ -87,7 +87,11 @@ auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 		}
 		else
 		{
+			ReturnType Ret = DebugResourceTable(seq(s), seq);
+			(void)Ret;
+#ifdef __clang__ //MSVC only prints the depth first static_assert while clang needs this to print the source of the error
 			static_assert(sizeof(decltype(seq(s))) == 0, "The seq returned a type that is did not contain it's inputs");
+#endif
 			return s.Union(seq(s));
 		}
 	});
@@ -113,7 +117,11 @@ auto Extract(const Seq<SequenceType, SequenceArgs...>& seq)
 		}
 		else
 		{
+			ExtractionTable ExtractedResult = DebugResourceTable(seq(s), seq);
+			(void)ExtractedResult;
+#ifdef __clang__ //MSVC only prints the depth first static_assert while clang needs this to print the source of the error
 			static_assert(sizeof(decltype(seq(s))) == 0, "The requested types could not be extracted from the seq");
+#endif
 			return s.Union(seq(s));
 		}
 	});
@@ -136,7 +144,11 @@ auto Select(const Seq<SequenceType, SequenceArgs...>& seq)
 		}
 		else
 		{
+			auto SelectionResult = seq(SelectionTable(DebugResourceTable(s, seq)));
+			(void)SelectionResult;
+#ifdef __clang__ //MSVC only prints the depth first static_assert while clang needs this to print the source of the error
 			static_assert(sizeof(decltype(seq(s))) == 0, "The requested types could not be found in the input sequence");
+#endif
 			return s.Union(seq(s));
 		}
 	});

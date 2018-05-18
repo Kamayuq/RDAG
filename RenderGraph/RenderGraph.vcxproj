@@ -122,7 +122,7 @@
     <ClInclude Include="Graphvis.h" />
     <ClInclude Include="PostprocessingPass.h" />
     <ClInclude Include="Renderpass.h" />
-    <ClInclude Include="ResourceTypes.h" />
+    <ClInclude Include="ExampleResourceTypes.h" />
     <ClInclude Include="Set.h" />
     <ClInclude Include="ShadowMapPass.h" />
     <ClInclude Include="Plumber.h" />
