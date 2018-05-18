@@ -493,7 +493,7 @@ public:
 		typedef const ResourceTableEntry& reference;
 		typedef std::input_iterator_tag iterator_category;
 
-		char* ItteratorStorage[sizeof(ResourceTableIterator<void>)];
+		char ItteratorStorage[sizeof(ResourceTableIterator<void>)];
 
 	public:
 		Iterator& operator++() 
