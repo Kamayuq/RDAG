@@ -2,6 +2,8 @@
 
 typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, EBlendMode::Type BlendMode)
 {
+	(void)BlendMode;
+
 	auto BlendSrcInfo = Input.GetDescriptor<RDAG::BlendSource>();
 	Texture2d::Descriptor BlendDstDescriptor;
 	BlendDstDescriptor.Name = "BlendDestinationRenderTarget";
