@@ -109,7 +109,9 @@ public:
 			}
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), ResourceCount);
+			To TestHandleConversion{ From() };
+			(void)TestHandleConversion;
+			Wrapped<To> ToEntry(ResourceCount);
 
 			if constexpr (s.template Contains<To>()) // destination already in the table
 			{
@@ -166,7 +168,9 @@ public:
 			Wrapped<From> FromEntry = s.template GetWrapped<From>();
 
 			//make a new destination and use the conversion constructor to check if the conversion is valid
-			Wrapped<To> ToEntry(To(FromEntry.GetHandle()), FromEntry.Revisions, FromEntry.ResourceCount);
+			To TestHandleConversion{ From() };
+			(void)TestHandleConversion;
+			Wrapped<To> ToEntry(FromEntry.Revisions, FromEntry.ResourceCount);
 			
 			//remove the old output and copy it into the new destination
 			return ResourceTable<To>{ "RenameAllEntries", ToEntry };
@@ -222,7 +226,7 @@ private:
 	template<typename Handle>
 	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount) const
 	{
-		auto WrappedResource = Wrapped<Handle>(Handle(), InDescriptors, ResourceCount);
+		auto WrappedResource = Wrapped<Handle>(InDescriptors, ResourceCount);
 		return Seq([WrappedResource](const auto& s)
 		{
 			CheckIsValidResourceTable(s);

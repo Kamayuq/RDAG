@@ -77,7 +77,7 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 		return LinearNew<ResourceType>(Descriptor, EResourceFlags::Managed);
 	}
 
-	void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource) const
+	static void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
 		Ctx.BindTexture(Resource);
@@ -89,7 +89,7 @@ struct Uav2dResourceHandle : Texture2dResourceHandle<CRTP>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
 		Ctx.BindTexture(Resource);
@@ -101,7 +101,7 @@ struct RendertargetResourceHandle : Texture2dResourceHandle<CRTP>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
 		Ctx.BindTexture(Resource);
@@ -161,7 +161,7 @@ struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CRTP>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
 		Ctx.BindTexture(Resource);
@@ -173,7 +173,7 @@ struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource) const
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
 		Ctx.BindTexture(Resource);

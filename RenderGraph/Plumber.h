@@ -126,7 +126,7 @@ struct ResourceRevision
 
 /* Wrapped resources share a common internal interface */ 
 template<typename Handle>
-struct Wrapped : private Handle
+struct Wrapped
 {
 	/* Internalize properies of the Handle for convienence */
 	using CompatibleType = typename Handle::CompatibleType;	
@@ -146,9 +146,8 @@ struct Wrapped : private Handle
 	template<typename...>
 	friend class ResourceTable;
 
-	Wrapped(const Handle& handle, U32 InResourceCount)
-		: Handle(handle)
-		, Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
+	Wrapped(U32 InResourceCount)
+		: Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
 		, ResourceCount(InResourceCount)
 	{
 		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
@@ -160,9 +159,8 @@ struct Wrapped : private Handle
 	}
 
 	/* Wrapped resources need a handle and a resource array (which they could copy or compose from other handles) */
-	Wrapped(const Handle& handle, const DescriptorType* InDescriptors, U32 InResourceCount)
-		: Handle(handle)
-		, Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
+	Wrapped(const DescriptorType* InDescriptors, U32 InResourceCount)
+		: Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
 		, ResourceCount(InResourceCount)
 	{
 		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work"); 
@@ -174,9 +172,8 @@ struct Wrapped : private Handle
 		}
 	}
 
-	Wrapped(const Handle& handle, const ResourceRevision* InRevisions, U32 InResourceCount)
-		: Handle(handle)
-		, Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
+	Wrapped(const ResourceRevision* InRevisions, U32 InResourceCount)
+		: Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
 		, ResourceCount(InResourceCount)
 	{
 		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
@@ -204,11 +201,6 @@ struct Wrapped : private Handle
 			NewRevisions[i].Parent = Parent;
 		}
 		Revisions = NewRevisions;
-	}
-
-	const Handle& GetHandle() const
-	{
-		return *this;
 	}
 
 	const DescriptorType& GetDescriptor(U32 i = 0) const
@@ -240,7 +232,9 @@ struct Wrapped : private Handle
 	{
 		// During casting of Handles try to call the conversion constructor otherwise fail 
 		// if conversion is not allowed by the user
-		return { Handle(Source.GetHandle()), Source.Revisions, Source.ResourceCount };
+		Handle TestHandleConversion{ SourceType() };
+		(void)TestHandleConversion;
+		return { Source.Revisions, Source.ResourceCount };
 	}
 	
 protected:
@@ -425,11 +419,11 @@ class ResourceTableIterator<TableType, X, XS...> : public IResourceTableIterator
 		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
 		if (Wrap.ResourceCount > 0)
 		{
-			return ResourceTableEntry(Wrap.Revisions[InResourceIndex], Owner, Wrap.GetHandle());
+			return ResourceTableEntry(Wrap.Revisions[InResourceIndex], Owner, X());
 		}
 		else
 		{
-			return ResourceTableEntry(ResourceRevision(nullptr), Owner, Wrap.GetHandle());
+			return ResourceTableEntry(ResourceRevision(nullptr), Owner, X());
 		}
 	}
 

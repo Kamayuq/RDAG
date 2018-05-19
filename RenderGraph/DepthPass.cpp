@@ -3,13 +3,13 @@
 
 namespace RDAG
 {
-	void DepthTexture::OnExecute(ImmediateRenderContext& Ctx, const DepthTexture::ResourceType& Resource) const
+	void DepthTexture::OnExecute(ImmediateRenderContext& Ctx, const DepthTexture::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTexture);
 		Ctx.BindTexture(Resource);
 	}
 
-	void DepthTarget::OnExecute(ImmediateRenderContext& Ctx, const DepthTarget::ResourceType& Resource) const
+	void DepthTarget::OnExecute(ImmediateRenderContext& Ctx, const DepthTarget::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTarget);
 		Ctx.BindRenderTarget(Resource);

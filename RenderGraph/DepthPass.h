@@ -11,7 +11,7 @@ namespace RDAG
 		explicit DepthTexture() {}
 		explicit DepthTexture(const struct DepthTarget&) {}
 
-		void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource) const;
+		static void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource);
 	};
 
 	struct DepthTarget : RendertargetResourceHandle<DepthTexture>
@@ -21,7 +21,7 @@ namespace RDAG
 		explicit DepthTarget(const DepthTexture&) {}
 		explicit DepthTarget(const struct DownsampleResult&) {}
 
-		void OnExecute(ImmediateRenderContext&, const DepthTarget::ResourceType& Resource) const;
+		static void OnExecute(ImmediateRenderContext&, const DepthTarget::ResourceType& Resource);
 	};
 }
 
