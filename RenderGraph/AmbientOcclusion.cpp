@@ -10,9 +10,8 @@ namespace RDAG
 	};
 }
 
-typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {
-	const auto& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor AoDescriptor;
 	AoDescriptor.Width = ViewInfo.SceneWidth;
 	AoDescriptor.Height = ViewInfo.SceneHeight;
@@ -23,7 +22,7 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::DistanceField:
 		{
 			AoDescriptor.Name = "DistanceFieldAoTarget";
-			using DFAOTable = ResourceTable<RDAG::SceneViewInfo, RDAG::AmbientOcclusionUAV>;
+			using DFAOTable = ResourceTable<RDAG::AmbientOcclusionUAV>;
 
 			return Seq
 			{

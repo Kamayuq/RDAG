@@ -39,8 +39,8 @@ struct ToneMappingPass
 
 struct PostProcessingPass
 {
-	using PassInputType = ResourceTable<RDAG::PostProcessingInput, RDAG::VelocityVectors, RDAG::DepthTexture, RDAG::SceneViewInfo>;
+	using PassInputType = ResourceTable<RDAG::PostProcessingInput, RDAG::VelocityVectors, RDAG::DepthTexture>;
 	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo);
 };

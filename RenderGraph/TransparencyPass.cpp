@@ -37,8 +37,8 @@ struct HalfResTransparencyRenderPass
 					Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
 					Builder.RenameEntry<RDAG::DownsampleResult, RDAG::DepthTarget>()
 				}),
-				Builder.CreateResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }, ESortOrder::BackToFront),
-				Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build),
+				Builder.CreateResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }),
+				Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build, ESortOrder::BackToFront),
 				Builder.RenameEntry<RDAG::DepthTarget, RDAG::HalfResDepth>(),
 				Builder.RenameEntry<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()
 			}),
@@ -48,14 +48,13 @@ struct HalfResTransparencyRenderPass
 	}
 };
 
-typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {
 	auto Output = Input;
 
-	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	if (ViewInfo.TransparencyEnabled)
 	{
-		Output = Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build)(Output);
+		Output = Builder.BuildRenderPass("Transparency_ForwardRenderPass", ForwardRenderPass::Build, ESortOrder::BackToFront)(Output);
 	}
 
 	if (ViewInfo.TransparencySeperateEnabled)
@@ -65,7 +64,7 @@ typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(co
 			Builder.BuildRenderPass("HalfResTransparencyRenderPass", HalfResTransparencyRenderPass::Build),
 			Builder.RenameEntry<RDAG::TransparencyTarget, RDAG::BlendSource>(0, 0),
 			Builder.RenameEntry<RDAG::HalfResTransparencyResult, RDAG::BlendSource>(0, 1),
-			Builder.BuildRenderPass("Transparency_FSimpleBlendPass", SimpleBlendPass::Build),
+			Builder.BuildRenderPass("Transparency_FSimpleBlendPass", SimpleBlendPass::Build, EBlendMode::Modulate),
 			Builder.RenameEntry<RDAG::BlendDest, RDAG::TransparencyTarget>()
 		}(Output);
 	}

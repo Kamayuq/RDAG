@@ -8,7 +8,7 @@
 
 struct DeferredLightingPass
 {
-	using PassInputType = ResourceTable<RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture, RDAG::SceneViewInfo>;
+	using PassInputType = ResourceTable<RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
 	using PassOutputType = ResourceTable<RDAG::SceneColorTexture>;
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);

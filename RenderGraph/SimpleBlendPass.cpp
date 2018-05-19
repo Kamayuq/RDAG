@@ -1,6 +1,6 @@
 #include "SimpleBlendPass.h"
 
-typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename SimpleBlendPass::PassOutputType SimpleBlendPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, EBlendMode::Type BlendMode)
 {
 	auto BlendSrcInfo = Input.GetDescriptor<RDAG::BlendSource>();
 	Texture2d::Descriptor BlendDstDescriptor;

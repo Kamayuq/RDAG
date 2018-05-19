@@ -179,39 +179,3 @@ struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP
 		Ctx.BindTexture(Resource);
 	}
 };
-
-struct CpuOnlyResource : MaterializedResource
-{
-	struct Descriptor
-	{
-	};
-
-	explicit CpuOnlyResource(const Descriptor&) : MaterializedResource(EResourceFlags::Discard)
-	{
-	}
-};
-
-template<typename CRTP>
-struct CpuOnlyResourceHandle : ResourceHandle<CRTP>
-{
-	typedef CpuOnlyResource ResourceType;
-	typedef CpuOnlyResource::Descriptor DescriptorType;
-	static constexpr bool IsReadOnlyResource = true;
-
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
-	{
-		TransientResourceImpl<Handle>* Ret = LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
-		Ret->Materialize();
-		return Ret;
-	}
-
-	static ResourceType* OnMaterialize(const DescriptorType&)
-	{
-		return nullptr;
-	}
-
-	void OnExecute(struct ImmediateRenderContext&, const ResourceType&) const
-	{
-	}
-};

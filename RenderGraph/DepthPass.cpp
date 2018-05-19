@@ -16,9 +16,8 @@ namespace RDAG
 	}
 }
 
-typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {
-	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	Texture2d::Descriptor DepthDescriptor;
 	DepthDescriptor.Name = "DepthRenderTarget";
 	DepthDescriptor.Format = ViewInfo.DepthFormat;

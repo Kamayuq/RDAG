@@ -31,11 +31,9 @@ namespace RDAG
 	{
 		static constexpr const char* Name = "BlendSource";
 
-		explicit BlendSource(EBlendMode::Type InBlendMode) : BlendMode(InBlendMode) {}
-		explicit BlendSource(const struct TransparencyTarget&) : BlendMode(EBlendMode::Modulate) {}
-		explicit BlendSource(const struct HalfResTransparencyResult&) : BlendMode(EBlendMode::Modulate) {}
-
-		EBlendMode::Type BlendMode;
+		explicit BlendSource() {}
+		explicit BlendSource(const struct TransparencyTarget&){}
+		explicit BlendSource(const struct HalfResTransparencyResult&){}
 	};
 }
 
@@ -44,5 +42,5 @@ struct SimpleBlendPass
 	using PassInputType = ResourceTable<RDAG::BlendSource>;
 	using PassOutputType = ResourceTable<RDAG::BlendDest>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, EBlendMode::Type BlendMode);
 };

@@ -1,11 +1,8 @@
 #include "ForwardPass.h"
 
 
-typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename ForwardRenderPass::PassOutputType ForwardRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, ESortOrder::Type SortOrder)
 {
-	auto ForwardInfo = Input.GetHandle<RDAG::ForwardRenderTarget>();
-	(void)ForwardInfo;
-
 	using PassActionType = ResourceTable<RDAG::ForwardRenderTarget, RDAG::DepthTarget>;
 	return Seq
 	{

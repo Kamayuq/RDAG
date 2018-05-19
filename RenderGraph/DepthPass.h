@@ -28,8 +28,8 @@ namespace RDAG
 
 struct DepthRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::SceneViewInfo>;
+	using PassInputType = ResourceTable<>;
 	using PassOutputType = ResourceTable<RDAG::DepthTarget>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo);
 };

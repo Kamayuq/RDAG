@@ -26,10 +26,8 @@ namespace RDAG
 	{
 		static constexpr const char* Name = "ForwardRenderTarget";
 		
-		explicit ForwardRenderTarget(ESortOrder::Type InSortOrder) : SortOrder(InSortOrder) {}
-		explicit ForwardRenderTarget(const struct TransparencyTarget&) : SortOrder(ESortOrder::BackToFront) {}
-
-		ESortOrder::Type SortOrder;
+		explicit ForwardRenderTarget() {}
+		explicit ForwardRenderTarget(const struct TransparencyTarget&) {}
 	};
 }
 
@@ -39,5 +37,5 @@ struct ForwardRenderPass
 	using PassInputType = ResourceTable<RDAG::ForwardRenderTarget, RDAG::DepthTarget>;
 	using PassOutputType = ResourceTable<RDAG::ForwardRenderTarget, RDAG::DepthTarget>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, ESortOrder::Type SortOrder);
 };

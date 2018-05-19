@@ -173,31 +173,31 @@ public:
 		});
 	}
 
-	template<typename Handle, typename... ARGS>
-	auto CreateResource(const ARGS&... Args) const
+	template<typename Handle>
+	auto CreateResource() const
 	{
-		return CreateResourceInternal<Handle>(nullptr, 0, Args...);
+		return CreateResourceInternal<Handle>(nullptr, 0);
 	}
 
 	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
-	template<typename Handle, typename... ARGS, unsigned ResourceCount>
-	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[ResourceCount], const ARGS&... Args) const
+	template<typename Handle, unsigned ResourceCount>
+	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[ResourceCount]) const
 	{
-		return CreateResourceInternal<Handle>(&InDescriptors[0], ResourceCount, Args...);
+		return CreateResourceInternal<Handle>(&InDescriptors[0], ResourceCount);
 	}
 
 	template
 	<
-		typename Handle, typename VectorType, typename... ARGS,
+		typename Handle, typename VectorType,
 		typename = std::void_t //use SFINAE to check for supported interface of VectorType
 		<
 			decltype(std::declval<VectorType>().data()), //requires member function data()
 			decltype(std::declval<VectorType>().size())  //requires member function size()
 		>
 	>
-	auto CreateResource(const VectorType& InDescriptors, const ARGS&... Args) const
+	auto CreateResource(const VectorType& InDescriptors) const
 	{
-		return CreateResourceInternal<Handle>(InDescriptors.data(), (U32)InDescriptors.size(), Args...);
+		return CreateResourceInternal<Handle>(InDescriptors.data(), (U32)InDescriptors.size());
 	}
 
 	/* returns the empty resourcetable */
@@ -219,10 +219,10 @@ public:
 
 private:
 	/* this function adds a new resource to the resourcetable all descriptors have to be provided */
-	template<typename Handle, typename... ARGS>
-	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount, const ARGS&... Args) const
+	template<typename Handle>
+	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount) const
 	{
-		auto WrappedResource = Wrapped<Handle>(Handle(Args...), InDescriptors, ResourceCount);
+		auto WrappedResource = Wrapped<Handle>(Handle(), InDescriptors, ResourceCount);
 		return Seq([WrappedResource](const auto& s)
 		{
 			CheckIsValidResourceTable(s);

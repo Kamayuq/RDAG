@@ -55,13 +55,12 @@ namespace RDAG
 #undef SIMPLE_UAV_HANDLE_ARRAY
 
 template<typename ConvolutionOutputType>
-auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enabled)
+auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, const SceneViewInfo& ViewInfo, bool Enabled)
 {
-	return Seq([&Builder, Enabled](const auto& s)
+	return Seq([&Builder, &ViewInfo, Enabled](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
-		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor ScatteringReduceDesc;
 		ScatteringReduceDesc.Name = "ScatteringReduceTexture";
 		ScatteringReduceDesc.Format = ERenderResourceFormat::ARGB16F;
@@ -104,13 +103,12 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, bool Enab
 }
 
 template<typename BokehLUTType>
-auto BuildBokehLut(const RenderPassBuilder& Builder)
+auto BuildBokehLut(const RenderPassBuilder& Builder, const SceneViewInfo& ViewInfo)
 {
-	return Seq([&Builder](const auto& s)
+	return Seq([&Builder, &ViewInfo](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
-		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		typename BokehLUTType::DescriptorType LutOutputDesc;
 		LutOutputDesc.Name = BokehLUTType::Name;
 		LutOutputDesc.Format = ERenderResourceFormat::ARGB16F;
@@ -132,13 +130,12 @@ auto BuildBokehLut(const RenderPassBuilder& Builder)
 }
 
 template<typename ConvolutionGatherType, unsigned ResourceCount>
-auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true)
+auto ConvolutionGatherPass(const RenderPassBuilder& Builder, const SceneViewInfo& ViewInfo, bool Enabled = true)
 {
-	return Seq([&Builder, Enabled](const auto& s)
+	return Seq([&Builder, &ViewInfo, Enabled](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
-		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ResourceCount];
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
@@ -170,13 +167,11 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, bool Enabled = true
 }
 
 template<typename... DofPostfilterElems>
-auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
+auto DofPostfilterPass(const RenderPassBuilder& Builder, const SceneViewInfo& ViewInfo, bool GatherForeGround)
 {
-	return Seq([&Builder, GatherForeGround](const auto& s)
+	return Seq([&Builder, &ViewInfo, GatherForeGround](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
-
-		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 
 		using ResourceTableType = std::decay_t<decltype(s)>;
 		ResourceTableType Result = s;
@@ -192,13 +187,12 @@ auto DofPostfilterPass(const RenderPassBuilder& Builder, bool GatherForeGround)
 	});
 }
 
-auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
+auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder, const SceneViewInfo& ViewInfo)
 {
-	return Seq([&Builder](const auto& s)
+	return Seq([&Builder, &ViewInfo](const auto& s)
 	{
 		CheckIsValidResourceTable(s);
 
-		const RDAG::SceneViewInfo& ViewInfo = s.template GetHandle<RDAG::SceneViewInfo>();
 		Texture2d::Descriptor SlightOutOfFocusConvolutionDesc;
 		SlightOutOfFocusConvolutionDesc.Name = "SlightOutOfFocusConvolution";
 		SlightOutOfFocusConvolutionDesc.Format = ERenderResourceFormat::ARGB16F;
@@ -219,9 +213,8 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder)
 	});
 };
 
-typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {
-	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	PassOutputType Output = Input;
 
 	if (ViewInfo.DepthOfFieldEnabled)
@@ -262,10 +255,10 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 			Scope(Seq
 			{
 				Builder.RenameEntry<RDAG::GatherColorTexture, RDAG::TemporalAAInput>(),
-				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build),
+				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build, ViewInfo),
 				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorTexture>()
 			}),
-			Select<RDAG::GatherColorTexture, RDAG::SceneViewInfo>(
+			Select<RDAG::GatherColorTexture>(
 			Extract<RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture>(Seq
 			{
 				Builder.CreateResource<RDAG::CocTileUav>({ CocTileDesc }),
@@ -278,17 +271,17 @@ typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPa
 				{
 					Ctx.Draw("PreFilterAction");
 				}),
-				BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
-				BuildBokehLut<RDAG::GatheringBokehLUTUav>(Builder),
-				ConvolutionGatherPass<RDAG::BackgroundConvolutionTexture, 2>(Builder),
-				ConvolutionGatherPass<RDAG::ForegroundConvolutionTexture, 1>(Builder, ViewInfo.DofSettings.GatherForeground),
-				DofPostfilterPass<RDAG::BackgroundConvolutionUav>(Builder, !ViewInfo.DofSettings.GatherForeground),
-				DofPostfilterPass<RDAG::ForegroundConvolutionUav, RDAG::BackgroundConvolutionTexture>(Builder, ViewInfo.DofSettings.GatherForeground),
-				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionUav>(Builder, ViewInfo.DofSettings.EnabledBackgroundLayer),
-				HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionUav>(Builder, ViewInfo.DofSettings.EnabledForegroundLayer),
-				SlightlyOutOfFocusPass(Builder)
+				BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder, ViewInfo),
+				BuildBokehLut<RDAG::GatheringBokehLUTUav>(Builder, ViewInfo),
+				ConvolutionGatherPass<RDAG::BackgroundConvolutionTexture, 2>(Builder, ViewInfo),
+				ConvolutionGatherPass<RDAG::ForegroundConvolutionTexture, 1>(Builder, ViewInfo, ViewInfo.DofSettings.GatherForeground),
+				DofPostfilterPass<RDAG::BackgroundConvolutionUav>(Builder, ViewInfo, !ViewInfo.DofSettings.GatherForeground),
+				DofPostfilterPass<RDAG::ForegroundConvolutionUav, RDAG::BackgroundConvolutionTexture>(Builder, ViewInfo, ViewInfo.DofSettings.GatherForeground),
+				HybridScatteringLayerProcessing<RDAG::BackgroundConvolutionUav>(Builder, ViewInfo, ViewInfo.DofSettings.EnabledBackgroundLayer),
+				HybridScatteringLayerProcessing<RDAG::ForegroundConvolutionUav>(Builder, ViewInfo, ViewInfo.DofSettings.EnabledForegroundLayer),
+				SlightlyOutOfFocusPass(Builder, ViewInfo)
 			})),
-			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder),
+			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder, ViewInfo),
 			Builder.CreateResource<RDAG::DepthOfFieldUav>({ DofResultDesc }), //recreation is equal to fully overwrite re-setting transition state
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
 			{

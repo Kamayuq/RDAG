@@ -2,11 +2,11 @@
 #include "DepthPass.h"
 
 
-typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {	
 	auto Output = Builder.CreateResource<RDAG::ShadowMapTextureArray>()(Input);
 
-	RDAG::SceneViewInfo ShadowViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
+	SceneViewInfo ShadowViewInfo = ViewInfo;
 	ShadowViewInfo.SceneWidth = ShadowViewInfo.ShadowResolution;
 	ShadowViewInfo.SceneHeight = ShadowViewInfo.ShadowResolution;
 	ShadowViewInfo.DepthFormat = ShadowViewInfo.ShadowFormat;
@@ -15,7 +15,7 @@ typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const Re
 	{
 		Output = Seq
 		{
-			Builder.BuildRenderPass("ShadowMap_DepthRenderPass", DepthRenderPass::Build),
+			Builder.BuildRenderPass("ShadowMap_DepthRenderPass", DepthRenderPass::Build, ShadowViewInfo),
 			Builder.RenameEntry<RDAG::DepthTarget, RDAG::ShadowMapTextureArray>(0, i)
 		}(Output);
 	}

@@ -19,7 +19,7 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	LightingDescriptor.Height = DepthInfo.Height;
 	LightingDescriptor.Width = DepthInfo.Width;
 
-	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture, RDAG::SceneViewInfo>;
+	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::LightingUAV>({ LightingDescriptor }),

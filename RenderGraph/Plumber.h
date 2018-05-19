@@ -28,6 +28,17 @@ struct ResourceHandle : ResourceHandleBase
 	/* Compatible types are used for automatic casting between each other */
 	/* each set can only contain unique Compatible Types */
 	using CompatibleType = CRTP;
+
+	ResourceHandle()
+	{
+		static_assert(sizeof(SizeTest) == 1, "Handles are not allowed to have any values");
+	}
+
+private:
+	struct SizeTest : CRTP
+	{
+		char dummy;
+	};
 };
 
 /* the base class of all materialized resources */

@@ -25,7 +25,7 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	}(Input);
 }
 
-typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {
 	return Seq
 	{
@@ -34,7 +34,7 @@ typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const Rend
 			Builder.RenameEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
 			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
 			Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::SceneColorTexture>(4, 0),
-			Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build)
+			Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build, ViewInfo)
 		}),
 		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 	}(Input);

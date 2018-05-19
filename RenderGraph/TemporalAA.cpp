@@ -10,9 +10,8 @@ namespace RDAG
 	};
 }
 
-typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
 {
-	const RDAG::SceneViewInfo& ViewInfo = Input.GetHandle<RDAG::SceneViewInfo>();
 	if (ViewInfo.TemporalAaEnabled)
 	{
 		std::vector<ExternalTexture2dDescriptor> OutputDescriptors;

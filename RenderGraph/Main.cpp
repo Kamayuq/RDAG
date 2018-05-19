@@ -27,7 +27,7 @@ namespace RDAG
 
 int main(int argc, char* argv[])
 {	
-	RDAG::SceneViewInfo ViewInfo;
+	SceneViewInfo ViewInfo;
 	//ViewInfo.AmbientOcclusionType = EAmbientOcclusionType::DistanceField;
 	//ViewInfo.TransparencyEnabled = false;
 	//ViewInfo.TransparencySeperateEnabled = false;
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 		check(0);
 		char* ViewInfoPtr = (char*)&ViewInfo;
 		srand(argv[1][0]);
-		for (int i = 0; i < (int)sizeof(RDAG::SceneViewInfo); i++)
+		for (int i = 0; i < (int)sizeof(SceneViewInfo); i++)
 		{
 			ViewInfoPtr[i] = (char)rand();
 		}
@@ -99,8 +99,7 @@ int main(int argc, char* argv[])
 
 			auto val = Seq
 			{
-				Builder.CreateResource<RDAG::SceneViewInfo>(ViewInfo),
-				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build)
+				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build, ViewInfo)
 			}(Builder.GetEmptyResourceTable());
 			(void)val;
 
