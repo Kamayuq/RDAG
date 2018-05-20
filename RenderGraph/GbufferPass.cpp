@@ -2,19 +2,15 @@
 
 namespace RDAG
 {
-	struct GbufferTarget : RendertargetResourceHandle<GbufferTexture>
-	{
-		static constexpr const U32 ResourceCount = 4;
-		static constexpr const char* Name = "GbufferTarget";
-
-		explicit GbufferTarget() {}
-	};
+	SIMPLE_RT_HANDLE(GbufferTarget, GbufferTexture);
 }
+
+static constexpr U32 NumGbuffers = 4;
 
 typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	Texture2d::Descriptor GbufferDescriptors[RDAG::GbufferTarget::ResourceCount];
-	for (U32 i = 0; i < RDAG::GbufferTarget::ResourceCount; i++)
+	Texture2d::Descriptor GbufferDescriptors[NumGbuffers];
+	for (U32 i = 0; i < NumGbuffers; i++)
 	{
 		GbufferDescriptors[i] = Input.GetDescriptor<RDAG::DepthTarget>();
 		GbufferDescriptors[i].Name = "GbufferTarget";

@@ -2,12 +2,7 @@
 
 namespace RDAG
 {
-	struct AmbientOcclusionUAV : Uav2dResourceHandle<AmbientOcclusionTexture>
-	{
-		static constexpr const char* Name = "AmbientOcclusionUAV";
-		explicit AmbientOcclusionUAV() {}
-		explicit AmbientOcclusionUAV(const AmbientOcclusionTexture&) {}
-	};
+	SIMPLE_UAV_HANDLE(AmbientOcclusionUAV, AmbientOcclusionTexture);
 }
 
 typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)

@@ -2,12 +2,7 @@
 
 namespace RDAG
 {
-	struct TemporalAAHistory : ExternalTexture2dResourceHandle<TemporalAAHistory>
-	{
-		static constexpr const char* Name = "TemporalAAHistory";
-
-		explicit TemporalAAHistory() {}
-	};
+	EXTERNAL_TEX_HANDLE(TemporalAAHistory);
 }
 
 typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)

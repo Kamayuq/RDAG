@@ -31,7 +31,6 @@ struct SceneViewInfo
 	U32 SceneWidth = 1920;
 	U32 SceneHeight = 1080;
 
-
 	ERenderResourceFormat::Type ShadowFormat = ERenderResourceFormat::D16F;
 	U32 ShadowCascades = 4;
 	U32 ShadowResolution = 1024;
@@ -48,13 +47,5 @@ struct SceneViewInfo
 
 namespace RDAG
 {
-	struct SceneColorTexture : Texture2dResourceHandle<SceneColorTexture>
-	{
-		static constexpr const char* Name = "SceneColorTexture";
-
-		explicit SceneColorTexture() {}
-
-		template<typename CRTP>
-		explicit SceneColorTexture(const Texture2dResourceHandle<CRTP>&) {}
-	}; 
+	SIMPLE_TEX_HANDLE(SceneColorTexture);
 }

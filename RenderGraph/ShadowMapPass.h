@@ -7,13 +7,7 @@
 
 namespace RDAG
 {
-	struct ShadowMapTextureArray : Texture2dResourceHandle<ShadowMapTextureArray>
-	{
-		static constexpr const char* Name = "ShadowMapTextureArray";
-
-		explicit ShadowMapTextureArray() {}
-		explicit ShadowMapTextureArray(const struct DepthTarget&) {}
-	};
+	SIMPLE_TEX_HANDLE(ShadowMapTextureArray);
 }
 
 struct ShadowMapRenderPass

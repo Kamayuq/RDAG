@@ -5,12 +5,7 @@
 
 namespace RDAG
 {
-	struct HalfResTransparencyResult : Texture2dResourceHandle<HalfResTransparencyResult>
-	{
-		static constexpr const char* Name = "HalfResTransparencyResult";
-		explicit HalfResTransparencyResult() {}
-		explicit HalfResTransparencyResult(const struct UpsampleResult&) {}
-	};
+	SIMPLE_TEX_HANDLE(HalfResTransparencyResult);
 }
 
 struct HalfResTransparencyRenderPass

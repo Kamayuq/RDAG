@@ -108,9 +108,8 @@ public:
 				ResourceCount = ResourceCount > Destination.ResourceCount ? ResourceCount : Destination.ResourceCount;
 			}
 
-			//make a new destination and use the conversion constructor to check if the conversion is valid
-			To TestHandleConversion{ From() };
-			(void)TestHandleConversion;
+			//make a new destination
+			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
 			Wrapped<To> ToEntry(ResourceCount);
 
 			if constexpr (s.template Contains<To>()) // destination already in the table
@@ -167,9 +166,8 @@ public:
 
 			Wrapped<From> FromEntry = s.template GetWrapped<From>();
 
-			//make a new destination and use the conversion constructor to check if the conversion is valid
-			To TestHandleConversion{ From() };
-			(void)TestHandleConversion;
+			//make a new destination 
+			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
 			Wrapped<To> ToEntry(FromEntry.Revisions, FromEntry.ResourceCount);
 			
 			//remove the old output and copy it into the new destination

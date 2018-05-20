@@ -2,25 +2,6 @@
 #include "VelocityPass.h"
 #include "TemporalAA.h"
 
-#define SIMPLE_TEX_HANDLE(HandleName)								\
-struct HandleName : Texture2dResourceHandle<HandleName>				\
-{																	\
-	static constexpr const char* Name = #HandleName;				\
-	explicit HandleName() {}										\
-	template<typename CRTP>											\
-	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
-};
-
-#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
-struct HandleName : Uav2dResourceHandle<Compatible>					\
-{																	\
-	static constexpr const char* Name = #HandleName;				\
-	explicit HandleName() {}										\
-	explicit HandleName(const Compatible&) {}						\
-	template<typename CRTP>											\
-	explicit HandleName(const Texture2dResourceHandle<CRTP>&) {}	\
-};
-
 namespace RDAG
 {
 	SIMPLE_UAV_HANDLE(DepthOfFieldUav, SceneColorTexture);
@@ -49,10 +30,6 @@ namespace RDAG
 	SIMPLE_TEX_HANDLE(BackgroundConvolutionTexture);
 	SIMPLE_UAV_HANDLE(BackgroundConvolutionUav, BackgroundConvolutionTexture);
 };
-#undef SIMPLE_TEX_HANDLE
-#undef SIMPLE_TEX_HANDLE_ARRAY
-#undef SIMPLE_UAV_HANDLE
-#undef SIMPLE_UAV_HANDLE_ARRAY
 
 template<typename ConvolutionOutputType>
 auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, const SceneViewInfo& ViewInfo, bool Enabled)

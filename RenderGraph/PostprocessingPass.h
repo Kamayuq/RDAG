@@ -6,27 +6,8 @@
 
 namespace RDAG
 {
-	struct PostProcessingInput : Texture2dResourceHandle<SceneColorTexture>
-	{
-		static constexpr const char* Name = "PostProcessingInput";
-
-		explicit PostProcessingInput() {}
-
-		explicit PostProcessingInput(const struct DownsamplePyramid&) {}
-
-		template<typename CRTP>
-		explicit PostProcessingInput(const Texture2dResourceHandle<CRTP>&) {}
-	};
-
-	struct PostProcessingResult : ExternalUav2dResourceHandle<PostProcessingResult>
-	{
-		static constexpr const char* Name = "PostProcessingResult";
-
-		explicit PostProcessingResult() {}
-
-		template<typename CRTP>
-		explicit PostProcessingResult(const Texture2dResourceHandle<CRTP>&) {}
-	};
+	SIMPLE_TEX_HANDLE2(PostProcessingInput, SceneColorTexture);
+	EXTERNAL_UAV_HANDLE(PostProcessingResult, PostProcessingResult);
 }
 
 struct ToneMappingPass

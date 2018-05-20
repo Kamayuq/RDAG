@@ -17,12 +17,7 @@ int ItterationCount = 1000;
 
 namespace RDAG
 {
-	struct SimpleResourceHandle : Texture2dResourceHandle<SimpleResourceHandle>
-	{
-		static constexpr const char* Name = "SimpleResourceHandle";
-
-		explicit SimpleResourceHandle() {}
-	};
+	SIMPLE_TEX_HANDLE(SimpleResourceHandle);
 }
 
 int main(int argc, char* argv[])

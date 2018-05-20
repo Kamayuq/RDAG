@@ -4,13 +4,7 @@
 
 namespace RDAG
 {
-	struct GbufferTexture : Texture2dResourceHandle<GbufferTexture>
-	{
-		static constexpr const char* Name = "GbufferTexture";
-
-		explicit GbufferTexture() {}
-		explicit GbufferTexture(const struct GbufferTarget&) {}
-	};
+	SIMPLE_TEX_HANDLE(GbufferTexture);
 }
 
 struct GbufferRenderPass

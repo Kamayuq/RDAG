@@ -2,12 +2,7 @@
 
 namespace RDAG
 {
-	struct VelocityVectorTarget : RendertargetResourceHandle<VelocityVectors>
-	{
-		static constexpr const char* Name = "VelocityVectorTarget";
-		explicit VelocityVectorTarget() {}
-		explicit VelocityVectorTarget(const VelocityVectors&) {}
-	};
+	SIMPLE_RT_HANDLE(VelocityVectorTarget, VelocityVectors);
 }
 
 typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)

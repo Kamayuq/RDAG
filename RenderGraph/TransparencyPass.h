@@ -6,16 +6,7 @@
 
 namespace RDAG
 {
-	struct TransparencyTarget : RendertargetResourceHandle<SceneColorTexture>
-	{
-		static constexpr const char* Name = "TransparencyTarget";
-		explicit TransparencyTarget() {}
-
-		explicit TransparencyTarget(const struct SceneColorTexture&) {}
-		explicit TransparencyTarget(const struct ForwardRenderTarget&) {}
-		explicit TransparencyTarget(const struct BlendDest&) {}
-		explicit TransparencyTarget(const struct TemporalAAOutput&) {}
-	};
+	SIMPLE_RT_HANDLE(TransparencyTarget, SceneColorTexture);
 }
 
 struct TransparencyRenderPass

@@ -82,6 +82,12 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
 		Ctx.BindTexture(Resource);
 	}
+
+	template<typename OTHER>
+	static constexpr bool IsConvertible()
+	{
+		return std::is_base_of_v<Texture2dResourceHandle<typename OTHER::CompatibleType>, OTHER>;
+	}
 };
 
 template<typename CRTP>
@@ -179,3 +185,42 @@ struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP
 		Ctx.BindTexture(Resource);
 	}
 };
+
+#define SIMPLE_TEX_HANDLE2(HandleName, Compatible)					\
+struct HandleName : Texture2dResourceHandle<Compatible>				\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
+struct HandleName : Uav2dResourceHandle<Compatible>					\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define SIMPLE_RT_HANDLE(HandleName, Compatible)					\
+struct HandleName : RendertargetResourceHandle<Compatible>			\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define EXTERNAL_TEX_HANDLE2(HandleName, Compatible)				\
+struct HandleName : ExternalTexture2dResourceHandle<Compatible>		\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define EXTERNAL_UAV_HANDLE(HandleName, Compatible)					\
+struct HandleName : ExternalUav2dResourceHandle<Compatible>			\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define EXTERNAL_RT_HANDLE(HandleName, Compatible)					\
+struct HandleName : ExternalRendertargetResourceHandle<Compatible>	\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define SIMPLE_TEX_HANDLE(HandleName) SIMPLE_TEX_HANDLE2(HandleName, HandleName)
+#define EXTERNAL_TEX_HANDLE(HandleName) EXTERNAL_TEX_HANDLE2(HandleName, HandleName)

@@ -4,28 +4,9 @@
 
 namespace RDAG
 {
-	struct UpsampleResult : Uav2dResourceHandle<UpsampleResult>
-	{
-		static constexpr const char* Name = "UpsampleResult";
-
-		explicit UpsampleResult() {}
-	};
-
-	struct HalfResInput : Texture2dResourceHandle<HalfResInput>
-	{
-		static constexpr const char* Name = "HalfResInput";
-
-		explicit HalfResInput() {}
-		explicit HalfResInput(const struct ForwardRenderTarget&) {}
-	};
-
-	struct HalfResDepth : Texture2dResourceHandle<HalfResDepth>
-	{
-		static constexpr const char* Name = "HalfResDepth";
-
-		explicit HalfResDepth() {}
-		explicit HalfResDepth(const struct DepthTarget&) {}
-	};
+	SIMPLE_UAV_HANDLE(UpsampleResult, UpsampleResult);
+	SIMPLE_TEX_HANDLE(HalfResInput);
+	SIMPLE_TEX_HANDLE(HalfResDepth);
 }
 
 

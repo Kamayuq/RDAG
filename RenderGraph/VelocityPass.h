@@ -5,12 +5,7 @@
 
 namespace RDAG
 {
-	struct VelocityVectors : Texture2dResourceHandle<VelocityVectors>
-	{
-		static constexpr const char* Name = "VelocityVectors";
-		explicit VelocityVectors() {}
-		explicit VelocityVectors(const struct VelocityVectorTarget&) {}
-	};
+	SIMPLE_TEX_HANDLE(VelocityVectors);
 }
 
 struct VelocityRenderPass

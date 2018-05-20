@@ -5,32 +5,9 @@
 
 namespace RDAG
 {
-	struct DownsamplePyramid : Texture2dResourceHandle<DownsamplePyramid>
-	{
-		static constexpr const char* Name = "DownsamplePyramid";
-		explicit DownsamplePyramid() {}
-		explicit DownsamplePyramid(const struct DownsampleResult&) {}
-		explicit DownsamplePyramid(const struct DownsampleInput&) {}
-	};
-
-	struct DownsampleResult : Uav2dResourceHandle<DownsampleResult>
-	{
-		static constexpr const char* Name = "DownsampleResult";
-		explicit DownsampleResult() {}
-
-		explicit DownsampleResult(const DownsamplePyramid&) {}
-	};
-
-	struct DownsampleInput : Texture2dResourceHandle<DownsampleInput>
-	{
-		static constexpr const char* Name = "DownsampleInput";
-		explicit DownsampleInput() {}
-
-		template<typename CRTP>
-		explicit DownsampleInput(const Texture2dResourceHandle<CRTP>&) {}
-
-		explicit DownsampleInput(const DownsamplePyramid&) {}
-	};
+	SIMPLE_TEX_HANDLE(DownsamplePyramid);
+	SIMPLE_UAV_HANDLE(DownsampleResult, DownsampleResult);
+	SIMPLE_TEX_HANDLE(DownsampleInput);
 }
 
 struct DownsampleRenderPass

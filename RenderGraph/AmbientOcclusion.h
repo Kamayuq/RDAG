@@ -6,13 +6,7 @@
 
 namespace RDAG
 {
-	struct AmbientOcclusionTexture : Texture2dResourceHandle<AmbientOcclusionTexture>
-	{
-		static constexpr const char* Name = "AmbientOcclusionTexture";
-
-		explicit AmbientOcclusionTexture() {}
-		explicit AmbientOcclusionTexture(const struct AmbientOcclusionUAV&) {}
-	};
+	SIMPLE_TEX_HANDLE(AmbientOcclusionTexture);
 }
 
 struct AmbientOcclusionPass

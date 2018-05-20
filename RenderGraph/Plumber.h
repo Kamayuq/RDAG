@@ -230,10 +230,7 @@ struct Wrapped
 	template<typename SourceType>
 	static constexpr Wrapped<Handle> ConvertFrom(const Wrapped<SourceType>& Source)
 	{
-		// During casting of Handles try to call the conversion constructor otherwise fail 
-		// if conversion is not allowed by the user
-		Handle TestHandleConversion{ SourceType() };
-		(void)TestHandleConversion;
+		static_assert(Handle::template IsConvertible<SourceType>(), "HandleTypes do not match");
 		return { Source.Revisions, Source.ResourceCount };
 	}
 	
@@ -710,7 +707,7 @@ public:
 		constexpr bool contains = this->template Contains<Handle>();
 		Wrapped<Handle>::template Test<contains>();
 		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
-		static_assert(IsCompatible<Handle, RealType>::value, "no valid conversion constructor available");
+		static_assert(Handle::template IsConvertible<RealType>(), "HandleTypes do not match");
 		return *static_cast<const Wrapped<RealType>*>(this);
 	}
 
@@ -719,7 +716,7 @@ protected:
 	auto& GetWrapped()
 	{
 		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
-		static_assert(IsCompatible<Handle, RealType>::value, "no valid conversion constructor available");
+		static_assert(Handle::template IsConvertible<RealType>(), "HandleTypes do not match");
 		return *static_cast<Wrapped<RealType>*>(this);
 	}
 	/*                ElementOperations                  */
@@ -731,7 +728,7 @@ private:
 		// restore the original RealType to be able to extract it 
 		// because we checked compatible types which might not be the same
 		using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
-		static_assert(IsCompatible<X, RealType>::value, "no valid conversion constructor available");
+		static_assert(X::template IsConvertible<RealType>(), "HandleTypes do not match");
 		return Table.template GetWrapped<RealType>();
 	}
 

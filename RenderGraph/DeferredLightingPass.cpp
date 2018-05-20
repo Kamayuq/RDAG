@@ -2,12 +2,7 @@
 
 namespace RDAG
 {
-	struct LightingUAV : Uav2dResourceHandle<SceneColorTexture>
-	{
-		static constexpr const char* Name = "LightingUAV";
-
-		explicit LightingUAV() {}
-	};
+	SIMPLE_UAV_HANDLE(LightingUAV, SceneColorTexture);
 }
 
 typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)

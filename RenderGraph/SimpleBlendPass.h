@@ -20,21 +20,8 @@ namespace EBlendMode
 
 namespace RDAG
 {
-	struct BlendDest : Uav2dResourceHandle<BlendDest>
-	{
-		static constexpr const char* Name = "BlendDest";
-
-		explicit BlendDest() {}
-	};
-
-	struct BlendSource : Texture2dResourceHandle<BlendSource>
-	{
-		static constexpr const char* Name = "BlendSource";
-
-		explicit BlendSource() {}
-		explicit BlendSource(const struct TransparencyTarget&){}
-		explicit BlendSource(const struct HalfResTransparencyResult&){}
-	};
+	SIMPLE_UAV_HANDLE(BlendDest, BlendDest);
+	SIMPLE_TEX_HANDLE(BlendSource);
 }
 
 struct SimpleBlendPass
