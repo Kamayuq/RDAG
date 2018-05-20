@@ -5,17 +5,8 @@
 
 namespace RDAG
 {
-	struct DepthTexture : Texture2dResourceHandle<DepthTexture>
-	{
-		static constexpr const char* Name = "DepthTexture";
-		static void OnExecute(ImmediateRenderContext&, const DepthTexture::ResourceType& Resource);
-	};
-
-	struct DepthTarget : RendertargetResourceHandle<DepthTexture>
-	{
-		static constexpr const char* Name = "DepthTarget";
-		static void OnExecute(ImmediateRenderContext&, const DepthTarget::ResourceType& Resource);
-	};
+	DEPTH_TEX_HANDLE(DepthTexture);
+	DEPTH_RT_HANDLE(DepthTarget, DepthTexture);
 }
 
 

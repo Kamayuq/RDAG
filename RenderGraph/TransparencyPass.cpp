@@ -28,9 +28,9 @@ struct HalfResTransparencyRenderPass
 			{
 				Scope(Seq
 				{
-					Builder.RenameEntry<RDAG::DepthTarget, RDAG::DownsampleInput>(),
-					Builder.BuildRenderPass("HalfResTransparency_DownsampleRenderPass", DownsampleRenderPass::Build),
-					Builder.RenameEntry<RDAG::DownsampleResult, RDAG::DepthTarget>()
+					Builder.RenameEntry<RDAG::DepthTarget, RDAG::DownsampleDepthInput>(),
+					Builder.BuildRenderPass("HalfResTransparency_DownsampleDepthRenderPass", DownsampleDepthRenderPass::Build),
+					Builder.RenameEntry<RDAG::DownsampleDepthResult, RDAG::DepthTarget>()
 				}),
 				Builder.CreateResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }),
 				Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build, ESortOrder::BackToFront),

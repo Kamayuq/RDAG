@@ -21,6 +21,26 @@ typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const 
 	}(Input);
 }
 
+typename DownsampleDepthRenderPass::PassOutputType DownsampleDepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+{
+	auto DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleDepthInput>();
+	Texture2d::Descriptor DownsampleDescriptor;
+	DownsampleDescriptor.Name = "DownsampleDepthRenderTarget";
+	DownsampleDescriptor.Format = DownSampleInfo.Format;
+	DownsampleDescriptor.Height = DownSampleInfo.Height >> 1;
+	DownsampleDescriptor.Width = DownSampleInfo.Width >> 1;
+
+	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	return Seq
+	{
+		Builder.CreateResource<RDAG::DownsampleDepthResult>({ DownsampleDescriptor }),
+		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContext& Ctx, const PassActionType&)
+	{
+		Ctx.Draw("DownsampleDepthRenderAction");
+	})
+	}(Input);
+}
+
 typename PyramidDownSampleRenderPass::PassOutputType PyramidDownSampleRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
 	PassOutputType Output = Builder.RenameEntry<RDAG::DownsampleInput, RDAG::DownsamplePyramid>(0, 0)(Input);

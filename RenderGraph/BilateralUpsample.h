@@ -6,7 +6,7 @@ namespace RDAG
 {
 	SIMPLE_UAV_HANDLE(UpsampleResult, UpsampleResult);
 	SIMPLE_TEX_HANDLE(HalfResInput);
-	SIMPLE_TEX_HANDLE(HalfResDepth);
+	DEPTH_TEX_HANDLE(HalfResDepth);
 }
 
 

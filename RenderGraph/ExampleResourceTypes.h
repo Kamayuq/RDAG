@@ -114,6 +114,27 @@ struct RendertargetResourceHandle : Texture2dResourceHandle<CRTP>
 	}
 };
 
+#define SIMPLE_TEX_HANDLE2(HandleName, Compatible)					\
+struct HandleName : Texture2dResourceHandle<Compatible>				\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
+struct HandleName : Uav2dResourceHandle<Compatible>					\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define SIMPLE_RT_HANDLE(HandleName, Compatible)					\
+struct HandleName : RendertargetResourceHandle<Compatible>			\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define SIMPLE_TEX_HANDLE(HandleName) SIMPLE_TEX_HANDLE2(HandleName, HandleName)
+
+
 struct ExternalTexture2dDescriptor : Texture2d::Descriptor
 {
 	I32 Index = -1;
@@ -186,24 +207,6 @@ struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP
 	}
 };
 
-#define SIMPLE_TEX_HANDLE2(HandleName, Compatible)					\
-struct HandleName : Texture2dResourceHandle<Compatible>				\
-{																	\
-	static constexpr const char* Name = #HandleName;				\
-};
-
-#define SIMPLE_UAV_HANDLE(HandleName, Compatible)					\
-struct HandleName : Uav2dResourceHandle<Compatible>					\
-{																	\
-	static constexpr const char* Name = #HandleName;				\
-};
-
-#define SIMPLE_RT_HANDLE(HandleName, Compatible)					\
-struct HandleName : RendertargetResourceHandle<Compatible>			\
-{																	\
-	static constexpr const char* Name = #HandleName;				\
-};
-
 #define EXTERNAL_TEX_HANDLE2(HandleName, Compatible)				\
 struct HandleName : ExternalTexture2dResourceHandle<Compatible>		\
 {																	\
@@ -222,5 +225,66 @@ struct HandleName : ExternalRendertargetResourceHandle<Compatible>	\
 	static constexpr const char* Name = #HandleName;				\
 };
 
-#define SIMPLE_TEX_HANDLE(HandleName) SIMPLE_TEX_HANDLE2(HandleName, HandleName)
 #define EXTERNAL_TEX_HANDLE(HandleName) EXTERNAL_TEX_HANDLE2(HandleName, HandleName)
+
+template<typename CRTP>
+struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
+{
+	static constexpr bool IsReadOnlyResource = true;
+
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::DepthTexture);
+		Ctx.BindTexture(Resource);
+	}
+
+	template<typename OTHER>
+	static constexpr bool IsConvertible()
+	{
+		return std::is_base_of_v<DepthTexture2dResourceHandle<typename OTHER::CompatibleType>, OTHER>;
+	}
+};
+
+template<typename CRTP>
+struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CRTP>
+{
+	static constexpr bool IsReadOnlyResource = false;
+
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
+		Ctx.BindTexture(Resource);
+	}
+};
+
+template<typename CRTP>
+struct DepthRendertargetResourceHandle : DepthTexture2dResourceHandle<CRTP>
+{
+	static constexpr bool IsReadOnlyResource = false;
+
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::DepthTarget);
+		Ctx.BindTexture(Resource);
+	}
+};
+
+#define DEPTH_TEX_HANDLE2(HandleName, Compatible)				\
+struct HandleName : DepthTexture2dResourceHandle<Compatible>	\
+{																\
+	static constexpr const char* Name = #HandleName;			\
+};
+
+#define DEPTH_UAV_HANDLE(HandleName, Compatible)					\
+struct HandleName : DepthUav2dResourceHandle<Compatible>			\
+{																	\
+	static constexpr const char* Name = #HandleName;				\
+};
+
+#define DEPTH_RT_HANDLE(HandleName, Compatible)					\
+struct HandleName : DepthRendertargetResourceHandle<Compatible>	\
+{																\
+	static constexpr const char* Name = #HandleName;			\
+};
+
+#define DEPTH_TEX_HANDLE(HandleName) DEPTH_TEX_HANDLE2(HandleName, HandleName)
