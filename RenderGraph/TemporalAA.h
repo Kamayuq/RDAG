@@ -7,7 +7,7 @@
 namespace RDAG
 {
 	SIMPLE_TEX_HANDLE(TemporalAAInput);
-	EXTERNAL_TEX_HANDLE(TemporalAAOutput);
+	EXTERNAL_UAV_HANDLE(TemporalAAOutput, TemporalAAOutput);
 }
 
 struct TemporalAARenderPass
