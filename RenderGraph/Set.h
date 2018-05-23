@@ -3,26 +3,51 @@
 
 struct Set final
 {
-	/* Wrapper class to hande types that cannot be inherited from */
-	template<typename T>
-	struct SetElement
-	{};
-	
 	/* The type representing a compile time set */
 	template<typename... TS>
-	struct Type final : SetElement<TS&>...
+	struct Type final
 	{
+	public:
 		/* Does this Set contain this type? */
 		template<typename T>
 		static constexpr bool Contains()
 		{
-			return std::is_base_of_v<SetElement<T&>, Type<TS...>>;
+			return std::is_base_of_v<SetElement<T>, UniquenessTest>;
 		}
 
 		/* Query the size of a Set */
 		static constexpr size_t GetSize() 
 		{ 
 			return sizeof...(TS); 
+		};
+
+		template<typename T>
+		static constexpr int GetIndex()
+		{
+			return GetIndexInternal(IndexedElement<0, TS...>());
+		};
+
+	private:
+		/* Wrapper class to hande types that cannot be inherited from */
+		template<typename T>
+		struct SetElement
+		{};
+
+		struct UniquenessTest final : SetElement<TS>...
+		{};
+
+		template<int I, typename X, typename... XS>
+		struct IndexedElement : IndexedElement<I + 1, XS...>
+		{};
+
+		template<int I, typename X>
+		struct IndexedElement<I, X>
+		{};
+
+		template<typename X, int I, typename... XS>
+		static constexpr int GetIndexInternal(const IndexedElement<I, X, XS...>&)
+		{
+			return I;
 		};
 	};
 
