@@ -22,12 +22,12 @@ class TransientResourceImpl;
 struct ResourceHandleBase {};
 
 /* A ResourceHande is used to implement and specialize your own Resources and callbacks */
-template<typename CRTP>
+template<typename Compatible>
 struct ResourceHandle : ResourceHandleBase
 {
 	/* Compatible types are used for automatic casting between each other */
 	/* each set can only contain unique Compatible Types */
-	using CompatibleType = CRTP;
+	using CompatibleType = Compatible;
 
 	ResourceHandle()
 	{
@@ -35,7 +35,7 @@ struct ResourceHandle : ResourceHandleBase
 	}
 
 private:
-	struct SizeTest : CRTP
+	struct SizeTest : Compatible
 	{
 		char dummy;
 	};

@@ -59,8 +59,8 @@ private:
 	mutable EResourceTransition::Type CurrentState = EResourceTransition::Undefined;
 };
 
-template<typename CRTP>
-struct Texture2dResourceHandle : ResourceHandle<CRTP>
+template<typename CompatibleType>
+struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 {
 	typedef Texture2d ResourceType;
 	typedef Texture2d::Descriptor DescriptorType;
@@ -86,28 +86,29 @@ struct Texture2dResourceHandle : ResourceHandle<CRTP>
 	template<typename OTHER>
 	static constexpr bool IsConvertible()
 	{
+		static_assert(std::is_base_of_v<Texture2dResourceHandle<typename CompatibleType::CompatibleType>, CompatibleType>, "The compatible Type needs to be same base class");
 		return std::is_base_of_v<Texture2dResourceHandle<typename OTHER::CompatibleType>, OTHER>;
 	}
 };
 
-template<typename CRTP>
-struct Uav2dResourceHandle : Texture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct Uav2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
 		Ctx.BindTexture(Resource);
 	}
 };
 
-template<typename CRTP>
-struct RendertargetResourceHandle : Texture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct RendertargetResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
 		Ctx.BindTexture(Resource);
@@ -143,8 +144,8 @@ public:
 	ExternalTexture2dDescriptor(const Texture2d::Descriptor& Other) : Texture2d::Descriptor(Other) {};
 };
 
-template<typename CRTP>
-struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	typedef Texture2d ResourceType;
 	typedef ExternalTexture2dDescriptor DescriptorType;
@@ -153,7 +154,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CRTP>::template OnCreate<Handle>(InDescriptor);
+		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CompatibleType>::template OnCreate<Handle>(InDescriptor);
 		if (InDescriptor.Index >= 0)
 		{
 			Ret->Materialize();
@@ -183,24 +184,24 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	}
 };
 
-template<typename CRTP>
-struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
 		Ctx.BindTexture(Resource);
 	}
 };
 
-template<typename CRTP>
-struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
 		Ctx.BindTexture(Resource);
@@ -227,12 +228,12 @@ struct HandleName : ExternalRendertargetResourceHandle<Compatible>	\
 
 #define EXTERNAL_TEX_HANDLE(HandleName) EXTERNAL_TEX_HANDLE2(HandleName, HandleName)
 
-template<typename CRTP>
-struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTexture);
 		Ctx.BindTexture(Resource);
@@ -245,24 +246,24 @@ struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CRTP>
 	}
 };
 
-template<typename CRTP>
-struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
 		Ctx.BindTexture(Resource);
 	}
 };
 
-template<typename CRTP>
-struct DepthRendertargetResourceHandle : DepthTexture2dResourceHandle<CRTP>
+template<typename CompatibleType>
+struct DepthRendertargetResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsReadOnlyResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CRTP>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTarget);
 		Ctx.BindTexture(Resource);
