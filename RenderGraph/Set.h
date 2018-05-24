@@ -24,7 +24,7 @@ struct Set final
 		template<typename T>
 		static constexpr int GetIndex()
 		{
-			return GetIndexInternal(IndexedElement<0, TS...>());
+			return GetIndexInternal<T>(IndexedElements<0, TS...>());
 		};
 
 	private:
@@ -36,16 +36,20 @@ struct Set final
 		struct UniquenessTest final : SetElement<TS>...
 		{};
 
+		template<typename X, int I>
+		struct IndexedElement
+		{};
+
 		template<int I, typename X, typename... XS>
-		struct IndexedElement : IndexedElement<I + 1, XS...>
+		struct IndexedElements : IndexedElements<I + 1, XS...>, IndexedElement<X, I>
 		{};
 
 		template<int I, typename X>
-		struct IndexedElement<I, X>
+		struct IndexedElements<I, X> : IndexedElement<X, I>
 		{};
 
 		template<typename X, int I, typename... XS>
-		static constexpr int GetIndexInternal(const IndexedElement<I, X, XS...>&)
+		static constexpr int GetIndexInternal(const IndexedElement<X, I>&)
 		{
 			return I;
 		};

@@ -6,13 +6,6 @@
 
 #include <iterator>
 
-template<typename F, typename T, typename = std::void_t<>>
-struct IsCompatible : std::false_type {};
-
-template<typename F, typename T>
-struct IsCompatible<F, T, std::void_t<decltype(F(std::declval<T>()))>> : std::true_type {};
-
-
 /* Specialized Transient resource Implementation */
 /* Handle is of ResourceHandle Type */
 template<typename Handle>
@@ -124,95 +117,60 @@ struct ResourceRevision
 	}
 };
 
-/* Wrapped resources share a common internal interface */ 
-template<typename Handle>
-struct Wrapped
+struct RevisionSet
 {
-	/* Internalize properies of the Handle for convienence */
-	using CompatibleType = typename Handle::CompatibleType;	
-	using HandleType = Handle;
-	typedef typename Handle::ResourceType ResourceType;
-	typedef typename Handle::DescriptorType DescriptorType;
+	RevisionSet(const RevisionSet&) = default;
 
-	/* make friends with other classes as we are unrelated to each other */
-	template<typename>
-	friend struct Wrapped;
-
-	template<typename, typename...>
-	friend class ResourceTableIterator;
-
-	friend struct RenderPassBuilder;
-
-	template<typename...>
-	friend class ResourceTable;
-
-	Wrapped(U32 InResourceCount)
-		: Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
-		, ResourceCount(InResourceCount)
+	RevisionSet(U32 InRevisionCount)
+		: Revisions(LinearAlloc<ResourceRevision>(InRevisionCount))
+		, RevisionCount(InRevisionCount)
 	{
-		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
-		for (U32 i = 0; i < ResourceCount; i++)
+		for (U32 i = 0; i < InRevisionCount; i++)
 		{
 			Revisions[i].ImaginaryResource = nullptr;
 			Revisions[i].Parent = nullptr;
 		}
 	}
 
-	/* Wrapped resources need a handle and a resource array (which they could copy or compose from other handles) */
-	Wrapped(const DescriptorType* InDescriptors, U32 InResourceCount)
-		: Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
-		, ResourceCount(InResourceCount)
+	RevisionSet(const ResourceRevision* InRevisions, U32 InRevisionCount)
+		: Revisions(LinearAlloc<ResourceRevision>(InRevisionCount))
+		, RevisionCount(InRevisionCount)
 	{
-		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work"); 
-		for (U32 i = 0; i < ResourceCount; i++)
-		{
-			Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
-			Revisions[i].Parent = nullptr;
-			check(Revisions[i].ImaginaryResource);
-		}
-	}
-
-	Wrapped(const ResourceRevision* InRevisions, U32 InResourceCount)
-		: Revisions(LinearAlloc<ResourceRevision>(InResourceCount))
-		, ResourceCount(InResourceCount)
-	{
-		static_assert(std::is_base_of_v<ResourceHandleBase, Handle>, "Handles must derive from ResourceHandle to work");
-		for (U32 i = 0; i < ResourceCount; i++)
+		for (U32 i = 0; i < InRevisionCount; i++)
 		{
 			Revisions[i] = InRevisions[i];
 		}
 	}
 
-	/* When a pass action is queued we want to update the revision to point to this new action */
-	template<typename SourceType>
-	constexpr void Link(const Wrapped<SourceType>& Source, const IResourceTableInfo* Parent)
-	{
-		static_assert(std::is_same_v<typename SourceType::CompatibleType, CompatibleType>, "Incompatible Types during linking");
-		check(AllocContains(Parent)); // make sure the parent is on the linear heap
-		check(ResourceCount == Source.ResourceCount);
+	ResourceRevision* Revisions = nullptr;
+	U32 RevisionCount = 0;
+};
 
-		ResourceRevision* NewRevisions = LinearAlloc<ResourceRevision>(ResourceCount);
-		for (U32 i = 0; i < ResourceCount; i++)
-		{
-			//check that the set has not been tampered with between pass creation and linkage
-			check(Revisions[i].ImaginaryResource == Source.Revisions[i].ImaginaryResource);
-			NewRevisions[i].ImaginaryResource = Source.Revisions[i].ImaginaryResource;
-			//point to the new parent
-			NewRevisions[i].Parent = Parent;
-		}
-		Revisions = NewRevisions;
-	}
+template<typename Handle>
+struct InternalRevisionSet : RevisionSet
+{
+	using HandleType = Handle;
+	using ResourceType = typename Handle::ResourceType;
+	using DescriptorType = typename Handle::DescriptorType;
+
+	InternalRevisionSet(const RevisionSet& InRevisionSet) : RevisionSet(InRevisionSet)
+	{}
 
 	const DescriptorType& GetDescriptor(U32 i = 0) const
 	{
-		check(i < ResourceCount && Revisions[i].ImaginaryResource != nullptr);
+		check(i < RevisionCount && Revisions[i].ImaginaryResource != nullptr);
 		return static_cast<const TransientResourceImpl<Handle>*>(Revisions[i].ImaginaryResource)->Descriptor;
+	}
+
+	const U32 GetResourceCount() const
+	{
+		return RevisionCount;
 	}
 
 	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
 	void OnExecute(struct ImmediateRenderContext& RndCtx) const
 	{
-		for (U32 i = 0; i < ResourceCount; i++)
+		for (U32 i = 0; i < RevisionCount; i++)
 		{
 			if (!IsUndefined(i) && Revisions[i].ImaginaryResource->IsMaterialized())
 			{
@@ -221,25 +179,9 @@ struct Wrapped
 		}
 	}
 
-	const U32 GetResourceCount() const
-	{
-		return ResourceCount;
-	}
-
-	/* Convert Handles between each other */
-	template<typename SourceType>
-	static constexpr Wrapped<Handle> ConvertFrom(const Wrapped<SourceType>& Source)
-	{
-		static_assert(Handle::template IsConvertible<SourceType>(), "HandleTypes do not match");
-		return { Source.Revisions, Source.ResourceCount };
-	}
-	
-protected:
-	/* Handles should always be valid, invalid handles were a concept in the past
-	and should not be possible due to the strong type safty of the implementation */
 	constexpr void CheckAllValid() const
 	{
-		for (U32 i = 0; i < ResourceCount; i++)
+		for (U32 i = 0; i < RevisionCount; i++)
 		{
 			check(Revisions[i].ImaginaryResource != nullptr);
 		}
@@ -249,29 +191,17 @@ private:
 	/* Handles can get undefined when they never have been written to */
 	constexpr bool IsUndefined(U32 i = 0) const
 	{
-		check(i < ResourceCount);
+		check(i < RevisionCount);
 		check(Revisions[i].ImaginaryResource != nullptr);
 		return Revisions[i].Parent == nullptr;
 	}
 
 	const ResourceType& GetResource(U32 i = 0) const
 	{
+		check(i < RevisionCount);
 		check(Revisions[i].ImaginaryResource != nullptr && Revisions[i].ImaginaryResource->IsMaterialized());
 		return static_cast<const ResourceType&>(*Revisions[i].ImaginaryResource->GetResource());
 	}
-
-	template<bool B>
-	static void Test()
-	{
-		static_assert(B, "ResourceHandleType could not be matched");
-		if constexpr(!B)
-		{
-			bool fail = Handle(); (void)fail;
-		}
-	}
-
-	ResourceRevision* Revisions = nullptr;
-	U32 ResourceCount = 0;
 };
 
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
@@ -279,9 +209,8 @@ struct ResourceTableEntry
 {
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
 
-	template<typename Handle> // only the static data of the Handle can be stored
-	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const Handle&)
-		: Revision(InRevision), Owner(InOwner), Name(Handle::Name)
+	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const char* HandleName)
+		: Revision(InRevision), Owner(InOwner), Name(HandleName)
 	{}
 
 	bool operator==(const ResourceTableEntry& Other) const
@@ -413,14 +342,14 @@ class ResourceTableIterator<TableType, X, XS...> : public IResourceTableIterator
 	/* helper function to build a ResourceTableEntry for the base class */
 	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner, U32 InResourceIndex)
 	{
-		const Wrapped<X>& Wrap = TablePtr->template GetWrapped<X>();
-		if (Wrap.ResourceCount > 0)
+		RevisionSet Wrap = TablePtr->template GetRevisionSet<X>();
+		if (Wrap.RevisionCount > 0)
 		{
-			return ResourceTableEntry(Wrap.Revisions[InResourceIndex], Owner, X());
+			return ResourceTableEntry(Wrap.Revisions[InResourceIndex], Owner, X::Name);
 		}
 		else
 		{
-			return ResourceTableEntry(ResourceRevision(nullptr), Owner, X());
+			return ResourceTableEntry(ResourceRevision(nullptr), Owner, nullptr);
 		}
 	}
 
@@ -432,7 +361,7 @@ public:
 	IResourceTableIterator* Next() override
 	{
 		const TableType* RealTablePtr = static_cast<const TableType*>(TablePtr);
-		U32 ResourceCount = RealTablePtr->template GetWrapped<X>().ResourceCount;
+		U32 ResourceCount = RealTablePtr->template GetRevisionSet<X>().RevisionCount;
 		if (ResourceIndex + 1 < ResourceCount)
 		{
 			//as long as there are still resources in this handle itterate over them
@@ -456,15 +385,10 @@ public:
 template<typename TableType>
 class ResourceTableIterator<TableType> : public IResourceTableIterator
 {
-	struct DummyResourceHandle
-	{
-		static constexpr const char* Name = nullptr;
-	};
-
 	/* helper function to build an empty ResourceTableEntry for the base class */
 	static ResourceTableEntry Get()
 	{
-		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, DummyResourceHandle());
+		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, nullptr);
 	}
 
 public:
@@ -591,9 +515,16 @@ class DebugResourceTable;
 /* ResourceTables are the main payload of the graph implementation */
 /* they are similar to compile time sets and they can be easily stored on the stack */
 template<typename... TS>
-class ResourceTable : public IResourceTableBase, protected Wrapped<TS>...
+class ResourceTable : public IResourceTableBase
 {
 	using ThisType = ResourceTable<TS...>;
+	using SetType = Set::Type<TS...>;
+	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
+
+	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
+	//const char* HandleNames[StorageSize];
+	ResourceRevision* HandleRevisions[StorageSize];
+	U32 RevisionCounts[StorageSize];
 
 public:
 	/*                   MakeFriends                    */
@@ -603,6 +534,11 @@ public:
 
 	template<typename>
 	friend class IterableResourceTable;
+
+	template<typename, typename...>
+	friend class ResourceTableIterator;
+
+	friend struct RenderPassBuilder;
 	/*                   MakeFriends                    */
 
 	/*                   Constructors                    */
@@ -611,13 +547,24 @@ public:
 	{}
 
 	explicit ResourceTable(const char* Name, const ThisType& RTT)
-		: ResourceTable(Name, RTT.GetWrapped<TS>()...) 
+		: ResourceTable(Name, { RevisionSet(RTT.HandleRevisions[SetType::template GetIndex<TS>()], RTT.RevisionCounts[SetType::template GetIndex<TS>()])... })
 	{}
 
-	explicit ResourceTable(const char* Name, const Wrapped<TS>&... xs)
+	explicit ResourceTable(const char* Name)
 		: IResourceTableBase(Name)
-		, Wrapped<TS>(xs)...
+		//, HandleNames{ "EmptyTable" }
+		, HandleRevisions{ nullptr }
+		, RevisionCounts{ 0 }
 	{}
+
+	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
+		: IResourceTableBase(Name)
+		//, HandleNames{ TS::Name... }
+		, HandleRevisions{ InRevisions[SetType::template GetIndex<TS>()].Revisions... }
+		, RevisionCounts{ InRevisions[SetType::template GetIndex<TS>()].RevisionCount... }
+	{
+		(void)InRevisions;
+	}
 
 	/* assignment constructor from another resourcetable with SINFAE*/
 	template<typename... YS, typename = std::enable_if_t<std::is_same_v<ThisType, decltype(CollectFrom(std::declval<ResourceTable<YS...>>()))>>>
@@ -634,20 +581,11 @@ public:
 	/*                   Constructors                    */
 
 	/*                   StaticStuff                     */
-	/* return the set of unique compatible handle types */
-	static constexpr auto GetCompatibleSetType() { return Set::Type<typename TS::CompatibleType...>(); }
-	
-	/* return the set of unique handle types */
-	static constexpr auto GetSetType() { return Set::Type<TS...>(); }
-	
-	/* return the size of the set */
-	static constexpr size_t GetSetSize() { return sizeof...(TS); }
-
 	/* check if a resourcetable contains a compatible handle */
-	template<typename C>
+	template<typename Handle>
 	static constexpr bool Contains() 
 	{ 
-		return GetCompatibleSetType().template Contains<typename C::CompatibleType>();
+		return CompatibleType::template Contains<typename Handle::CompatibleType>();
 	}
 	/*                   StaticStuff                     */
 
@@ -657,23 +595,7 @@ public:
 	constexpr auto Union(const ResourceTable<YS...>& Other) const
 	{
 		using OtherType = ResourceTable<YS...>;
-		return ThisType::MergeToLeft(Set::Union(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
-	}
-
-	/* intersect two Tables taking the handles from the right Table */
-	template<typename... YS>
-	constexpr auto Intersect(const ResourceTable<YS...>& Other) const
-	{
-		using OtherType = ResourceTable<YS...>;
-		return ThisType::MergeToLeft(Set::Intersect(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
-	}
-
-	/* returning the merged table without the intersection */
-	template<typename... YS>
-	constexpr auto Difference(const ResourceTable<YS...>& Other) const
-	{
-		using OtherType = ResourceTable<YS...>;
-		return ThisType::MergeToLeft(Set::Difference(GetCompatibleSetType(), OtherType::GetCompatibleSetType()), *this, Other);
+		return ThisType::MergeToLeft(Set::Union(CompatibleType(), typename OtherType::CompatibleType()), *this, Other);
 	}
 	/*                  SetOperations                    */
 
@@ -681,43 +603,30 @@ public:
 	template<typename Handle>
 	const auto& GetDescriptor(U32 i = 0) const
 	{
-		return GetWrapped<Handle>().GetDescriptor(i);
+		InternalRevisionSet<Handle> RevSet = GetRevisionSet<Handle>();
+		return RevSet.GetDescriptor(i);
 	}
 
 	template<typename Handle>
 	const U32 GetResourceCount() const
 	{
-		return GetWrapped<Handle>().GetResourceCount();
-	}
-
-	template<typename Handle>
-	const auto& GetHandle() const
-	{
-		return GetWrapped<Handle>().GetHandle();
+		InternalRevisionSet<Handle> RevSet = GetRevisionSet<Handle>();
+		return RevSet.GetResourceCount();
 	}
 
 	void CheckAllValid() const
 	{
-		(GetWrapped<TS>().CheckAllValid(), ...);
-	}
-
-	template<typename Handle>
-	const auto& GetWrapped() const
-	{ 
-		constexpr bool contains = this->template Contains<Handle>();
-		Wrapped<Handle>::template Test<contains>();
-		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
-		static_assert(Handle::template IsConvertible<RealType>(), "HandleTypes do not match");
-		return *static_cast<const Wrapped<RealType>*>(this);
+		(InternalRevisionSet<TS>(GetRevisionSet<TS>()).CheckAllValid(), ...);
 	}
 
 protected:
 	template<typename Handle>
-	auto& GetWrapped()
+	RevisionSet GetRevisionSet() const
 	{
-		using RealType = decltype(SetOperation<TS...>::template GetOriginalType<typename Handle::CompatibleType>());
-		static_assert(Handle::template IsConvertible<RealType>(), "HandleTypes do not match");
-		return *static_cast<Wrapped<RealType>*>(this);
+		static_assert(CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
+		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
+		constexpr int RevisionIndex = CompatibleType::template GetIndex<typename Handle::CompatibleType>();
+		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
 	}
 	/*                ElementOperations                  */
 
@@ -729,7 +638,7 @@ private:
 		// because we checked compatible types which might not be the same
 		using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
 		static_assert(X::template IsConvertible<RealType>(), "HandleTypes do not match");
-		return Table.template GetWrapped<RealType>();
+		return InternalRevisionSet<RealType>(Table.template GetRevisionSet<RealType>());
 	}
 
 	/* prefer select element X from right otherwise take the lefthand side */
@@ -761,7 +670,7 @@ private:
 		using ReturnType = ResourceTable<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>;
 		return ReturnType
 		{
-			"MergeToLeft", ThisType::MergeSelect<XS>(Lhs, Rhs)...
+			"MergeToLeft", { RevisionSet(ThisType::MergeSelect<XS>(Lhs, Rhs))... }
 		};
 	}
 
@@ -781,7 +690,7 @@ private:
 			(
 				//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
 				//before we cast it to the type that we want to fill the new table with
-				"CollectFrom", Wrapped<TS>::ConvertFrom(SelectInternal<TS>(Rhs))...
+				"CollectFrom", { RevisionSet(SelectInternal<TS>(Rhs))... }
 			);
 		}
 	}
@@ -790,7 +699,7 @@ protected:
 	/* forward OnExecute callback for all the handles the Table contains */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		(GetWrapped<TS>().OnExecute(Ctx), ...);
+		(InternalRevisionSet<TS>(GetRevisionSet<TS>()).OnExecute(Ctx), ...);
 	}
 
 	IResourceTableInfo::Iterator begin(const IResourceTableInfo* Owner) const
@@ -877,12 +786,24 @@ private:
 		return MergedOutput;
 	}
 
-	template<typename X, typename... ZS>
+	template<typename Handle, typename... ZS>
 	constexpr void LinkInternal(ResourceTable<ZS...>& MergedOutput) const
 	{
-		using RealType = decltype(SetOperation<ZS...>::template GetOriginalType<typename X::CompatibleType>());
-		static_assert(IsCompatible<X, RealType>::value, "no valid conversion constructor available");
-		MergedOutput.template GetWrapped<RealType>().Link(this->template GetWrapped<RealType>(), this);
+		using MergedTable = ResourceTable<ZS...>;
+		static_assert(MergedTable::CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
+		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
+		constexpr int DestIndex = MergedTable::CompatibleType::template GetIndex<typename Handle::CompatibleType>();
+		
+		ResourceRevision* NewRevisions = LinearAlloc<ResourceRevision>(MergedOutput.RevisionCounts[DestIndex]);
+		for (U32 i = 0; i < MergedOutput.RevisionCounts[DestIndex]; i++)
+		{
+			//check that the set has not been tampered with between pass creation and linkage
+			check(MergedOutput.HandleRevisions[DestIndex][i].ImaginaryResource == this->template GetRevisionSet<Handle>().Revisions[i].ImaginaryResource);
+			NewRevisions[i].ImaginaryResource = MergedOutput.HandleRevisions[DestIndex][i].ImaginaryResource;
+			//point to the new parent
+			NewRevisions[i].Parent = this;
+		}
+		MergedOutput.HandleRevisions[DestIndex] = NewRevisions;
 	}
 
 	/* Entry point for OnExecute callbacks */

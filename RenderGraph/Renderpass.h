@@ -82,7 +82,7 @@ public:
 			LocalActionList.push_back(NewRenderAction);
 
 			//extract the resources which can be written to (like UAVs and Rendertargets)
-			auto WritableSet = Set::template Filter<IsMutableOp>(InputTableType::GetSetType());
+			auto WritableSet = Set::template Filter<IsMutableOp>(typename InputTableType::SetType());
 			// merge and link (have the outputs point at this action from now on).
 			return NewRenderAction->RenderPassData.Link(WritableSet);
 		});
@@ -99,27 +99,27 @@ public:
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
-			auto FromEntry = s.template GetWrapped<From>();
+			InternalRevisionSet<From> FromEntry = s.template GetRevisionSet<From>();
 			U32 ResourceCount = (ToIndex + 1);
 
 			if constexpr (s.template Contains<To>())
 			{
-				const auto& Destination = s.template GetWrapped<To>();
-				ResourceCount = ResourceCount > Destination.ResourceCount ? ResourceCount : Destination.ResourceCount;
+				RevisionSet Destination = s.template GetRevisionSet<To>();
+				ResourceCount = ResourceCount > Destination.RevisionCount ? ResourceCount : Destination.RevisionCount;
 			}
 
 			//make a new destination
 			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
-			Wrapped<To> ToEntry(ResourceCount);
+			RevisionSet ToEntry(ResourceCount);
 
 			if constexpr (s.template Contains<To>()) // destination already in the table
 			{
-				const auto& Destination = s.template GetWrapped<To>();
+				RevisionSet Destination = s.template GetRevisionSet<To>();
 
 				//copy over the previous entries
 				for (U32 i = 0; i < ResourceCount; i++)
 				{
-					if (i < Destination.ResourceCount)
+					if (i < Destination.RevisionCount)
 					{
 						ToEntry.Revisions[i] = Destination.Revisions[i];
 					}
@@ -144,12 +144,12 @@ public:
 				}
 			}
 
-			check(FromIndex < FromEntry.ResourceCount);
+			check(FromIndex < FromEntry.RevisionCount);
 			check(ToIndex < ResourceCount);
 			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
 
 			//remove the old output and copy it into the new destination
-			return ResourceTable<To>{ "RenameEntry", ToEntry };
+			return ResourceTable<To>{ "RenameEntry", { ToEntry } };
 		});
 	}
 
@@ -164,14 +164,14 @@ public:
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
-			Wrapped<From> FromEntry = s.template GetWrapped<From>();
+			RevisionSet FromEntry = s.template GetRevisionSet<From>();
 
 			//make a new destination 
 			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
-			Wrapped<To> ToEntry(FromEntry.Revisions, FromEntry.ResourceCount);
+			RevisionSet ToEntry(FromEntry.Revisions, FromEntry.RevisionCount);
 			
 			//remove the old output and copy it into the new destination
-			return ResourceTable<To>{ "RenameAllEntries", ToEntry };
+			return ResourceTable<To>{ "RenameAllEntries", { ToEntry } };
 		});
 	}
 
@@ -224,11 +224,17 @@ private:
 	template<typename Handle>
 	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount) const
 	{
-		auto WrappedResource = Wrapped<Handle>(InDescriptors, ResourceCount);
+		RevisionSet WrappedResource(ResourceCount);
+		for (U32 i = 0; i < ResourceCount; i++)
+		{
+			WrappedResource.Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
+			check(WrappedResource.Revisions[i].ImaginaryResource);
+		}
+
 		return Seq([WrappedResource](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
-			return ResourceTable<Handle>{ "CreateResource", WrappedResource };
+			return ResourceTable<Handle>{ "CreateResource", { WrappedResource } };
 		});
 	}
 

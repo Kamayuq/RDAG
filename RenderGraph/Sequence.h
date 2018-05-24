@@ -42,9 +42,10 @@ namespace Internal
 			CheckIsValidResourceTable(s0);
 			if constexpr (IsCallable<X, InputType>::value)
 			{
-				auto s1 = s0.Union(x(s0));
-				CheckIsValidResourceTable(s1);
-				return s1.Union(Seq(xs...)(s1));
+				auto s1 = x(s0);
+				auto s2 = s0.Union(s1);
+				CheckIsValidResourceTable(s2);
+				return s2.Union(Seq(xs...)(s2));
 			}
 			else
 			{
