@@ -99,7 +99,7 @@ public:
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
-			InternalRevisionSet<From> FromEntry = s.template GetRevisionSet<From>();
+			RevisionSet FromEntry = s.template GetRevisionSet<From>();
 			U32 ResourceCount = (ToIndex + 1);
 
 			if constexpr (s.template Contains<To>())
@@ -126,7 +126,7 @@ public:
 					else if (i != ToIndex)
 					{
 						//create undefined dummy resources with the same descriptor
-						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(RevisionSetInterface<From>::GetDescriptor(FromEntry, FromIndex));
 						ToEntry.Revisions[i].Parent = nullptr;
 						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
@@ -139,16 +139,16 @@ public:
 					if (i != ToIndex)
 					{
 						//create undefined dummy resources with the same descriptor
-						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(RevisionSetInterface<From>::GetDescriptor(FromEntry, FromIndex));
 						ToEntry.Revisions[i].Parent = nullptr;
 						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
 				}
 			}
 
-			check(FromIndex < FromEntry.GetResourceCount());
+			check(FromIndex < FromEntry.RevisionCount);
 			check(ToIndex < ResourceCount);
-			ToEntry.Revisions[ToIndex] = FromEntry.GetRevision(FromIndex);
+			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
 
 			//remove the old output and copy it into the new destination
 			return ResourceTable<To>{ "RenameEntry", { ToEntry } };

@@ -131,74 +131,6 @@ struct RevisionSet
 	U32 RevisionCount = 0;
 };
 
-template<typename Handle>
-struct InternalRevisionSet
-{
-	friend struct RenderPassBuilder;
-
-	using HandleType = Handle;
-	using ResourceType = typename Handle::ResourceType;
-	using DescriptorType = typename Handle::DescriptorType;
-
-	InternalRevisionSet(const RevisionSet& InRevisionSet) : Revisions(InRevisionSet)
-	{}
-
-	const DescriptorType& GetDescriptor(U32 i = 0) const
-	{
-		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
-	}
-
-	const U32 GetResourceCount() const
-	{
-		return Revisions.RevisionCount;
-	}
-
-	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
-	void OnExecute(struct ImmediateRenderContext& RndCtx) const
-	{
-		for (U32 i = 0; i < Revisions.RevisionCount; i++)
-		{
-			if (!IsUndefined(i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
-			{
-				Handle::OnExecute(RndCtx, GetResource(i));
-			}
-		}
-	}
-
-	constexpr void CheckAllValid() const
-	{
-		for (U32 i = 0; i < Revisions.RevisionCount; i++)
-		{
-			check(Revisions.Revisions[i].ImaginaryResource != nullptr);
-		}
-	}
-
-private:
-	const ResourceRevision& GetRevision(U32 i = 0) const
-	{
-		check(i < Revisions.RevisionCount);
-		return Revisions.Revisions[i];
-	}
-
-	/* Handles can get undefined when they never have been written to */
-	constexpr bool IsUndefined(U32 i = 0) const
-	{
-		check(i < Revisions.RevisionCount);
-		check(Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return Revisions.Revisions[i].Parent == nullptr;
-	}
-
-	const ResourceType& GetResource(U32 i = 0) const
-	{
-		check(i < Revisions.RevisionCount);
-		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
-		return static_cast<const ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
-	}
-
-	RevisionSet Revisions;
-};
-
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
 struct ResourceTableEntry
 {
@@ -290,107 +222,6 @@ public:
 	}
 };
 
-/* Itterator Base to itterate over ResourceTables with for-each*/
-class IResourceTableIterator
-{
-protected:
-	const void* TablePtr = nullptr;
-	ResourceTableEntry Entry;
-	U32 ResourceIndex = 0;
-
-	IResourceTableIterator() = default;
-	IResourceTableIterator(const void* InTablePtr, const ResourceTableEntry& InEntry) : TablePtr(InTablePtr), Entry(InEntry)
-	{}
-	
-public:
-	/* move to the next element, can return the empty element */
-	virtual IResourceTableIterator* Next() = 0;
-
-public:
-	bool Equals(const IResourceTableIterator& Other) const
-	{
-		if (Entry != Other.Entry)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	/* access the element the itterator currently point at */
-	const ResourceTableEntry& Get() const
-	{
-		return Entry;
-	}
-};
-
-/* Itterator Implementation to itterate over ResourceTables with for-each*/
-template<typename TableType, typename... XS>
-class ResourceTableIterator;
-
-/* a non empty Itterator */
-template<typename TableType, typename X, typename... XS>
-class ResourceTableIterator<TableType, X, XS...> final : public IResourceTableIterator
-{
-	/* helper function to build a ResourceTableEntry for the base class */
-	static ResourceTableEntry GetInternal(const TableType* TablePtr, const IResourceTableInfo* Owner, U32 InResourceIndex)
-	{
-		RevisionSet Wrap = TablePtr->template GetRevisionSet<X>();
-		if (Wrap.RevisionCount > 0)
-		{
-			return ResourceTableEntry(Wrap.Revisions[InResourceIndex], Owner, X::Name);
-		}
-		else
-		{
-			return ResourceTableEntry();
-		}
-	}
-
-public:
-	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo* Owner) 
-		: IResourceTableIterator(InTablePtr, GetInternal(InTablePtr, Owner, 0))
-	{}
-
-	IResourceTableIterator* Next() override
-	{
-		const TableType* RealTablePtr = static_cast<const TableType*>(TablePtr);
-		U32 ResourceCount = RealTablePtr->template GetRevisionSet<X>().RevisionCount;
-		if (ResourceIndex + 1 < ResourceCount)
-		{
-			//as long as there are still resources in this handle itterate over them
-			ResourceIndex++;
-			Entry = GetInternal(RealTablePtr, Entry.GetOwner(), ResourceIndex);
-			return this;
-		}
-		else
-		{
-			//move to the next handle in the list
-			//sanity check sizes before sliceing the type
-			static_assert(sizeof(ResourceTableIterator<TableType, XS...>) == sizeof(ResourceTableIterator<TableType, X, XS...>), "Size don't Match for inplace storage");
-			//sliceing the type so that the next vtable call will point to the next element
-			new (this) ResourceTableIterator<TableType, XS...>(reinterpret_cast<const TableType*>(TablePtr), Entry.GetOwner());
-			return this;
-		}
-	}
-};
-
-/* an empty Itterator */
-template<typename TableType>
-class ResourceTableIterator<TableType> final : public IResourceTableIterator
-{
-public:
-	ResourceTableIterator() = default;
-
-	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo*)
-		: IResourceTableIterator(InTablePtr, ResourceTableEntry())
-	{}
-
-	IResourceTableIterator* Next() override
-	{
-		return this;
-	}
-};
-
 struct IRenderPassAction;
 
 /* the base class of resource tables provides access to itterators */
@@ -402,38 +233,48 @@ public:
 	/* mandatory C++ itterator implementation */
 	class Iterator
 	{
-		ResourceTableIterator<void> DummyItterator;
+		const IResourceTableInfo* ResourceTable = nullptr;
+		const char* const* HandleNames = nullptr;
+		ResourceRevision* const* HandleRevisions = nullptr;
+		const U32* RevisionCounts = nullptr;
+		size_t NumHandles = 0;
+		U32 CurrentHandleIndex = 0;
+		U32 CurrentRevisionIndex = 0;
+
+		bool Equals(const Iterator& Other) const
+		{
+			return ResourceTable == Other.ResourceTable
+				&& CurrentHandleIndex == Other.CurrentHandleIndex
+				&& CurrentRevisionIndex == Other.CurrentRevisionIndex;
+		}
 
 	public:
-		Iterator& operator++() 
-		{ 
-			//cast necessary for slicing to take effect
-			reinterpret_cast<IResourceTableIterator&>(DummyItterator).Next();
+		Iterator(const IResourceTableInfo* InResourceTable, const char* const* InHandleNames, ResourceRevision* const* InHandleRevisions, const U32* InRevisionCounts, size_t InNumHandles, bool SetToEnd)
+			: ResourceTable(InResourceTable), HandleNames(InHandleNames), HandleRevisions(InHandleRevisions), RevisionCounts(InRevisionCounts), NumHandles(InNumHandles)
+		{
+			if (SetToEnd)
+			{
+				CurrentHandleIndex = U32(NumHandles);
+			}
+		}
+
+		Iterator& operator++()
+		{
+			CurrentRevisionIndex++;
+			if (CurrentRevisionIndex >= RevisionCounts[CurrentHandleIndex])
+			{
+				CurrentRevisionIndex = 0;
+				CurrentHandleIndex++;
+			}
 			return *this;
 		}
 
-		bool operator==(const Iterator& Other) const 
-		{ 
-			return DummyItterator.Equals(Other.DummyItterator);
-		}
+		bool operator==(const Iterator& Other) const { return Equals(Other); }
+		bool operator!=(const Iterator& Other) const { return !Equals(Other); }
 
-		bool operator!=(const Iterator& Other) const
-		{ 
-			return !DummyItterator.Equals(Other.DummyItterator);
-		}
-
-		const ResourceTableEntry& operator*() const
-		{ 
-			return DummyItterator.Get();
-		}
-
-		template<typename TableType, typename... TS>
-		static Iterator MakeIterator(const TableType* InTableType, const IResourceTableInfo* Owner)
+		ResourceTableEntry operator*() const
 		{
-			Iterator RetVal;
-			static_assert(sizeof(ResourceTableIterator<TableType, TS...>) == sizeof(ResourceTableIterator<void>), "Size don't Match for inplace storage");
-			new (&RetVal.DummyItterator) ResourceTableIterator<TableType, TS...>(InTableType, Owner);
-			return RetVal;
+			return ResourceTableEntry(HandleRevisions[CurrentHandleIndex][CurrentRevisionIndex], ResourceTable, HandleNames[CurrentHandleIndex]);
 		}
 	};
 
@@ -442,11 +283,7 @@ public:
 	
 	/* iterator implementation */
 	virtual IResourceTableInfo::Iterator begin() const = 0;
-
-	IResourceTableInfo::Iterator end() const
-	{
-		return Iterator::MakeIterator<void>(nullptr, nullptr);
-	}
+	virtual IResourceTableInfo::Iterator end() const = 0;
 
 	virtual const char* GetName() const = 0;
 
@@ -477,6 +314,63 @@ private:
 template<typename, typename>
 class DebugResourceTable;
 
+template<typename Handle>
+struct RevisionSetInterface
+{
+	using HandleType = Handle;
+	using ResourceType = typename Handle::ResourceType;
+	using DescriptorType = typename Handle::DescriptorType;
+
+	static const DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
+	{
+		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
+		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
+	}
+
+	static U32 GetResourceCount(const RevisionSet& Revisions)
+	{
+		return Revisions.RevisionCount;
+	}
+
+	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
+	static void OnExecute(const RevisionSet& Revisions, struct ImmediateRenderContext& RndCtx)
+	{
+		for (U32 i = 0; i < Revisions.RevisionCount; i++)
+		{
+			if (!IsUndefined(Revisions, i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
+			{
+				Handle::OnExecute(RndCtx, GetResource(Revisions, i));
+			}
+		}
+	}
+
+	static void CheckAllValid(const RevisionSet& Revisions)
+	{
+		for (U32 i = 0; i < Revisions.RevisionCount; i++)
+		{
+			check(Revisions.Revisions[i].ImaginaryResource != nullptr);
+		}
+	}
+
+private:
+	/* Handles can get undefined when they never have been written to */
+	static bool IsUndefined(const RevisionSet& Revisions, U32 i = 0)
+	{
+		check(i < Revisions.RevisionCount);
+		check(Revisions.Revisions[i].ImaginaryResource != nullptr);
+		return Revisions.Revisions[i].Parent == nullptr;
+	}
+
+	static const ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
+	{
+		check(i < Revisions.RevisionCount);
+		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
+		return static_cast<const ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
+	}
+
+	;
+};
+
 /* Common interface for Table operations */
 /* ResourceTables are the main payload of the graph implementation */
 /* they are similar to compile time sets and they can be easily stored on the stack */
@@ -488,7 +382,9 @@ class ResourceTable : public IResourceTableBase
 	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
 
 	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
-	//const char* HandleNames[StorageSize];
+
+protected:
+	const char* HandleNames[StorageSize];
 	ResourceRevision* HandleRevisions[StorageSize];
 	U32 RevisionCounts[StorageSize];
 
@@ -520,14 +416,14 @@ public:
 
 	explicit ResourceTable(const char* Name)
 		: IResourceTableBase(Name)
-		//, HandleNames{ "EmptyTable" }
+		, HandleNames{ "EmptyTable" }
 		, HandleRevisions{ nullptr }
 		, RevisionCounts{ 0 }
 	{}
 
 	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
 		: IResourceTableBase(Name)
-		//, HandleNames{ TS::Name... }
+		, HandleNames{ TS::Name... }
 		, HandleRevisions{ InRevisions[SetType::template GetIndex<TS>()].Revisions... }
 		, RevisionCounts{ InRevisions[SetType::template GetIndex<TS>()].RevisionCount... }
 	{
@@ -555,6 +451,11 @@ public:
 	/*                   Constructors                    */
 
 	/*                   StaticStuff                     */
+	static constexpr size_t Size()
+	{
+		return sizeof...(TS);
+	}
+
 	/* check if a resourcetable contains a compatible handle */
 	template<typename Handle>
 	static constexpr bool Contains() 
@@ -577,31 +478,26 @@ public:
 	template<typename Handle>
 	const auto& GetDescriptor(U32 i = 0) const
 	{
-		return InternalRevisionSet<Handle>(GetRevisionSet<Handle>()).GetDescriptor(i);
+		return RevisionSetInterface<Handle>::GetDescriptor(GetRevisionSet<Handle>(), i);
 	}
 
 	template<typename Handle>
 	const U32 GetResourceCount() const
 	{
-		return InternalRevisionSet<Handle>(GetRevisionSet<Handle>()).GetResourceCount();
+		return RevisionSetInterface<Handle>::GetResourceCount(GetRevisionSet<Handle>());
 	}
 
 	void CheckAllValid() const
 	{
-		(InternalRevisionSet<TS>(GetRevisionSet<TS>()).CheckAllValid(), ...);
+		(RevisionSetInterface<TS>::CheckAllValid(GetRevisionSet<TS>()), ...);
 	}
 
 protected:
 	/* forward OnExecute callback for all the handles the Table contains */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		(InternalRevisionSet<TS>(GetRevisionSet<TS>()).OnExecute(Ctx), ...);
+		(RevisionSetInterface<TS>::OnExecute(GetRevisionSet<TS>(), Ctx), ...);
 	}
-
-	IResourceTableInfo::Iterator begin(const IResourceTableInfo* Owner) const
-	{
-		return IResourceTableInfo::Iterator::MakeIterator<ThisType, TS...>(this, Owner);
-	};
 
 private:
 	template<typename Handle>
@@ -681,9 +577,14 @@ public:
 		return IResourceTableBase::GetName();
 	}
 
-	IResourceTableInfo::Iterator begin() const override
+	Iterator begin() const override
 	{
-		return ResourceTableType::begin(this);
+		return { this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), false };
+	}
+
+	Iterator end() const override
+	{
+		return { this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), true };
 	}
 
 private:
