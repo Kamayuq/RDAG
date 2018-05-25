@@ -309,11 +309,6 @@ public:
 public:
 	bool Equals(const IResourceTableIterator& Other) const
 	{
-		if (TablePtr != Other.TablePtr)
-		{
-			return false;
-		}
-
 		if (Entry != Other.Entry)
 		{
 			return false;
@@ -453,7 +448,12 @@ public:
 	
 	/* iterator implementation */
 	virtual IResourceTableInfo::Iterator begin() const = 0;
-	virtual IResourceTableInfo::Iterator end() const = 0;
+
+	IResourceTableInfo::Iterator end() const
+	{
+		return Iterator::MakeIterator<void>(nullptr, nullptr);
+	}
+
 	virtual const char* GetName() const = 0;
 
 	/* Only ResourceTables that do draw/dispatch work have an action */
@@ -609,12 +609,6 @@ protected:
 		return IResourceTableInfo::Iterator::MakeIterator<ThisType, TS...>(this, Owner);
 	};
 
-	/* returning the empty itterator */
-	IResourceTableInfo::Iterator end() const
-	{
-		return IResourceTableInfo::Iterator::MakeIterator<ThisType>(this, nullptr);
-	};
-
 private:
 	template<typename Handle>
 	RevisionSet GetRevisionSet() const
@@ -696,11 +690,6 @@ public:
 	IResourceTableInfo::Iterator begin() const override
 	{
 		return ResourceTableType::begin(this);
-	}
-
-	IResourceTableInfo::Iterator end() const override
-	{
-		return ResourceTableType::end();
 	}
 
 private:
