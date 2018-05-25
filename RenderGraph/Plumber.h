@@ -207,6 +207,7 @@ private:
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
 struct ResourceTableEntry
 {
+	ResourceTableEntry() = default;
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
 
 	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const char* HandleName)
@@ -301,6 +302,8 @@ protected:
 	const void* TablePtr = nullptr;
 	ResourceTableEntry Entry;
 	U32 ResourceIndex = 0;
+
+	IResourceTableIterator() = default;
 	IResourceTableIterator(const void* InTablePtr, const ResourceTableEntry& InEntry) : TablePtr(InTablePtr), Entry(InEntry)
 	{}
 	
@@ -309,14 +312,14 @@ public:
 	virtual IResourceTableIterator* Next() = 0;
 
 public:
-	bool Equals(const IResourceTableIterator* Other) const
+	bool Equals(const IResourceTableIterator& Other) const
 	{
-		if (TablePtr != Other->TablePtr)
+		if (TablePtr != Other.TablePtr)
 		{
 			return false;
 		}
 
-		if (Entry != Other->Entry)
+		if (Entry != Other.Entry)
 		{
 			return false;
 		}
@@ -337,10 +340,10 @@ class ResourceTableIterator;
 
 /* a non empty Itterator */
 template<typename TableType, typename X, typename... XS>
-class ResourceTableIterator<TableType, X, XS...> : public IResourceTableIterator
+class ResourceTableIterator<TableType, X, XS...> final : public IResourceTableIterator
 {
 	/* helper function to build a ResourceTableEntry for the base class */
-	static ResourceTableEntry Get(const TableType* TablePtr, const IResourceTableInfo* Owner, U32 InResourceIndex)
+	static ResourceTableEntry GetInternal(const TableType* TablePtr, const IResourceTableInfo* Owner, U32 InResourceIndex)
 	{
 		RevisionSet Wrap = TablePtr->template GetRevisionSet<X>();
 		if (Wrap.RevisionCount > 0)
@@ -349,13 +352,13 @@ class ResourceTableIterator<TableType, X, XS...> : public IResourceTableIterator
 		}
 		else
 		{
-			return ResourceTableEntry(ResourceRevision(nullptr), Owner, nullptr);
+			return ResourceTableEntry();
 		}
 	}
 
 public:
 	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo* Owner) 
-		: IResourceTableIterator(InTablePtr, Get(InTablePtr, Owner, 0))
+		: IResourceTableIterator(InTablePtr, GetInternal(InTablePtr, Owner, 0))
 	{}
 
 	IResourceTableIterator* Next() override
@@ -366,7 +369,7 @@ public:
 		{
 			//as long as there are still resources in this handle itterate over them
 			ResourceIndex++;
-			Entry = Get(RealTablePtr, Entry.GetOwner(), ResourceIndex);
+			Entry = GetInternal(RealTablePtr, Entry.GetOwner(), ResourceIndex);
 			return this;
 		}
 		else
@@ -383,17 +386,13 @@ public:
 
 /* an empty Itterator */
 template<typename TableType>
-class ResourceTableIterator<TableType> : public IResourceTableIterator
+class ResourceTableIterator<TableType> final : public IResourceTableIterator
 {
-	/* helper function to build an empty ResourceTableEntry for the base class */
-	static ResourceTableEntry Get()
-	{
-		return ResourceTableEntry(ResourceRevision(nullptr), nullptr, nullptr);
-	}
-
 public:
+	ResourceTableIterator() = default;
+
 	ResourceTableIterator(const TableType* InTablePtr, const IResourceTableInfo*)
-		: IResourceTableIterator(InTablePtr, Get())
+		: IResourceTableIterator(InTablePtr, ResourceTableEntry())
 	{}
 
 	IResourceTableIterator* Next() override
@@ -419,28 +418,29 @@ public:
 		typedef const ResourceTableEntry& reference;
 		typedef std::input_iterator_tag iterator_category;
 
-		char* ItteratorStorage[sizeof(ResourceTableIterator<void>)];
+		ResourceTableIterator<void> DummyItterator;
 
 	public:
 		Iterator& operator++() 
 		{ 
-			reinterpret_cast<IResourceTableIterator*>(ItteratorStorage)->Next();
+			//cast necessary for slicing to take effect
+			reinterpret_cast<IResourceTableIterator&>(DummyItterator).Next();
 			return *this;
 		}
 
 		bool operator==(const Iterator& Other) const 
 		{ 
-			return reinterpret_cast<const IResourceTableIterator*>(ItteratorStorage)->Equals(reinterpret_cast<const IResourceTableIterator*>(Other.ItteratorStorage));
+			return DummyItterator.Equals(Other.DummyItterator);
 		}
 
 		bool operator!=(const Iterator& Other) const
 		{ 
-			return !reinterpret_cast<const IResourceTableIterator*>(ItteratorStorage)->Equals(reinterpret_cast<const IResourceTableIterator*>(Other.ItteratorStorage));
+			return !DummyItterator.Equals(Other.DummyItterator);
 		}
 
 		reference operator*() const
 		{ 
-			return reinterpret_cast<const IResourceTableIterator*>(ItteratorStorage)->Get();
+			return DummyItterator.Get();
 		}
 
 		template<typename TableType, typename... TS>
@@ -448,7 +448,7 @@ public:
 		{
 			Iterator RetVal;
 			static_assert(sizeof(ResourceTableIterator<TableType, TS...>) == sizeof(ResourceTableIterator<void>), "Size don't Match for inplace storage");
-			new (RetVal.ItteratorStorage) ResourceTableIterator<TableType, TS...>(InTableType, Owner);
+			new (&RetVal.DummyItterator) ResourceTableIterator<TableType, TS...>(InTableType, Owner);
 			return RetVal;
 		}
 	};
@@ -469,29 +469,6 @@ public:
 
 private:
 	const IRenderPassAction* Action = nullptr;
-};
-
-template<typename... TS>
-struct SetOperation
-{
-private:
-	/* A helper struct thas is just a pair of types */
-	template<typename CompatibleType, typename SetType>
-	struct CompatiblePair {};
-
-	/* A list of pairs with each having their origninal type first and their compatible type second */
-	struct CompatiblePairList : CompatiblePair<typename TS::CompatibleType, TS>... {};
-
-	/* this function has no implementation as it is only used within a decltype */
-	/* Given a CompatibleType overload resolution will find us the Original type from a set of pairs */
-	template<typename CompatibleType, typename SetType>
-	static constexpr auto GetOriginalTypeInternal(const CompatiblePair<CompatibleType, SetType>&)->SetType;
-
-public:
-	/* this function has no implementation as it is only used within a decltype */
-	/* Helper declaration which plumbs in the List into the extracting function returning the OriginalType given a CompatibleType */
-	template<typename CompatibleType>
-	static constexpr auto GetOriginalType() -> decltype(GetOriginalTypeInternal<CompatibleType>(CompatiblePairList()));
 };
 
 struct IResourceTableBase
@@ -548,7 +525,9 @@ public:
 
 	explicit ResourceTable(const char* Name, const ThisType& RTT)
 		: ResourceTable(Name, { RevisionSet(RTT.HandleRevisions[SetType::template GetIndex<TS>()], RTT.RevisionCounts[SetType::template GetIndex<TS>()])... })
-	{}
+	{
+		(void)RTT;
+	}
 
 	explicit ResourceTable(const char* Name)
 		: IResourceTableBase(Name)
@@ -567,17 +546,23 @@ public:
 	}
 
 	/* assignment constructor from another resourcetable with SINFAE*/
-	template<typename... YS, typename = std::enable_if_t<std::is_same_v<ThisType, decltype(CollectFrom(std::declval<ResourceTable<YS...>>()))>>>
-	ResourceTable(const ResourceTable<YS...>& RTT) 
-		: ResourceTable(CollectFrom(RTT)) 
-	{}
+	template
+	<
+		typename OtherResourceTable, 
+		bool ContainsAll = (OtherResourceTable::template Contains<TS>() && ...),
+		typename = std::enable_if_t<ContainsAll>
+	>
+	ResourceTable(const OtherResourceTable& Other)
+		: ResourceTable("Assignment", { Other.template GetRevisionSet<TS>()... })
+	{
+		(void)Other;
+	}
 
 	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
 	template<typename DebugType, typename FunctionType>
-	ResourceTable(const DebugResourceTable<DebugType, FunctionType>&)
+	explicit ResourceTable(const DebugResourceTable<DebugType, FunctionType>&)
 		: ResourceTable(DebugResourceTable<DebugType, FunctionType>::CompileTimeError(*this))
 	{}
-
 	/*                   Constructors                    */
 
 	/*                   StaticStuff                     */
@@ -591,11 +576,11 @@ public:
 
 	/*                  SetOperations                    */
 	/* merge two Tables where the right table overwrites entries from the left if they both contain the same compatible type */
-	template<typename... YS>
-	constexpr auto Union(const ResourceTable<YS...>& Other) const
+	template<typename OtherResourceTable>
+	constexpr auto Union(const OtherResourceTable& Other) const
 	{
-		using OtherType = ResourceTable<YS...>;
-		return ThisType::MergeToLeft(Set::Union(CompatibleType(), typename OtherType::CompatibleType()), *this, Other);
+		using ThisTypeMinusOtherType = decltype(Set::Filter<UnionFilterOp<OtherResourceTable>, ::ResourceTable>(typename ThisType::CompatibleType()));
+		return Meld(ThisTypeMinusOtherType(*this), Other);
 	}
 	/*                  SetOperations                    */
 
@@ -603,96 +588,18 @@ public:
 	template<typename Handle>
 	const auto& GetDescriptor(U32 i = 0) const
 	{
-		InternalRevisionSet<Handle> RevSet = GetRevisionSet<Handle>();
-		return RevSet.GetDescriptor(i);
+		return InternalRevisionSet<Handle>(GetRevisionSet<Handle>()).GetDescriptor(i);
 	}
 
 	template<typename Handle>
 	const U32 GetResourceCount() const
 	{
-		InternalRevisionSet<Handle> RevSet = GetRevisionSet<Handle>();
-		return RevSet.GetResourceCount();
+		return InternalRevisionSet<Handle>(GetRevisionSet<Handle>()).GetResourceCount();
 	}
 
 	void CheckAllValid() const
 	{
 		(InternalRevisionSet<TS>(GetRevisionSet<TS>()).CheckAllValid(), ...);
-	}
-
-protected:
-	template<typename Handle>
-	RevisionSet GetRevisionSet() const
-	{
-		static_assert(CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
-		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
-		constexpr int RevisionIndex = CompatibleType::template GetIndex<typename Handle::CompatibleType>();
-		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
-	}
-	/*                ElementOperations                  */
-
-private:
-	template<typename X, typename... RS>
-	static constexpr auto SelectInternal(const ResourceTable<RS...>& Table)
-	{
-		// restore the original RealType to be able to extract it 
-		// because we checked compatible types which might not be the same
-		using RealType = decltype(SetOperation<RS...>::template GetOriginalType<typename X::CompatibleType>());
-		static_assert(X::template IsConvertible<RealType>(), "HandleTypes do not match");
-		return InternalRevisionSet<RealType>(Table.template GetRevisionSet<RealType>());
-	}
-
-	/* prefer select element X from right otherwise take the lefthand side */
-	template<typename X, typename LeftType, typename RightType>
-	static constexpr auto MergeSelect(const LeftType& Lhs, const RightType& Rhs)
-	{
-		if constexpr (RightType::template Contains<X>())
-		{
-			(void)Lhs; //silly MSVC thinks they are unreferenced
-			// if the right table contains our result than use it 
-			// but first restore the original RealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			return SelectInternal<X>(Rhs);
-		}
-		else
-		{
-			(void)Rhs; //silly MSVC thinks they are unreferenced
-			// otherwise use the result from the left table 
-			// but first restore the original ealType to be able to extract it 
-			// because we checked compatible types which might not be the same
-			return SelectInternal<X>(Lhs);
-		}
-	}
-
-	/* use the first argument to define the list of elements we are looking for, the second and third are the two tables to merge */
-	template<typename... XS, typename LeftType, typename RightType>
-	static constexpr auto MergeToLeft(const Set::Type<XS...>&, const LeftType& Lhs, const RightType& Rhs)
-	{
-		using ReturnType = ResourceTable<typename decltype(ThisType::MergeSelect<XS>(Lhs, Rhs))::HandleType...>;
-		return ReturnType
-		{
-			"MergeToLeft", { RevisionSet(ThisType::MergeSelect<XS>(Lhs, Rhs))... }
-		};
-	}
-
-	/* CollectFrom will generate a new Resourcetable from a set of HandleTypes and another Table that must contain all those Handles */
-	/* given another table itterate though all its elements and fill a new table that only contains the current set of compatible handles */
-	/* the argument contains the table we collect from */
-	template<typename SourceTableType>
-	static constexpr auto CollectFrom(const SourceTableType& Rhs)
-	{
-		(void)Rhs; //silly MSVC thinks it's unreferenced
-		constexpr bool ContainsAll = (SourceTableType::template Contains<TS>() && ...);
-		if constexpr (ContainsAll)
-		{
-			//for all XSs try to collect their values
-			//we know the definite type here therefore there is no need to deduce from any compatible type
-			return ThisType
-			(
-				//Rhs might contain a compatible type so we look for a compatible type and get its RealType (in Rhs) first 
-				//before we cast it to the type that we want to fill the new table with
-				"CollectFrom", { RevisionSet(SelectInternal<TS>(Rhs))... }
-			);
-		}
 	}
 
 protected:
@@ -712,6 +619,33 @@ protected:
 	{
 		return IResourceTableInfo::Iterator::MakeIterator<ThisType>(this, nullptr);
 	};
+
+private:
+	template<typename Handle>
+	RevisionSet GetRevisionSet() const
+	{
+		static_assert(CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
+		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
+		constexpr int RevisionIndex = CompatibleType::template GetIndex<typename Handle::CompatibleType>();
+		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
+	}
+
+	template<typename OtherResourceTable>
+	struct UnionFilterOp
+	{
+		template<typename Handle>
+		static constexpr bool Filter()
+		{
+			return !OtherResourceTable::CompatibleType::template Contains<typename Handle::CompatibleType>();
+		}
+	};
+
+	template<typename... XS, typename... YS>
+	static constexpr auto Meld(const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
+	{
+		(void)A; (void)B;
+		return ResourceTable<XS..., YS...>{ "MeldedTable", { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
+	}
 };
 
 template<typename SourceResourceTableType, typename FunctionType>

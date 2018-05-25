@@ -82,9 +82,9 @@ public:
 			LocalActionList.push_back(NewRenderAction);
 
 			//extract the resources which can be written to (like UAVs and Rendertargets)
-			auto WritableSet = Set::template Filter<IsMutableOp>(typename InputTableType::SetType());
+			using WritableSetType = decltype(Set::template Filter<IsMutableOp>(typename InputTableType::SetType()));
 			// merge and link (have the outputs point at this action from now on).
-			return NewRenderAction->RenderPassData.Link(WritableSet);
+			return NewRenderAction->RenderPassData.Link(WritableSetType());
 		});
 	}
 
@@ -241,7 +241,7 @@ private:
 	struct IsMutableOp
 	{
 		template<typename T>
-		static constexpr bool Test()
+		static constexpr bool Filter()
 		{
 			return !T::IsReadOnlyResource;
 		}
