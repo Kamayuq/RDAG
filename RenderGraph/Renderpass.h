@@ -110,7 +110,7 @@ public:
 
 			//make a new destination
 			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
-			RevisionSet ToEntry(ResourceCount);
+			RevisionSet ToEntry(LinearAlloc<ResourceRevision>(ResourceCount), ResourceCount);
 
 			if constexpr (s.template Contains<To>()) // destination already in the table
 			{
@@ -127,6 +127,7 @@ public:
 					{
 						//create undefined dummy resources with the same descriptor
 						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						ToEntry.Revisions[i].Parent = nullptr;
 						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
 				}
@@ -139,14 +140,15 @@ public:
 					{
 						//create undefined dummy resources with the same descriptor
 						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(FromEntry.GetDescriptor(FromIndex));
+						ToEntry.Revisions[i].Parent = nullptr;
 						check(ToEntry.Revisions[i].ImaginaryResource);
 					}
 				}
 			}
 
-			check(FromIndex < FromEntry.RevisionCount);
+			check(FromIndex < FromEntry.GetResourceCount());
 			check(ToIndex < ResourceCount);
-			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
+			ToEntry.Revisions[ToIndex] = FromEntry.GetRevision(FromIndex);
 
 			//remove the old output and copy it into the new destination
 			return ResourceTable<To>{ "RenameEntry", { ToEntry } };
@@ -164,14 +166,10 @@ public:
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
-			RevisionSet FromEntry = s.template GetRevisionSet<From>();
-
 			//make a new destination 
-			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
-			RevisionSet ToEntry(FromEntry.Revisions, FromEntry.RevisionCount);
-			
+			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");			
 			//remove the old output and copy it into the new destination
-			return ResourceTable<To>{ "RenameAllEntries", { ToEntry } };
+			return ResourceTable<To>{ "RenameAllEntries", { s.template GetRevisionSet<From>() } };
 		});
 	}
 
@@ -224,10 +222,11 @@ private:
 	template<typename Handle>
 	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount) const
 	{
-		RevisionSet WrappedResource(ResourceCount);
+		RevisionSet WrappedResource(LinearAlloc<ResourceRevision>(ResourceCount), ResourceCount);
 		for (U32 i = 0; i < ResourceCount; i++)
 		{
 			WrappedResource.Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
+			WrappedResource.Revisions[i].Parent = nullptr;
 			check(WrappedResource.Revisions[i].ImaginaryResource);
 		}
 

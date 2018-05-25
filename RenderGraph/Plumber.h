@@ -121,58 +121,45 @@ struct RevisionSet
 {
 	RevisionSet(const RevisionSet&) = default;
 
-	RevisionSet(U32 InRevisionCount)
-		: Revisions(LinearAlloc<ResourceRevision>(InRevisionCount))
+	RevisionSet(ResourceRevision* const InRevisions, U32 InRevisionCount)
+		: Revisions(InRevisions)
 		, RevisionCount(InRevisionCount)
 	{
-		for (U32 i = 0; i < InRevisionCount; i++)
-		{
-			Revisions[i].ImaginaryResource = nullptr;
-			Revisions[i].Parent = nullptr;
-		}
 	}
 
-	RevisionSet(const ResourceRevision* InRevisions, U32 InRevisionCount)
-		: Revisions(LinearAlloc<ResourceRevision>(InRevisionCount))
-		, RevisionCount(InRevisionCount)
-	{
-		for (U32 i = 0; i < InRevisionCount; i++)
-		{
-			Revisions[i] = InRevisions[i];
-		}
-	}
-
-	ResourceRevision* Revisions = nullptr;
+	ResourceRevision* const Revisions = nullptr;
 	U32 RevisionCount = 0;
 };
 
 template<typename Handle>
-struct InternalRevisionSet : RevisionSet
+struct InternalRevisionSet
 {
+	friend struct RenderPassBuilder;
+
 	using HandleType = Handle;
 	using ResourceType = typename Handle::ResourceType;
 	using DescriptorType = typename Handle::DescriptorType;
 
-	InternalRevisionSet(const RevisionSet& InRevisionSet) : RevisionSet(InRevisionSet)
+	InternalRevisionSet(const RevisionSet& InRevisionSet) : Revisions(InRevisionSet)
 	{}
 
 	const DescriptorType& GetDescriptor(U32 i = 0) const
 	{
-		check(i < RevisionCount && Revisions[i].ImaginaryResource != nullptr);
-		return static_cast<const TransientResourceImpl<Handle>*>(Revisions[i].ImaginaryResource)->Descriptor;
+		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
+		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
 	}
 
 	const U32 GetResourceCount() const
 	{
-		return RevisionCount;
+		return Revisions.RevisionCount;
 	}
 
 	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
 	void OnExecute(struct ImmediateRenderContext& RndCtx) const
 	{
-		for (U32 i = 0; i < RevisionCount; i++)
+		for (U32 i = 0; i < Revisions.RevisionCount; i++)
 		{
-			if (!IsUndefined(i) && Revisions[i].ImaginaryResource->IsMaterialized())
+			if (!IsUndefined(i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
 			{
 				Handle::OnExecute(RndCtx, GetResource(i));
 			}
@@ -181,27 +168,35 @@ struct InternalRevisionSet : RevisionSet
 
 	constexpr void CheckAllValid() const
 	{
-		for (U32 i = 0; i < RevisionCount; i++)
+		for (U32 i = 0; i < Revisions.RevisionCount; i++)
 		{
-			check(Revisions[i].ImaginaryResource != nullptr);
+			check(Revisions.Revisions[i].ImaginaryResource != nullptr);
 		}
 	}
 
 private:
+	const ResourceRevision& GetRevision(U32 i = 0) const
+	{
+		check(i < Revisions.RevisionCount);
+		return Revisions.Revisions[i];
+	}
+
 	/* Handles can get undefined when they never have been written to */
 	constexpr bool IsUndefined(U32 i = 0) const
 	{
-		check(i < RevisionCount);
-		check(Revisions[i].ImaginaryResource != nullptr);
-		return Revisions[i].Parent == nullptr;
+		check(i < Revisions.RevisionCount);
+		check(Revisions.Revisions[i].ImaginaryResource != nullptr);
+		return Revisions.Revisions[i].Parent == nullptr;
 	}
 
 	const ResourceType& GetResource(U32 i = 0) const
 	{
-		check(i < RevisionCount);
-		check(Revisions[i].ImaginaryResource != nullptr && Revisions[i].ImaginaryResource->IsMaterialized());
-		return static_cast<const ResourceType&>(*Revisions[i].ImaginaryResource->GetResource());
+		check(i < Revisions.RevisionCount);
+		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
+		return static_cast<const ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
 	}
+
+	RevisionSet Revisions;
 };
 
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
