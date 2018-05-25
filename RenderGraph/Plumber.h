@@ -402,12 +402,6 @@ public:
 	/* mandatory C++ itterator implementation */
 	class Iterator
 	{
-		typedef size_t difference_type;
-		typedef ResourceTableEntry value_type;
-		typedef const ResourceTableEntry* pointer;
-		typedef const ResourceTableEntry& reference;
-		typedef std::input_iterator_tag iterator_category;
-
 		ResourceTableIterator<void> DummyItterator;
 
 	public:
@@ -428,7 +422,7 @@ public:
 			return !DummyItterator.Equals(Other.DummyItterator);
 		}
 
-		reference operator*() const
+		const ResourceTableEntry& operator*() const
 		{ 
 			return DummyItterator.Get();
 		}
