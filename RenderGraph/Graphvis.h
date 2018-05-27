@@ -162,7 +162,7 @@ struct ActionStyle
 {
 	ActionStyle(const IRenderPassAction* InRenderPassAction) : RenderPassAction(InRenderPassAction), LocalActionIndex(GlobalActionIndex++)
 	{
-		for (const auto& Entry : *RenderPassAction->GetRenderPassData())
+		for (const auto& Entry : RenderPassAction->GetRenderPassData())
 		{
 			Pins.push_back(PinStyle(Entry, RenderPassAction));
 		}
@@ -256,7 +256,7 @@ digraph G
 		for (const IRenderPassAction* Action : InAllActions)
 		{
 			Actions.push_back(ActionStyle(Action));
-			for (ResourceTableEntry Entry : *Action->GetRenderPassData())
+			for (ResourceTableEntry Entry : Action->GetRenderPassData())
 			{
 				AllEntries.push_back(PinStyle(Entry, Action));
 			}

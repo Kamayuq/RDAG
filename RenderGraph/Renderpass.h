@@ -13,7 +13,7 @@ struct IRenderPassAction
 	IRenderPassAction(const char* InName) : Name(InName) {}
 
 	virtual ~IRenderPassAction() {}
-	virtual const class IResourceTableInfo* GetRenderPassData() const = 0;
+	virtual const class IResourceTableInfo& GetRenderPassData() const = 0;
 	virtual void Execute(struct ImmediateRenderContext&) const {};
 
 	const char* GetName() const { return Name; };
@@ -203,7 +203,7 @@ public:
 	/* returns the empty resourcetable */
 	static inline auto GetEmptyResourceTable()
 	{
-		return ResourceTable<>("EmptyResourceTable");
+		return ResourceTable<>();
 	}
 
 	/* after the builing finished return all the actions recorded */
@@ -257,9 +257,9 @@ private:
 			, Task(InTask) {}
 
 	private:
-		const IResourceTableInfo* GetRenderPassData() const override
+		const IResourceTableInfo& GetRenderPassData() const override
 		{
-			return &RenderPassData;
+			return RenderPassData;
 		}
 
 		void Execute(ImmediateRenderContext& RndCtx) const override final

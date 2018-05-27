@@ -13,10 +13,13 @@ class DebugResourceTable;
 
 struct IResourceTableBase;
 
-template<typename ResourceTableType>
-static inline void CheckIsValidResourceTable(const ResourceTableType& Table)
+template<typename...>
+class ResourceTable;
+
+template<typename... TS>
+static inline void CheckIsValidResourceTable(const ResourceTable<TS...>& Table)
 {
-	static_assert(std::is_base_of<IResourceTableBase, ResourceTableType>(), "Table is not a ResorceTable");
+	static_assert(std::is_base_of<IResourceTableBase, ResourceTable<TS...>>(), "Table is not a ResorceTable");
 	Table.CheckAllValid();
 }
 

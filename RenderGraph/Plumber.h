@@ -131,6 +131,265 @@ struct RevisionSet
 	U32 RevisionCount = 0;
 };
 
+template<typename Handle>
+struct RevisionSetInterface
+{
+	using ResourceType = typename Handle::ResourceType;
+	using DescriptorType = typename Handle::DescriptorType;
+
+	static const DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
+	{
+		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
+		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
+	}
+
+	static U32 GetResourceCount(const RevisionSet& Revisions)
+	{
+		return Revisions.RevisionCount;
+	}
+
+	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
+	static void OnExecute(const RevisionSet& Revisions, struct ImmediateRenderContext& RndCtx)
+	{
+		for (U32 i = 0; i < Revisions.RevisionCount; i++)
+		{
+			if (!IsUndefined(Revisions, i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
+			{
+				Handle::OnExecute(RndCtx, GetResource(Revisions, i));
+			}
+		}
+	}
+
+	static void CheckAllValid(const RevisionSet& Revisions)
+	{
+		for (U32 i = 0; i < Revisions.RevisionCount; i++)
+		{
+			check(Revisions.Revisions[i].ImaginaryResource != nullptr);
+		}
+	}
+
+private:
+	/* Handles can get undefined when they never have been written to */
+	static bool IsUndefined(const RevisionSet& Revisions, U32 i = 0)
+	{
+		check(i < Revisions.RevisionCount);
+		check(Revisions.Revisions[i].ImaginaryResource != nullptr);
+		return Revisions.Revisions[i].Parent == nullptr;
+	}
+
+	static const ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
+	{
+		check(i < Revisions.RevisionCount);
+		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
+		return static_cast<const ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
+	}
+};
+
+template<typename, typename>
+class DebugResourceTable;
+
+/* Common interface for Table operations */
+/* ResourceTables are the main payload of the graph implementation */
+/* they are similar to compile time sets and they can be easily stored on the stack */
+struct IResourceTableBase {};
+
+template<typename... TS>
+class ResourceTable : public IResourceTableBase
+{
+	using ThisType = ResourceTable<TS...>;
+	using SetType = Set::Type<TS...>;
+	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
+
+	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
+
+protected:
+	const char* Name = nullptr;
+	const char* HandleNames[StorageSize];
+	ResourceRevision* HandleRevisions[StorageSize];
+	U32 RevisionCounts[StorageSize];
+
+public:
+	/*                   MakeFriends                    */
+	/* make friends with other tables */
+	template<typename...>
+	friend class ResourceTable;
+
+	template<typename>
+	friend class IterableResourceTable;
+
+	template<typename, typename...>
+	friend class ResourceTableIterator;
+
+	friend struct RenderPassBuilder;
+	/*                   MakeFriends                    */
+
+	/*                   Constructors                    */
+	ResourceTable(const ThisType& RTT)
+		: ResourceTable(RTT.GetName(), RTT)
+	{}
+
+	explicit ResourceTable(const char* Name, const ThisType& RTT)
+		: ResourceTable(Name, { RevisionSet(RTT.HandleRevisions[SetType::template GetIndex<TS>()], RTT.RevisionCounts[SetType::template GetIndex<TS>()])... })
+	{
+		(void)RTT;
+	}
+
+	template
+	<
+		bool IsTheEmptyTable = sizeof...(TS) == 0, 
+		typename = std::enable_if_t<IsTheEmptyTable>
+	>
+	explicit ResourceTable()
+		: Name("EmptyTable")
+		, HandleNames{ "DummyHandle" }
+		, HandleRevisions{ nullptr }
+		, RevisionCounts{ 0 }
+	{}
+
+	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
+		: Name(Name)
+		, HandleNames{ TS::Name... }
+		, HandleRevisions{ InRevisions[SetType::template GetIndex<TS>()].Revisions... }
+		, RevisionCounts{ InRevisions[SetType::template GetIndex<TS>()].RevisionCount... }
+	{
+		(void)InRevisions;
+	}
+
+	/* assignment constructor from another resourcetable with SINFAE*/
+	template
+	<
+		typename OtherResourceTable, 
+		bool ContainsAll = (OtherResourceTable::template Contains<TS>() && ...),
+		typename = std::enable_if_t<ContainsAll>
+	>
+	ResourceTable(const OtherResourceTable& Other)
+		: ResourceTable(Other.GetName(), { Other.template GetRevisionSet<TS>()... })
+	{
+		(void)Other;
+	}
+
+	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
+	template<typename DebugType, typename FunctionType>
+	ResourceTable(const DebugResourceTable<DebugType, FunctionType>&)
+		: ResourceTable(DebugResourceTable<DebugType, FunctionType>::CompileTimeError(*this))
+	{}
+	/*                   Constructors                    */
+
+	/*                   StaticStuff                     */
+	static constexpr size_t Size()
+	{
+		return sizeof...(TS);
+	}
+
+	/* check if a resourcetable contains a compatible handle */
+	template<typename Handle>
+	static constexpr bool Contains() 
+	{ 
+		return CompatibleType::template Contains<typename Handle::CompatibleType>();
+	}
+	/*                   StaticStuff                     */
+
+	/*                  SetOperations                    */
+	/* merge two Tables where the right table overwrites entries from the left if they both contain the same compatible type */
+	template<typename OtherResourceTable>
+	constexpr auto Union(const OtherResourceTable& Other) const
+	{
+		using ThisTypeMinusOtherType = decltype(Set::Filter<UnionFilterOp<OtherResourceTable>, ::ResourceTable>(typename ThisType::CompatibleType()));
+		return Meld(Other.GetName(), ThisTypeMinusOtherType(*this), Other);
+	}
+	/*                  SetOperations                    */
+
+	/*                ElementOperations                  */
+	template<typename Handle>
+	const auto& GetDescriptor(U32 i = 0) const
+	{
+		return RevisionSetInterface<Handle>::GetDescriptor(GetRevisionSet<Handle>(), i);
+	}
+
+	template<typename Handle>
+	const U32 GetResourceCount() const
+	{
+		return RevisionSetInterface<Handle>::GetResourceCount(GetRevisionSet<Handle>());
+	}
+
+	void CheckAllValid() const
+	{
+		(RevisionSetInterface<TS>::CheckAllValid(GetRevisionSet<TS>()), ...);
+	}
+
+	const char* GetName() const
+	{
+		return Name;
+	}
+
+protected:
+	/* forward OnExecute callback for all the handles the Table contains */
+	void OnExecute(struct ImmediateRenderContext& Ctx) const
+	{
+		(RevisionSetInterface<TS>::OnExecute(GetRevisionSet<TS>(), Ctx), ...);
+	}
+
+private:
+	template<typename Handle>
+	RevisionSet GetRevisionSet() const
+	{
+		static_assert(CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
+		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
+		constexpr int RevisionIndex = CompatibleType::template GetIndex<typename Handle::CompatibleType>();
+		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
+	}
+
+	template<typename OtherResourceTable>
+	struct UnionFilterOp
+	{
+		template<typename Handle>
+		static constexpr bool Filter()
+		{
+			return !OtherResourceTable::CompatibleType::template Contains<typename Handle::CompatibleType>();
+		}
+	};
+
+	template<typename... XS, typename... YS>
+	static constexpr auto Meld(const char* Name, const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
+	{
+		(void)A; (void)B;
+		return ResourceTable<XS..., YS...>{ Name, { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
+	}
+};
+
+template<typename SourceResourceTableType, typename FunctionType>
+class DebugResourceTable : public SourceResourceTableType
+{
+	template<typename... XS>
+	static inline auto TheMissingTypes(const Set::Type<XS...>&)
+	{
+		//this will error and therefore print the values that are missing from the table
+		static_assert(sizeof(Set::Type<XS...>) == 0, "A table entry is missing and the following error will print the types after: TheTypesMissingWere");
+		using NotAvailable = decltype(Set::Type<XS...>::TheTypesMissingWere);
+		return NotAvailable();
+	}
+
+	template<typename InFunction, typename... SourceHandles, typename... DestHandles>
+	static inline auto WithinTheFunction(const ResourceTable<SourceHandles...>&, const ResourceTable<DestHandles...>&)
+	{
+		using MissingTypes = decltype(Set::LeftDifference(Set::Type<DestHandles...>(), Set::Type<SourceHandles...>()));
+		return TheMissingTypes(MissingTypes());
+	}
+
+public:
+	DebugResourceTable(const SourceResourceTableType& RTT, const FunctionType&) : SourceResourceTableType(RTT)
+	{}
+
+	template<typename DestinationResourceTableType>
+	static constexpr DestinationResourceTableType CompileTimeError(const DestinationResourceTableType&)
+	{
+		WithinTheFunction<FunctionType>(std::declval<SourceResourceTableType>(), std::declval<DestinationResourceTableType>());
+		return std::declval<DestinationResourceTableType>();
+	}
+};
+template<typename SourceResourceTableType, typename FunctionType>
+DebugResourceTable(const SourceResourceTableType&, const FunctionType&) -> DebugResourceTable<SourceResourceTableType, FunctionType>;
+
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
 struct ResourceTableEntry
 {
@@ -165,7 +424,7 @@ struct ResourceTableEntry
 	{
 		return Owner;
 	}
-	
+
 	bool IsUndefined() const
 	{
 		return Revision.ImaginaryResource == nullptr || Revision.Parent == nullptr;
@@ -200,13 +459,13 @@ public:
 	UintPtr ParentHash() const
 	{
 		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
-			  + ((reinterpret_cast<UintPtr>(Revision.Parent) >> 3) * 1610612741));
+			+ ((reinterpret_cast<UintPtr>(Revision.Parent) >> 3) * 1610612741));
 	}
 
 	UintPtr Hash() const
 	{
 		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
-			  + ((reinterpret_cast<UintPtr>(Owner) >> 3) * 1610612741));
+			+ ((reinterpret_cast<UintPtr>(Owner) >> 3) * 1610612741));
 	}
 
 	/* External resourcers are not managed by the graph and the user has to provide an implementation to retrieve the resource */
@@ -280,7 +539,7 @@ public:
 
 	IResourceTableInfo(const IRenderPassAction* InAction) : Action(InAction) {}
 	virtual ~IResourceTableInfo() {}
-	
+
 	/* iterator implementation */
 	virtual IResourceTableInfo::Iterator begin() const = 0;
 	virtual IResourceTableInfo::Iterator end() const = 0;
@@ -297,268 +556,6 @@ private:
 	const IRenderPassAction* Action = nullptr;
 };
 
-struct IResourceTableBase
-{
-	IResourceTableBase(const char* InName) : Name(InName) {}
-
-	/* Name of the Subpass or Action */
-	const char* GetName() const
-	{
-		return Name;
-	}
-
-private:
-	const char* Name = nullptr;
-};
-
-template<typename, typename>
-class DebugResourceTable;
-
-template<typename Handle>
-struct RevisionSetInterface
-{
-	using HandleType = Handle;
-	using ResourceType = typename Handle::ResourceType;
-	using DescriptorType = typename Handle::DescriptorType;
-
-	static const DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
-	{
-		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
-	}
-
-	static U32 GetResourceCount(const RevisionSet& Revisions)
-	{
-		return Revisions.RevisionCount;
-	}
-
-	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
-	static void OnExecute(const RevisionSet& Revisions, struct ImmediateRenderContext& RndCtx)
-	{
-		for (U32 i = 0; i < Revisions.RevisionCount; i++)
-		{
-			if (!IsUndefined(Revisions, i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
-			{
-				Handle::OnExecute(RndCtx, GetResource(Revisions, i));
-			}
-		}
-	}
-
-	static void CheckAllValid(const RevisionSet& Revisions)
-	{
-		for (U32 i = 0; i < Revisions.RevisionCount; i++)
-		{
-			check(Revisions.Revisions[i].ImaginaryResource != nullptr);
-		}
-	}
-
-private:
-	/* Handles can get undefined when they never have been written to */
-	static bool IsUndefined(const RevisionSet& Revisions, U32 i = 0)
-	{
-		check(i < Revisions.RevisionCount);
-		check(Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return Revisions.Revisions[i].Parent == nullptr;
-	}
-
-	static const ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
-	{
-		check(i < Revisions.RevisionCount);
-		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
-		return static_cast<const ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
-	}
-
-	;
-};
-
-/* Common interface for Table operations */
-/* ResourceTables are the main payload of the graph implementation */
-/* they are similar to compile time sets and they can be easily stored on the stack */
-template<typename... TS>
-class ResourceTable : public IResourceTableBase
-{
-	using ThisType = ResourceTable<TS...>;
-	using SetType = Set::Type<TS...>;
-	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
-
-	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
-
-protected:
-	const char* HandleNames[StorageSize];
-	ResourceRevision* HandleRevisions[StorageSize];
-	U32 RevisionCounts[StorageSize];
-
-public:
-	/*                   MakeFriends                    */
-	/* make friends with other tables */
-	template<typename...>
-	friend class ResourceTable;
-
-	template<typename>
-	friend class IterableResourceTable;
-
-	template<typename, typename...>
-	friend class ResourceTableIterator;
-
-	friend struct RenderPassBuilder;
-	/*                   MakeFriends                    */
-
-	/*                   Constructors                    */
-	ResourceTable(const ThisType& RTT)
-		: ResourceTable(RTT.GetName(), RTT)
-	{}
-
-	explicit ResourceTable(const char* Name, const ThisType& RTT)
-		: ResourceTable(Name, { RevisionSet(RTT.HandleRevisions[SetType::template GetIndex<TS>()], RTT.RevisionCounts[SetType::template GetIndex<TS>()])... })
-	{
-		(void)RTT;
-	}
-
-	explicit ResourceTable(const char* Name)
-		: IResourceTableBase(Name)
-		, HandleNames{ "EmptyTable" }
-		, HandleRevisions{ nullptr }
-		, RevisionCounts{ 0 }
-	{}
-
-	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
-		: IResourceTableBase(Name)
-		, HandleNames{ TS::Name... }
-		, HandleRevisions{ InRevisions[SetType::template GetIndex<TS>()].Revisions... }
-		, RevisionCounts{ InRevisions[SetType::template GetIndex<TS>()].RevisionCount... }
-	{
-		(void)InRevisions;
-	}
-
-	/* assignment constructor from another resourcetable with SINFAE*/
-	template
-	<
-		typename OtherResourceTable, 
-		bool ContainsAll = (OtherResourceTable::template Contains<TS>() && ...),
-		typename = std::enable_if_t<ContainsAll>
-	>
-	ResourceTable(const OtherResourceTable& Other)
-		: ResourceTable("Assignment", { Other.template GetRevisionSet<TS>()... })
-	{
-		(void)Other;
-	}
-
-	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
-	template<typename DebugType, typename FunctionType>
-	explicit ResourceTable(const DebugResourceTable<DebugType, FunctionType>&)
-		: ResourceTable(DebugResourceTable<DebugType, FunctionType>::CompileTimeError(*this))
-	{}
-	/*                   Constructors                    */
-
-	/*                   StaticStuff                     */
-	static constexpr size_t Size()
-	{
-		return sizeof...(TS);
-	}
-
-	/* check if a resourcetable contains a compatible handle */
-	template<typename Handle>
-	static constexpr bool Contains() 
-	{ 
-		return CompatibleType::template Contains<typename Handle::CompatibleType>();
-	}
-	/*                   StaticStuff                     */
-
-	/*                  SetOperations                    */
-	/* merge two Tables where the right table overwrites entries from the left if they both contain the same compatible type */
-	template<typename OtherResourceTable>
-	constexpr auto Union(const OtherResourceTable& Other) const
-	{
-		using ThisTypeMinusOtherType = decltype(Set::Filter<UnionFilterOp<OtherResourceTable>, ::ResourceTable>(typename ThisType::CompatibleType()));
-		return Meld(ThisTypeMinusOtherType(*this), Other);
-	}
-	/*                  SetOperations                    */
-
-	/*                ElementOperations                  */
-	template<typename Handle>
-	const auto& GetDescriptor(U32 i = 0) const
-	{
-		return RevisionSetInterface<Handle>::GetDescriptor(GetRevisionSet<Handle>(), i);
-	}
-
-	template<typename Handle>
-	const U32 GetResourceCount() const
-	{
-		return RevisionSetInterface<Handle>::GetResourceCount(GetRevisionSet<Handle>());
-	}
-
-	void CheckAllValid() const
-	{
-		(RevisionSetInterface<TS>::CheckAllValid(GetRevisionSet<TS>()), ...);
-	}
-
-protected:
-	/* forward OnExecute callback for all the handles the Table contains */
-	void OnExecute(struct ImmediateRenderContext& Ctx) const
-	{
-		(RevisionSetInterface<TS>::OnExecute(GetRevisionSet<TS>(), Ctx), ...);
-	}
-
-private:
-	template<typename Handle>
-	RevisionSet GetRevisionSet() const
-	{
-		static_assert(CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
-		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
-		constexpr int RevisionIndex = CompatibleType::template GetIndex<typename Handle::CompatibleType>();
-		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
-	}
-
-	template<typename OtherResourceTable>
-	struct UnionFilterOp
-	{
-		template<typename Handle>
-		static constexpr bool Filter()
-		{
-			return !OtherResourceTable::CompatibleType::template Contains<typename Handle::CompatibleType>();
-		}
-	};
-
-	template<typename... XS, typename... YS>
-	static constexpr auto Meld(const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
-	{
-		(void)A; (void)B;
-		return ResourceTable<XS..., YS...>{ "MeldedTable", { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
-	}
-};
-
-template<typename SourceResourceTableType, typename FunctionType>
-class DebugResourceTable final : public SourceResourceTableType
-{
-	template<typename FunctionType2>
-	struct ErrorType
-	{
-		template<typename... XS>
-		static constexpr auto ThrowError(const Set::Type<XS...>&)
-		{
-			//this will error and therefore print the values that are missing from the table
-			static_assert(sizeof(Set::Type<XS...>) == 0, "A table entry is missing and the following error will print the types after: TheTypesMissingWere");
-			using NotAvailable = decltype(Set::Type<XS...>::TheTypesMissingWere);
-			return NotAvailable();
-		}
-	};
-
-public:
-	DebugResourceTable(const SourceResourceTableType& RTT, const FunctionType&) : SourceResourceTableType(RTT)
-	{}
-
-	template<typename DestinationResourceTableType>
-	static constexpr DestinationResourceTableType CompileTimeError(const DestinationResourceTableType&)
-	{
-		ErrorType<FunctionType>::ThrowError(Set::LeftDifference(DestinationResourceTableType::GetCompatibleSetType(), SourceResourceTableType::GetCompatibleSetType()));
-		return std::declval<DestinationResourceTableType>();
-	}
-};
-
-template<typename SourceResourceTableType, typename FunctionType>
-DebugResourceTable(const SourceResourceTableType&, const FunctionType&) -> DebugResourceTable<SourceResourceTableType, FunctionType>;
-
-
 template<typename ResourceTableType>
 class IterableResourceTable final : public ResourceTableType, public IResourceTableInfo
 {
@@ -574,7 +571,7 @@ public:
 	/* IResourceTableInfo implementation */
 	const char* GetName() const override
 	{
-		return IResourceTableBase::GetName();
+		return ResourceTableType::GetName();
 	}
 
 	Iterator begin() const override
@@ -617,16 +614,5 @@ private:
 			NewRevisions[i].Parent = this;
 		}
 		MergedOutput.HandleRevisions[DestIndex] = NewRevisions;
-	}
-
-	/* Entry point for OnExecute callbacks */
-	void OnExecute(struct ImmediateRenderContext& Ctx) const
-	{
-		//first transition and execute
-		ResourceTableType::OnExecute(Ctx);
-		//this way if a compatible type was input bound as Texture
-		//and the output type was UAV and previous state was UAV
-		//and UAV to texture to UAV barrier will be issued
-		//otherwise if UAV was input and output no barrier will be issued
 	}
 };	
