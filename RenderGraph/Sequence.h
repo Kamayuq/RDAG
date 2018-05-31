@@ -12,12 +12,10 @@ struct IsCallable<F, V, std::void_t<decltype(std::declval<F>()(std::declval<V>()
 template<typename...>
 class ResourceTable;
 
-struct IResourceTableBase;
-
 template<typename... TS>
 static inline void CheckIsValidResourceTable(const ResourceTable<TS...>& Table)
 {
-	static_assert(std::is_base_of<IResourceTableBase, ResourceTable<TS...>>(), "Table is not a ResorceTable");
+	static_assert(std::is_base_of<struct IResourceTableBase, ResourceTable<TS...>>(), "Table is not a ResorceTable");
 	Table.CheckAllValid();
 }
 
@@ -100,7 +98,6 @@ struct Seq : SequenceType
 {
 	Seq(const ARGS&... Args) : SequenceType(Internal::Seq(Args...)) {}
 };
-
 template<typename... ARGS>
 Seq(const ARGS&...) -> Seq<decltype(Internal::Seq(std::declval<ARGS>()...)), ARGS...>;
 
@@ -131,9 +128,6 @@ auto Scope(const Seq<SequenceType, SequenceArgs...>& seq)
 		}
 	});
 }
-
-template<typename... TS>
-class ResourceTable;
 
 /* an Extaction filters on output */
 /* this will revert the changes done to the entries passed into the Sequence and only return/extract the changes of the extra specified values in AddedReturnTable */

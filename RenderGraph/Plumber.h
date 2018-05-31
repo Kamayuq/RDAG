@@ -4,17 +4,9 @@
 #include "Assert.h"
 #include "LinearAlloc.h"
 
-/* Specialized Transient resource Implementation */
-/* Handle is of ResourceHandle Type */
-template<typename Handle>
-class TransientResourceImpl;
-
-/* Base of all ResourceHandles this class should never be used directly: use ResourceHandle instead */
-struct ResourceHandleBase {};
-
 /* A ResourceHande is used to implement and specialize your own Resources and callbacks */
 template<typename Compatible>
-struct ResourceHandle : ResourceHandleBase
+struct ResourceHandle
 {
 	/* Compatible types are used for automatic casting between each other */
 	/* each set can only contain unique Compatible Types */
@@ -22,14 +14,9 @@ struct ResourceHandle : ResourceHandleBase
 
 	ResourceHandle()
 	{
+		struct SizeTest : Compatible { char dummy; };
 		static_assert(sizeof(SizeTest) == 1, "Handles are not allowed to have any values");
 	}
-
-private:
-	struct SizeTest : Compatible
-	{
-		char dummy;
-	};
 };
 
 /* the base class of all materialized resources */
@@ -66,11 +53,13 @@ public:
 template<typename Handle>
 class TransientResourceImpl : public TransientResource
 {
+public:
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
 
-public:
 	DescriptorType Descriptor;
+
+	TransientResourceImpl(const DescriptorType& InDescriptor) : Descriptor(InDescriptor) {}
 
 	/* use the descriptor to create a resource and trigger OnMaterilize callback */
 	void Materialize() const override
@@ -80,20 +69,15 @@ public:
 			Resource = Handle::OnMaterialize(Descriptor);
 		}
 	}
-
-public:
-	TransientResourceImpl(const DescriptorType& InDescriptor) : Descriptor(InDescriptor) {}
 };
 
-class IResourceTableInfo;
 /* the ResourceRevision stores the connectivity and History between transient resources in the graph */
 struct ResourceRevision
 {
 	/* a link to it's underlying immaginary resource */
 	const TransientResource* ImaginaryResource = nullptr;
-	
 	/* a link to the resourcetable set where this revision came from originally */
-	const IResourceTableInfo* Parent = nullptr;
+	const class IResourceTableInfo* Parent = nullptr;
 
 	ResourceRevision(const TransientResource* InImaginaryResource = nullptr) : ImaginaryResource(InImaginaryResource) {}
 
@@ -118,12 +102,10 @@ struct RevisionSet
 	U32 RevisionCount = 0;
 
 	RevisionSet(const RevisionSet&) = default;
-
 	RevisionSet(ResourceRevision* const InRevisions, U32 InRevisionCount)
 		: Revisions(InRevisions)
 		, RevisionCount(InRevisionCount)
-	{
-	}
+	{}
 
 	/* Handles can get undefined when they never have been written to */
 	bool IsUndefined(U32 i = 0) const
@@ -212,9 +194,7 @@ public:
 
 	explicit ResourceTable(const char* Name, const ThisType& RTT)
 		: ResourceTable(Name, { RevisionSet(RTT.HandleRevisions[SetType::template GetIndex<TS>()], RTT.RevisionCounts[SetType::template GetIndex<TS>()])... })
-	{
-		(void)RTT;
-	}
+	{ (void)RTT; }
 
 	template
 	<
@@ -233,22 +213,18 @@ public:
 		, HandleNames{ TS::Name... }
 		, HandleRevisions{ InRevisions[SetType::template GetIndex<TS>()].Revisions... }
 		, RevisionCounts{ InRevisions[SetType::template GetIndex<TS>()].RevisionCount... }
-	{
-		(void)InRevisions;
-	}
+	{ (void)InRevisions; }
 
 	/* assignment constructor from another resourcetable with SINFAE*/
 	template
 	<
-		typename OtherResourceTable, 
-		bool ContainsAll = (OtherResourceTable::template Contains<TS>() && ...),
+		typename... Handles, 
+		bool ContainsAll = (ResourceTable<Handles...>::template Contains<TS>() && ...),
 		typename = std::enable_if_t<ContainsAll>
 	>
-	ResourceTable(const OtherResourceTable& Other)
+	ResourceTable(const ResourceTable<Handles...>& Other)
 		: ResourceTable(Other.GetName(), { Other.template GetRevisionSet<TS>()... })
-	{
-		(void)Other;
-	}
+	{ (void)Other; }
 
 	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
 	template<typename DebugType, typename FunctionType>
@@ -304,14 +280,13 @@ public:
 		return Name;
 	}
 
-protected:
+private:
 	/* forward OnExecute callback for all the handles the Table contains */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
 		(RevisionSetInterface<TS>::OnExecute(GetRevisionSet<TS>(), Ctx), ...);
 	}
 
-private:
 	template<typename Handle>
 	RevisionSet GetRevisionSet() const
 	{
@@ -333,27 +308,25 @@ private:
 
 	template<typename... XS, typename... YS>
 	static constexpr ResourceTable<XS..., YS...> Meld(const char* Name, const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
-	{
-		(void)A; (void)B;
+	{	(void)A; (void)B;
 		return ResourceTable<XS..., YS...>{ Name, { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
 	}
 };
 
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
-struct ResourceTableEntry
+class ResourceTableEntry
 {
-private:
 	//Graph connectivity information 
 	ResourceRevision Revision;
 	//the current owner
-	const IResourceTableInfo* Owner = nullptr;
+	const class IResourceTableInfo* Owner = nullptr;
 	//the name as given by the constexpr value of the Handle
 	const char* Name = nullptr;
 
 public:
 	ResourceTableEntry() = default;
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
-	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const char* HandleName)
+	ResourceTableEntry(const ResourceRevision& InRevision, const class IResourceTableInfo* InOwner, const char* HandleName)
 		: Revision(InRevision), Owner(InOwner), Name(HandleName)
 	{}
 
@@ -362,12 +335,12 @@ public:
 		return Revision.ImaginaryResource;
 	}
 
-	const IResourceTableInfo* GetParent() const
+	const class IResourceTableInfo* GetParent() const
 	{
 		return Revision.Parent;
 	}
 
-	const IResourceTableInfo* GetOwner() const
+	const class IResourceTableInfo* GetOwner() const
 	{
 		return Owner;
 	}
@@ -420,6 +393,9 @@ private:
 	const struct IRenderPassAction* Action = nullptr;
 
 public:
+	IResourceTableInfo(const struct IRenderPassAction* InAction) : Action(InAction) {}
+	virtual ~IResourceTableInfo() {}
+
 	/* mandatory C++ itterator implementation */
 	class Iterator
 	{
@@ -468,13 +444,9 @@ public:
 		}
 	};
 
-	IResourceTableInfo(const struct IRenderPassAction* InAction) : Action(InAction) {}
-	virtual ~IResourceTableInfo() {}
-
 	/* iterator implementation */
-	virtual IResourceTableInfo::Iterator begin() const = 0;
-	virtual IResourceTableInfo::Iterator end() const = 0;
-
+	virtual Iterator begin() const = 0;
+	virtual Iterator end() const = 0;
 	virtual const char* GetName() const = 0;
 
 	/* Only ResourceTables that do draw/dispatch work have an action */
@@ -492,8 +464,10 @@ class IterableResourceTable final : public ResourceTableType, public IResourceTa
 public:
 	explicit IterableResourceTable(const ResourceTableType& RTT, const char* Name, const struct IRenderPassAction* InAction)
 		: ResourceTableType(Name, RTT)
-		, IResourceTableInfo(InAction) {};
+		, IResourceTableInfo(InAction) 
+	{};
 
+private:
 	/* IResourceTableInfo implementation */
 	const char* GetName() const override
 	{
@@ -510,7 +484,6 @@ public:
 		return { this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), true };
 	}
 
-private:
 	/* First the tables are merged and than the results are linked to track the history */
 	/* Linking is used to update the Resourcetable-entries to point to the previous action */
 	template<typename... XS>
