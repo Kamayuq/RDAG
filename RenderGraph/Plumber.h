@@ -175,7 +175,7 @@ template<typename... TS>
 class ResourceTable : public IResourceTableBase
 {
 	using ThisType = ResourceTable<TS...>;
-	using SetType = Set::Type<TS...>;
+	using HandleTypes = Set::Type<TS...>;
 	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
 	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
 
@@ -197,13 +197,22 @@ public:
 	/*                   MakeFriends                    */
 
 	/*                   Constructors                    */
-	ResourceTable(const ThisType& RTT)
-		: ResourceTable(RTT.GetName(), RTT)
-	{}
+	ResourceTable(const ThisType& RTT) = default;
 
-	explicit ResourceTable(const char* Name, const ThisType& RTT)
-		: ResourceTable(Name, { RevisionSet(RTT.HandleRevisions[SetType::template GetIndex<TS>()], RTT.RevisionCounts[SetType::template GetIndex<TS>()])... })
-	{ (void)RTT; }
+	explicit ResourceTable(const char* InName, const ThisType& RTT)
+		: ResourceTable(RTT)
+	{  
+		Name = InName;
+	}
+
+	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
+		: Name(Name)
+		, HandleNames{ TS::Name... }
+		, HandleRevisions{ InRevisions[HandleTypes::template GetIndex<TS>()].Revisions... }
+		, RevisionCounts{ InRevisions[HandleTypes::template GetIndex<TS>()].RevisionCount... }
+	{
+		(void)InRevisions;
+	}
 
 	template
 	<
@@ -217,13 +226,6 @@ public:
 		, RevisionCounts{ 0 }
 	{}
 
-	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
-		: Name(Name)
-		, HandleNames{ TS::Name... }
-		, HandleRevisions{ InRevisions[SetType::template GetIndex<TS>()].Revisions... }
-		, RevisionCounts{ InRevisions[SetType::template GetIndex<TS>()].RevisionCount... }
-	{ (void)InRevisions; }
-
 	/* assignment constructor from another resourcetable with SINFAE*/
 	template
 	<
@@ -233,7 +235,9 @@ public:
 	>
 	ResourceTable(const ResourceTable<Handles...>& Other)
 		: ResourceTable(Other.GetName(), { Other.template GetRevisionSet<TS>()... })
-	{ (void)Other; }
+	{ 
+		(void)Other; 
+	}
 
 	/* assignment constructor from another resourcetable for debuging purposes without SINFAE*/
 	template<typename DebugType, typename FunctionType>
@@ -486,12 +490,12 @@ private:
 
 	Iterator begin() const override
 	{
-		return { this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), false };
+		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), false };
 	}
 
 	Iterator end() const override
 	{
-		return { this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), true };
+		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), true };
 	}
 
 	/* First the tables are merged and than the results are linked to track the history */

@@ -83,7 +83,7 @@ public:
 			LocalActionList.push_back(NewRenderAction);
 
 			//extract the resources which can be written to (like UAVs and Rendertargets)
-			using WritableSetType = decltype(Set::template Filter<IsMutableOp>(typename InputTableType::SetType()));
+			using WritableSetType = decltype(Set::template Filter<IsMutableOp>(typename InputTableType::HandleTypes()));
 			// merge and link (have the outputs point at this action from now on).
 			return NewRenderAction->RenderPassData.Link(WritableSetType());
 		});
