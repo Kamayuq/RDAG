@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "Plumber.h"
+#include "Renderpass.h"
 #include <vector>
 #include <map>
 #include <set>
@@ -6,8 +8,6 @@
 #include <stdlib.h>
 #include <string>
 #include <algorithm>
-#include "Plumber.h"
-#include "Renderpass.h"
 
 struct ColorStyle
 {
@@ -162,7 +162,7 @@ struct ActionStyle
 {
 	ActionStyle(const IRenderPassAction* InRenderPassAction) : RenderPassAction(InRenderPassAction), LocalActionIndex(GlobalActionIndex++)
 	{
-		for (const auto& Entry : RenderPassAction->GetRenderPassData())
+		for (const ResourceTableEntry& Entry : RenderPassAction->GetRenderPassData())
 		{
 			Pins.push_back(PinStyle(Entry, RenderPassAction));
 		}
@@ -174,7 +174,7 @@ struct ActionStyle
 
 	void PrintPins(FILE* fhp, const std::vector<PinStyle>& LocalPins, const char* LocalRank) const
 	{
-		for (const auto& Entry : LocalPins)
+		for (const PinStyle& Entry : LocalPins)
 		{
 			fprintf(fhp, R"(
 			)");
@@ -184,7 +184,7 @@ struct ActionStyle
 
 		fprintf(fhp, R"(
 			{rank = %s; )", LocalRank);
-		for (const auto& Entry : LocalPins)
+		for (const PinStyle& Entry : LocalPins)
 		{
 			Entry.PrintName(fhp);
 			fprintf(fhp, R"( ; )");
@@ -268,7 +268,7 @@ digraph G
 
 		PrintActions(fhp);
 
-		for (const auto& PinEntry : AllEntries)
+		for (const PinStyle& PinEntry : AllEntries)
 		{
 			PinEntry.DrawArrow(fhp);
 		}
@@ -279,7 +279,7 @@ digraph G
 		if (Actions.size() == 0)
 			return;
 
-		for (const auto& Action : Actions)
+		for (const ActionStyle& Action : Actions)
 		{
 			Action.Print(localfhp);
 		}

@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
 			Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::PostProcessingInput>(2, 0),
 			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
-		}(Builder.GetEmptyResourceTable());
+		}(ResourceTable<>());
 		(void)val;
 	}
 
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
 			auto val = Seq
 			{
 				Builder.BuildRenderPass("MainRenderPass", DeferredRendererPass::Build, ViewInfo)
-			}(Builder.GetEmptyResourceTable());
+			}(ResourceTable<>());
 			(void)val;
 
 			auto time = std::chrono::high_resolution_clock::now() - start;

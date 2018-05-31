@@ -7,7 +7,7 @@ namespace RDAG
 
 typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DepthInfo = Input.GetDescriptor<RDAG::DepthTarget>();
+	const Texture2d::Descriptor& DepthInfo = Input.GetDescriptor<RDAG::DepthTarget>();
 	Texture2d::Descriptor VelocityDescriptor;
 	VelocityDescriptor.Name = "VelocityRenderTarget";
 	VelocityDescriptor.Format = ERenderResourceFormat::RG16F;

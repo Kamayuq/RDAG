@@ -7,7 +7,7 @@ namespace RDAG
 
 typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DepthInfo = Input.GetDescriptor<RDAG::DepthTexture>();
+	const Texture2d::Descriptor& DepthInfo = Input.GetDescriptor<RDAG::DepthTexture>();
 	Texture2d::Descriptor LightingDescriptor;
 	LightingDescriptor.Name = "LightingRenderTarget";
 	LightingDescriptor.Format = ERenderResourceFormat::ARGB16F;

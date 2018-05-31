@@ -4,7 +4,6 @@
 #include "Plumber.h"
 #include "RHI.h"
 #include "Sequence.h"
-
 #include <vector>
 
 /* Base class of all actions which can contain dispatches or draws */
@@ -28,10 +27,13 @@ private:
 
 struct RenderPassBuilder
 {
+private:
+	using ActionListType = std::vector<const IRenderPassAction*>;
+	mutable ActionListType ActionList;
+
 public:
 	RenderPassBuilder(const RenderPassBuilder&) = delete;
-	RenderPassBuilder()
-	{}
+	RenderPassBuilder(){}
 
 	/* run an renderpass in another callable or function this can be useful to seperate the definition from the implementation in a cpp file */
 	template<typename FunctionType, typename... ARGS>
@@ -69,7 +71,7 @@ public:
 		typedef std::decay_t<typename Traits::return_type> VoidReturnType;
 		static_assert(std::is_same_v<void, VoidReturnType>, "The returntype must be void");
 		
-		auto& LocalActionList = ActionList;
+		ActionListType& LocalActionList = ActionList;
 		return Seq([&LocalActionList, QueuedTask, Name](const InputTableType& input)
 		{
 			CheckIsValidResourceTable(input);
@@ -173,6 +175,17 @@ public:
 		});
 	}
 
+	/* after the builing finished return all the actions recorded */
+	const ActionListType& GetActionList() const
+	{
+		return ActionList;
+	}
+
+	void Reset()
+	{
+		ActionList.clear();
+	}
+
 	template<typename Handle>
 	auto CreateResource() const
 	{
@@ -198,23 +211,6 @@ public:
 	auto CreateResource(const VectorType& InDescriptors) const
 	{
 		return CreateResourceInternal<Handle>(InDescriptors.data(), (U32)InDescriptors.size());
-	}
-
-	/* returns the empty resourcetable */
-	static inline auto GetEmptyResourceTable()
-	{
-		return ResourceTable<>();
-	}
-
-	/* after the builing finished return all the actions recorded */
-	const std::vector<const IRenderPassAction*>& GetActionList() const
-	{
-		return ActionList;
-	}
-
-	void Reset()
-	{
-		ActionList.clear();
 	}
 
 private:
@@ -271,6 +267,4 @@ private:
 		IterableResourceTable<RenderPassDataType> RenderPassData;
 		FunctionType Task;
 	};
-
-	mutable std::vector<const IRenderPassAction*> ActionList;
 };

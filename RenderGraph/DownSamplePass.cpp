@@ -3,7 +3,7 @@
 
 typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleInput>();
+	const Texture2d::Descriptor& DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleInput>();
 	Texture2d::Descriptor DownsampleDescriptor;
 	DownsampleDescriptor.Name = "DownsampleRenderTarget";
 	DownsampleDescriptor.Format = DownSampleInfo.Format;
@@ -23,7 +23,7 @@ typename DownsampleRenderPass::PassOutputType DownsampleRenderPass::Build(const 
 
 typename DownsampleDepthRenderPass::PassOutputType DownsampleDepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 {
-	auto DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleDepthInput>();
+	const Texture2d::Descriptor& DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleDepthInput>();
 	Texture2d::Descriptor DownsampleDescriptor;
 	DownsampleDescriptor.Name = "DownsampleDepthRenderTarget";
 	DownsampleDescriptor.Format = DownSampleInfo.Format;
@@ -47,7 +47,7 @@ typename PyramidDownSampleRenderPass::PassOutputType PyramidDownSampleRenderPass
 
 	for (U32 i = 1; true; i++)
 	{
-		auto DownSampleInfo = Output.template GetDescriptor<RDAG::DownsamplePyramid>(i - 1);
+		const Texture2d::Descriptor& DownSampleInfo = Output.template GetDescriptor<RDAG::DownsamplePyramid>(i - 1);
 		if (((DownSampleInfo.Width >> 1) == 0) || ((DownSampleInfo.Height >> 1) == 0))
 			break;
 

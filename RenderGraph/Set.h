@@ -69,8 +69,7 @@ private:
 
 	/* meld 2 disjunct Sets */
 	template<template<typename...> class ConstructorType = Set::Type, typename... LS, typename... RS>
-	static constexpr auto Meld(const Type<LS...>&, const Type<RS...>&)
-		-> ConstructorType<LS..., RS...>;
+	static constexpr ConstructorType<LS..., RS...> Meld(const Type<LS...>&, const Type<RS...>&);
 
 	/* Recursively itterate through the first argument checking it against the second and accumulating the results in the third */
 	template<typename FilterOp, typename T, typename... TS, typename... LS>

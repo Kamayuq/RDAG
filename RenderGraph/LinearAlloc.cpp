@@ -1,6 +1,6 @@
 #include "LinearAlloc.h"
-#include <malloc.h>
 #include "Assert.h"
+#include <malloc.h>
 
 
 #define USE_ATOMICS 0

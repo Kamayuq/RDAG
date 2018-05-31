@@ -3,7 +3,6 @@
 #include "Plumber.h"
 #include "LinearAlloc.h"
 
-
 /* example Texture2d implementation */
 struct Texture2d : MaterializedResource
 {

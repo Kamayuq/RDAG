@@ -4,8 +4,6 @@
 #include "Assert.h"
 #include "LinearAlloc.h"
 
-#include <iterator>
-
 /* Specialized Transient resource Implementation */
 /* Handle is of ResourceHandle Type */
 template<typename Handle>
@@ -70,9 +68,6 @@ class TransientResourceImpl : public TransientResource
 {
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
-
-	template<typename>
-	friend struct Wrapped;
 
 public:
 	DescriptorType Descriptor;
@@ -150,10 +145,7 @@ struct RevisionSet
 template<typename Handle>
 struct RevisionSetInterface
 {
-	using ResourceType = typename Handle::ResourceType;
-	using DescriptorType = typename Handle::DescriptorType;
-
-	static const DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
+	static const typename Handle::DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
 	{
 		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
 		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
@@ -172,11 +164,11 @@ struct RevisionSetInterface
 	}
 
 private:
-	static const ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
+	static const typename Handle::ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
 	{
 		check(i < Revisions.RevisionCount);
 		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
-		return static_cast<const ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
+		return static_cast<const typename Handle::ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
 	}
 };
 
@@ -194,10 +186,8 @@ class ResourceTable : public IResourceTableBase
 	using ThisType = ResourceTable<TS...>;
 	using SetType = Set::Type<TS...>;
 	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
-
 	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
 
-protected:
 	const char* Name = nullptr;
 	const char* HandleNames[StorageSize];
 	ResourceRevision* HandleRevisions[StorageSize];
@@ -211,9 +201,6 @@ public:
 
 	template<typename>
 	friend class IterableResourceTable;
-
-	template<typename, typename...>
-	friend class ResourceTableIterator;
 
 	friend struct RenderPassBuilder;
 	/*                   MakeFriends                    */
@@ -296,7 +283,7 @@ public:
 
 	/*                ElementOperations                  */
 	template<typename Handle>
-	const auto& GetDescriptor(U32 i = 0) const
+	const typename Handle::DescriptorType& GetDescriptor(U32 i = 0) const
 	{
 		return RevisionSetInterface<Handle>::GetDescriptor(GetRevisionSet<Handle>(), i);
 	}
@@ -345,65 +332,30 @@ private:
 	};
 
 	template<typename... XS, typename... YS>
-	static constexpr auto Meld(const char* Name, const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
+	static constexpr ResourceTable<XS..., YS...> Meld(const char* Name, const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
 	{
 		(void)A; (void)B;
 		return ResourceTable<XS..., YS...>{ Name, { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
 	}
 };
 
-template<typename SourceResourceTableType, typename FunctionType>
-class DebugResourceTable : public SourceResourceTableType
-{
-	template<typename... XS>
-	static inline auto TheMissingTypes(const Set::Type<XS...>&)
-	{
-		//this will error and therefore print the values that are missing from the table
-		static_assert(sizeof(Set::Type<XS...>) == 0, "A table entry is missing and the following error will print the types after: TheTypesMissingWere");
-		using NotAvailable = decltype(Set::Type<XS...>::TheTypesMissingWere);
-		return NotAvailable();
-	}
-
-	template<typename InFunction, typename... SourceHandles, typename... DestHandles>
-	static inline auto WithinTheFunction(const ResourceTable<SourceHandles...>&, const ResourceTable<DestHandles...>&)
-	{
-		using MissingTypes = decltype(Set::LeftDifference(Set::Type<DestHandles...>(), Set::Type<SourceHandles...>()));
-		return TheMissingTypes(MissingTypes());
-	}
-
-public:
-	DebugResourceTable(const SourceResourceTableType& RTT, const FunctionType&) : SourceResourceTableType(RTT)
-	{}
-
-	template<typename DestinationResourceTableType>
-	static constexpr DestinationResourceTableType CompileTimeError(const DestinationResourceTableType&)
-	{
-		WithinTheFunction<FunctionType>(std::declval<SourceResourceTableType>(), std::declval<DestinationResourceTableType>());
-		return std::declval<DestinationResourceTableType>();
-	}
-};
-template<typename SourceResourceTableType, typename FunctionType>
-DebugResourceTable(const SourceResourceTableType&, const FunctionType&) -> DebugResourceTable<SourceResourceTableType, FunctionType>;
-
 /* A ResourceTableEntry is a temporary object for loop itteration, this allows generic access to some parts of the data */
 struct ResourceTableEntry
 {
+private:
+	//Graph connectivity information 
+	ResourceRevision Revision;
+	//the current owner
+	const IResourceTableInfo* Owner = nullptr;
+	//the name as given by the constexpr value of the Handle
+	const char* Name = nullptr;
+
+public:
 	ResourceTableEntry() = default;
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
-
 	ResourceTableEntry(const ResourceRevision& InRevision, const IResourceTableInfo* InOwner, const char* HandleName)
 		: Revision(InRevision), Owner(InOwner), Name(HandleName)
 	{}
-
-	bool operator==(const ResourceTableEntry& Other) const
-	{
-		return (Owner == Other.Owner) && (Revision == Other.Revision);
-	}
-
-	bool operator!=(const ResourceTableEntry& Other) const
-	{
-		return!(*this == Other);
-	}
 
 	const TransientResource* GetImaginaryResource() const
 	{
@@ -442,15 +394,6 @@ struct ResourceTableEntry
 		return Name;
 	}
 
-private:
-	//Graph connectivity information 
-	ResourceRevision Revision;
-	//the current owner
-	const IResourceTableInfo* Owner = nullptr;
-	//the name as given by the constexpr value of the Handle
-	const char* Name = nullptr;
-
-public:
 	UintPtr ParentHash() const
 	{
 		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
@@ -468,20 +411,13 @@ public:
 	{
 		return IsMaterialized() && Revision.ImaginaryResource->GetResource()->IsExternalResource();
 	}
-
-	/* A Resource is related when their immaginary resources match */
-	bool IsRelatedTo(const ResourceTableEntry& Other) const
-	{
-		return Revision.ImaginaryResource == Other.Revision.ImaginaryResource;
-	}
 };
-
-struct IRenderPassAction;
 
 /* the base class of resource tables provides access to itterators */
 class IResourceTableInfo
 {
-	friend struct RenderPassBuilder;
+private:
+	const struct IRenderPassAction* Action = nullptr;
 
 public:
 	/* mandatory C++ itterator implementation */
@@ -532,7 +468,7 @@ public:
 		}
 	};
 
-	IResourceTableInfo(const IRenderPassAction* InAction) : Action(InAction) {}
+	IResourceTableInfo(const struct IRenderPassAction* InAction) : Action(InAction) {}
 	virtual ~IResourceTableInfo() {}
 
 	/* iterator implementation */
@@ -542,24 +478,19 @@ public:
 	virtual const char* GetName() const = 0;
 
 	/* Only ResourceTables that do draw/dispatch work have an action */
-	const IRenderPassAction* GetAction() const
+	const struct IRenderPassAction* GetAction() const
 	{
 		return Action;
 	}
-
-private:
-	const IRenderPassAction* Action = nullptr;
 };
 
 template<typename ResourceTableType>
 class IterableResourceTable final : public ResourceTableType, public IResourceTableInfo
 {
-	using ThisType = IterableResourceTable<ResourceTableType>;
-
 	friend struct RenderPassBuilder;
 
 public:
-	explicit IterableResourceTable(const ResourceTableType& RTT, const char* Name, const IRenderPassAction* InAction)
+	explicit IterableResourceTable(const ResourceTableType& RTT, const char* Name, const struct IRenderPassAction* InAction)
 		: ResourceTableType(Name, RTT)
 		, IResourceTableInfo(InAction) {};
 
@@ -583,9 +514,9 @@ private:
 	/* First the tables are merged and than the results are linked to track the history */
 	/* Linking is used to update the Resourcetable-entries to point to the previous action */
 	template<typename... XS>
-	constexpr auto Link(const Set::Type<XS...>&) const
+	constexpr ResourceTableType Link(const Set::Type<XS...>&) const
 	{
-		auto MergedOutput = *this;
+		ResourceTableType MergedOutput = *this;
 		/* incrementally link all the Handles from the intersecting set*/
 		(LinkInternal<XS>(MergedOutput), ...);
 		return MergedOutput;

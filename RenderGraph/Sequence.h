@@ -1,4 +1,5 @@
 #pragma once
+#include "Set.h"
 #include <utility>
 #include <type_traits>
 
@@ -8,13 +9,10 @@ struct IsCallable : std::false_type {};
 template<typename F, typename V>
 struct IsCallable<F, V, std::void_t<decltype(std::declval<F>()(std::declval<V>()))>> : std::true_type {};
 
-template<typename, typename>
-class DebugResourceTable;
-
-struct IResourceTableBase;
-
 template<typename...>
 class ResourceTable;
+
+struct IResourceTableBase;
 
 template<typename... TS>
 static inline void CheckIsValidResourceTable(const ResourceTable<TS...>& Table)
@@ -22,6 +20,39 @@ static inline void CheckIsValidResourceTable(const ResourceTable<TS...>& Table)
 	static_assert(std::is_base_of<IResourceTableBase, ResourceTable<TS...>>(), "Table is not a ResorceTable");
 	Table.CheckAllValid();
 }
+
+template<typename SourceResourceTableType, typename FunctionType>
+class DebugResourceTable : public SourceResourceTableType
+{
+	template<typename... XS>
+	static inline void TheMissingTypes(const Set::Type<XS...>&)
+	{
+		//this will error and therefore print the values that are missing from the table
+		static_assert(sizeof(Set::Type<XS...>) == 0, "A table entry is missing and the following error will print the types after: TheTypesMissingWere");
+		using NotAvailable = decltype(Set::Type<XS...>::TheTypesMissingWere);
+		NotAvailable();
+	}
+
+	template<typename InFunction, typename... SourceHandles, typename... DestHandles>
+	static inline void WithinTheFunction(const ResourceTable<SourceHandles...>&, const ResourceTable<DestHandles...>&)
+	{
+		using MissingTypes = decltype(Set::LeftDifference(Set::Type<DestHandles...>(), Set::Type<SourceHandles...>()));
+		TheMissingTypes(MissingTypes());
+	}
+
+public:
+	DebugResourceTable(const SourceResourceTableType& RTT, const FunctionType&) : SourceResourceTableType(RTT)
+	{}
+
+	template<typename DestinationResourceTableType>
+	static constexpr DestinationResourceTableType CompileTimeError(const DestinationResourceTableType&)
+	{
+		WithinTheFunction<FunctionType>(std::declval<SourceResourceTableType>(), std::declval<DestinationResourceTableType>());
+		return std::declval<DestinationResourceTableType>();
+	}
+};
+template<typename SourceResourceTableType, typename FunctionType>
+DebugResourceTable(const SourceResourceTableType&, const FunctionType&)->DebugResourceTable<SourceResourceTableType, FunctionType>;
 
 namespace Internal
 {

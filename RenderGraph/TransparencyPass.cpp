@@ -15,7 +15,7 @@ struct HalfResTransparencyRenderPass
 
 	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)
 	{
-		auto TransparencyInfo = Input.GetDescriptor<RDAG::TransparencyTarget>();
+		const Texture2d::Descriptor& TransparencyInfo = Input.GetDescriptor<RDAG::TransparencyTarget>();
 		Texture2d::Descriptor HalfResTransparencyDescriptor;
 		HalfResTransparencyDescriptor.Name = "HalfResTransparencyRenderTarget";
 		HalfResTransparencyDescriptor.Format = TransparencyInfo.Format;

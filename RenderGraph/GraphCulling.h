@@ -1,7 +1,6 @@
 #pragma once
 #include "Renderpass.h"
 #include "Types.h"
-
 #include <vector>
 #include <algorithm>
 

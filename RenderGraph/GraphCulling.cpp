@@ -1,11 +1,10 @@
-#include <set>
 #include "GraphCulling.h"
 #include "Plumber.h"
 #include "Renderpass.h"
 
 void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions, U32 ParentColor)
 {
-	const auto& Pass = Action->GetRenderPassData();
+	const IResourceTableInfo& Pass = Action->GetRenderPassData();
 
 	U32 NumValidMutables = 0;
 	for (const ResourceTableEntry& Output : Pass)
