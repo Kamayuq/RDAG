@@ -28,7 +28,7 @@ class DebugResourceTable : public SourceResourceTableType
 		//this will error and therefore print the values that are missing from the table
 		static_assert(sizeof(Set::Type<XS...>) == 0, "A table entry is missing and the following error will print the types after: TheTypesMissingWere");
 		using NotAvailable = decltype(Set::Type<XS...>::TheTypesMissingWere);
-		NotAvailable();
+		(void)NotAvailable();
 	}
 
 	template<typename InFunction, typename... SourceHandles, typename... DestHandles>

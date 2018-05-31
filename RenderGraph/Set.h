@@ -48,7 +48,7 @@ struct Set final
 		struct IndexedElements<I, X> : IndexedElement<X, I>
 		{};
 
-		template<typename X, int I, typename... XS>
+		template<typename X, int I>
 		static constexpr int GetIndexInternal(const IndexedElement<X, I>&)
 		{
 			return I;

@@ -75,7 +75,6 @@ public:
 		return Seq([&LocalActionList, QueuedTask, Name](const InputTableType& input)
 		{
 			CheckIsValidResourceTable(input);
-			//typedef typename std::decay<decltype(s)>::type StateType;
 
 			typedef TRenderPassAction<ContextType, InputTableType, FunctionType> RenderActionType;
 
@@ -258,7 +257,7 @@ private:
 			return RenderPassData;
 		}
 
-		void Execute(ImmediateRenderContext& RndCtx) const override final
+		void Execute(ImmediateRenderContext& RndCtx) const override
 		{
 			RenderPassData.OnExecute(RndCtx);
 			Task(checked_cast<ContextType&>(RndCtx), RenderPassData);

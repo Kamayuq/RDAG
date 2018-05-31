@@ -42,32 +42,41 @@ protected:
 
 public:
 	/* use the descriptor to create a resource and trigger OnMaterilize callback */
-	virtual void Materialize() const = 0;
+	void Materialize() const
+	{
+		if (Resource == nullptr)
+		{
+			Resource = MaterializeInternal();
+		}
+	}
 
 	bool IsMaterialized() const { return Resource != nullptr; }
-	const MaterializedResource* GetResource() const { return Resource; }
+	bool IsExternalResource() const { return Resource && Resource->IsExternalResource(); }
+
+private:
+	virtual MaterializedResource* MaterializeInternal() const = 0;
 };
 
 /* Specialized Transient resource Implementation */
 /* Handle is of ResourceHandle Type */
 template<typename Handle>
-class TransientResourceImpl : public TransientResource
+class TransientResourceImpl final : public TransientResource
 {
-public:
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
-
 	DescriptorType Descriptor;
 
+public:
 	TransientResourceImpl(const DescriptorType& InDescriptor) : Descriptor(InDescriptor) {}
+	
+	const DescriptorType& GetDescriptor() const { return Descriptor; }
+	const ResourceType* GetResource() const { return static_cast<const ResourceType*>(Resource); }
 
+private:
 	/* use the descriptor to create a resource and trigger OnMaterilize callback */
-	void Materialize() const override
+	MaterializedResource* MaterializeInternal() const override
 	{
-		if (Resource == nullptr)
-		{
-			Resource = Handle::OnMaterialize(Descriptor);
-		}
+		return Handle::OnMaterialize(Descriptor);
 	}
 };
 
@@ -130,7 +139,7 @@ struct RevisionSetInterface
 	static const typename Handle::DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
 	{
 		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
+		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->GetDescriptor();
 	}
 
 	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
@@ -150,7 +159,7 @@ private:
 	{
 		check(i < Revisions.RevisionCount);
 		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
-		return static_cast<const typename Handle::ResourceType&>(*Revisions.Revisions[i].ImaginaryResource->GetResource());
+		return *static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->GetResource();
 	}
 };
 
@@ -308,7 +317,8 @@ private:
 
 	template<typename... XS, typename... YS>
 	static constexpr ResourceTable<XS..., YS...> Meld(const char* Name, const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
-	{	(void)A; (void)B;
+	{	
+		(void)A; (void)B;
 		return ResourceTable<XS..., YS...>{ Name, { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
 	}
 };
@@ -382,7 +392,7 @@ public:
 	/* External resourcers are not managed by the graph and the user has to provide an implementation to retrieve the resource */
 	bool IsExternal() const
 	{
-		return IsMaterialized() && Revision.ImaginaryResource->GetResource()->IsExternalResource();
+		return IsMaterialized() && Revision.ImaginaryResource->IsExternalResource();
 	}
 };
 
