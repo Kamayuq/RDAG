@@ -5,7 +5,7 @@ namespace RDAG
 	SIMPLE_UAV_HANDLE(AmbientOcclusionUAV, AmbientOcclusionTexture);
 }
 
-typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename AmbientOcclusionPass::AmbientOcclusionResult AmbientOcclusionPass::Build(const RenderPassBuilder& Builder, const AmbientOcclusionInput& Input, const SceneViewInfo& ViewInfo)
 {
 	Texture2d::Descriptor AoDescriptor;
 	AoDescriptor.Width = ViewInfo.SceneWidth;
@@ -17,12 +17,12 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::DistanceField:
 		{
 			AoDescriptor.Name = "DistanceFieldAoTarget";
-			using DFAOTable = ResourceTable<RDAG::AmbientOcclusionUAV>;
+			using DFAOAction = ResourceTable<RDAG::AmbientOcclusionUAV>;
 
 			return Seq
 			{
 				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
-				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOTable&)
+				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOAction&)
 				{
 					Ctx.Draw("DistancefieldAOAction");
 				})
@@ -33,12 +33,12 @@ typename AmbientOcclusionPass::PassOutputType AmbientOcclusionPass::Build(const 
 		case EAmbientOcclusionType::HorizonBased:
 		{
 			AoDescriptor.Name = "HorizonBasedAoTarget";
-			using HBAOTable = ResourceTable<RDAG::GbufferTexture, RDAG::DepthTexture, RDAG::AmbientOcclusionUAV>;
+			using HBAOAction = ResourceTable<RDAG::GbufferTexture, RDAG::DepthTexture, RDAG::AmbientOcclusionUAV>;
 
 			return Seq
 			{
 				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
-				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOTable&)
+				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOAction&)
 				{
 					Ctx.Draw("HorizonBasedAOAction");
 				})

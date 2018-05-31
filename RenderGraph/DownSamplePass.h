@@ -14,24 +14,24 @@ namespace RDAG
 
 struct DownsampleRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DownsampleInput>;
-	using PassOutputType = ResourceTable<RDAG::DownsampleResult>;
+	using DownsampleRenderInput = ResourceTable<RDAG::DownsampleInput>;
+	using DownsampleRenderResult = ResourceTable<RDAG::DownsampleResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static DownsampleRenderResult Build(const RenderPassBuilder& Builder, const DownsampleRenderInput& Input);
 };
 
 struct DownsampleDepthRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DownsampleDepthInput>;
-	using PassOutputType = ResourceTable<RDAG::DownsampleDepthResult>;
+	using DownsampleDepthInput = ResourceTable<RDAG::DownsampleDepthInput>;
+	using DownsampleDepthResult = ResourceTable<RDAG::DownsampleDepthResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static DownsampleDepthResult Build(const RenderPassBuilder& Builder, const DownsampleDepthInput& Input);
 };
 
 struct PyramidDownSampleRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DownsampleInput>;
-	using PassOutputType = ResourceTable<RDAG::DownsamplePyramid>;
+	using PyramidDownSampleRenderInput = ResourceTable<RDAG::DownsampleInput>;
+	using PyramidDownSampleRenderResult = ResourceTable<RDAG::DownsamplePyramid>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static PyramidDownSampleRenderResult Build(const RenderPassBuilder& Builder, const PyramidDownSampleRenderInput& Input);
 };

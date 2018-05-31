@@ -9,8 +9,8 @@ namespace RDAG
 
 struct GbufferRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTarget>;
-	using PassOutputType = ResourceTable<RDAG::GbufferTexture, RDAG::DepthTarget>;
+	using GbufferRenderInput = ResourceTable<RDAG::DepthTarget>;
+	using GbufferRenderResult = ResourceTable<RDAG::GbufferTexture, RDAG::DepthTarget>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static GbufferRenderResult Build(const RenderPassBuilder& Builder, const GbufferRenderInput& Input);
 };

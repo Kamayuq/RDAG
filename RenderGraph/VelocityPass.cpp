@@ -5,7 +5,7 @@ namespace RDAG
 	SIMPLE_RT_HANDLE(VelocityVectorTarget, VelocityVectors);
 }
 
-typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename VelocityRenderPass::VelocityRenderResult VelocityRenderPass::Build(const RenderPassBuilder& Builder, const VelocityRenderInput& Input)
 {
 	const Texture2d::Descriptor& DepthInfo = Input.GetDescriptor<RDAG::DepthTarget>();
 	Texture2d::Descriptor VelocityDescriptor;
@@ -14,11 +14,11 @@ typename VelocityRenderPass::PassOutputType VelocityRenderPass::Build(const Rend
 	VelocityDescriptor.Height = DepthInfo.Height;
 	VelocityDescriptor.Width = DepthInfo.Width;
 
-	using PassActionType = ResourceTable<RDAG::VelocityVectorTarget, RDAG::DepthTexture>;
+	using VelocityRenderAction = ResourceTable<RDAG::VelocityVectorTarget, RDAG::DepthTexture>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
-		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const VelocityRenderAction&)
 		{
 			Ctx.Draw("VelocityRenderAction");
 		})

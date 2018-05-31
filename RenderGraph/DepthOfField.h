@@ -7,8 +7,8 @@
 
 struct DepthOfFieldPass
 {
-	using PassInputType = ResourceTable<RDAG::SceneColorTexture, RDAG::VelocityVectors, RDAG::DepthTexture>;
-	using PassOutputType = ResourceTable<RDAG::SceneColorTexture>;
+	using DepthOfFieldInput = ResourceTable<RDAG::SceneColorTexture, RDAG::VelocityVectors, RDAG::DepthTexture>;
+	using DepthOfFieldResult = ResourceTable<RDAG::SceneColorTexture>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo);
+	static DepthOfFieldResult Build(const RenderPassBuilder& Builder, const DepthOfFieldInput& Input, const SceneViewInfo& ViewInfo);
 };

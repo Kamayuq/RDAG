@@ -11,8 +11,8 @@ namespace RDAG
 
 struct TransparencyRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
-	using PassOutputType = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
+	using TransparencyRenderInput = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
+	using TransparencyRenderResult = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo);
+	static TransparencyRenderResult Build(const RenderPassBuilder& Builder, const TransparencyRenderInput& Input, const SceneViewInfo& ViewInfo);
 };

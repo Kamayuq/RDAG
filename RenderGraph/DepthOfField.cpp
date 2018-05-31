@@ -190,9 +190,9 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder, const SceneViewInf
 	});
 };
 
-typename DepthOfFieldPass::PassOutputType DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename DepthOfFieldPass::DepthOfFieldResult DepthOfFieldPass::Build(const RenderPassBuilder& Builder, const DepthOfFieldInput& Input, const SceneViewInfo& ViewInfo)
 {
-	PassOutputType Output = Input;
+	DepthOfFieldResult Output = Input;
 
 	if (ViewInfo.DepthOfFieldEnabled)
 	{

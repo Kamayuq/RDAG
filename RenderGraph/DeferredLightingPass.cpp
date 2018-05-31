@@ -5,7 +5,7 @@ namespace RDAG
 	SIMPLE_UAV_HANDLE(LightingUAV, SceneColorTexture);
 }
 
-typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename DeferredLightingPass::DeferredLightingResult DeferredLightingPass::Build(const RenderPassBuilder& Builder, const DeferredLightingInput& Input)
 {
 	const Texture2d::Descriptor& DepthInfo = Input.GetDescriptor<RDAG::DepthTexture>();
 	Texture2d::Descriptor LightingDescriptor;
@@ -14,11 +14,11 @@ typename DeferredLightingPass::PassOutputType DeferredLightingPass::Build(const 
 	LightingDescriptor.Height = DepthInfo.Height;
 	LightingDescriptor.Width = DepthInfo.Width;
 
-	using PassActionType = ResourceTable<RDAG::LightingUAV, RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
+	using DeferredLightingAction = ResourceTable<RDAG::LightingUAV, RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::LightingUAV>({ LightingDescriptor }),
-		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext& Ctx, const DeferredLightingAction&)
 		{
 			Ctx.Draw("DeferredLightingAction");
 		})

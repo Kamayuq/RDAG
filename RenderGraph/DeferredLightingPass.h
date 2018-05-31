@@ -8,8 +8,8 @@
 
 struct DeferredLightingPass
 {
-	using PassInputType = ResourceTable<RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
-	using PassOutputType = ResourceTable<RDAG::SceneColorTexture>;
+	using DeferredLightingInput = ResourceTable<RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
+	using DeferredLightingResult = ResourceTable<RDAG::SceneColorTexture>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static DeferredLightingResult Build(const RenderPassBuilder& Builder, const DeferredLightingInput& Input);
 };

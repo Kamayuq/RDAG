@@ -2,7 +2,7 @@
 #include "DepthPass.h"
 
 
-typename ShadowMapRenderPass::PassOutputType ShadowMapRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename ShadowMapRenderPass::ShadowMapRenderResult ShadowMapRenderPass::Build(const RenderPassBuilder& Builder, const ShadowMapRenderInput& Input, const SceneViewInfo& ViewInfo)
 {	
 	auto Output = Builder.CreateResource<RDAG::ShadowMapTextureArray>()(Input);
 

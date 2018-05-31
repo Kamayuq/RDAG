@@ -12,16 +12,16 @@ namespace RDAG
 
 struct ToneMappingPass
 {
-	using PassInputType = ResourceTable<RDAG::PostProcessingInput>;
-	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
+	using ToneMappingInput = ResourceTable<RDAG::PostProcessingInput>;
+	using ToneMappingResult = ResourceTable<RDAG::PostProcessingResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static ToneMappingResult Build(const RenderPassBuilder& Builder, const ToneMappingInput& Input);
 };
 
 struct PostProcessingPass
 {
-	using PassInputType = ResourceTable<RDAG::PostProcessingInput, RDAG::VelocityVectors, RDAG::DepthTexture>;
-	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
+	using PostProcessingPassInput = ResourceTable<RDAG::PostProcessingInput, RDAG::VelocityVectors, RDAG::DepthTexture>;
+	using PostProcessingPassResult = ResourceTable<RDAG::PostProcessingResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo);
+	static PostProcessingPassResult Build(const RenderPassBuilder& Builder, const PostProcessingPassInput& Input, const SceneViewInfo& ViewInfo);
 };

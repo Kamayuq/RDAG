@@ -26,8 +26,8 @@ namespace RDAG
 
 struct SimpleBlendPass
 {
-	using PassInputType = ResourceTable<RDAG::BlendSource>;
-	using PassOutputType = ResourceTable<RDAG::BlendDest>;
+	using SimpleBlendInput = ResourceTable<RDAG::BlendSource>;
+	using SimpleBlendResult = ResourceTable<RDAG::BlendDest>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, EBlendMode::Type BlendMode);
+	static SimpleBlendResult Build(const RenderPassBuilder& Builder, const SimpleBlendInput& Input, EBlendMode::Type BlendMode);
 };

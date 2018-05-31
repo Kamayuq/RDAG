@@ -6,8 +6,8 @@
 
 struct DeferredRendererPass
 {
-	using PassInputType = ResourceTable<>;
-	using PassOutputType = ResourceTable<RDAG::PostProcessingResult>;
+	using DeferredRendererInput = ResourceTable<>;
+	using DeferredRendererOutput = ResourceTable<RDAG::PostProcessingResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo);
+	static DeferredRendererOutput Build(const RenderPassBuilder& Builder, const DeferredRendererInput& Input, const SceneViewInfo& ViewInfo);
 };

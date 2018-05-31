@@ -10,8 +10,8 @@ namespace RDAG
 
 struct VelocityRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::DepthTexture>;
-	using PassOutputType = ResourceTable<RDAG::VelocityVectors>;
+	using VelocityRenderInput = ResourceTable<RDAG::DepthTexture>;
+	using VelocityRenderResult = ResourceTable<RDAG::VelocityVectors>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static VelocityRenderResult Build(const RenderPassBuilder& Builder, const VelocityRenderInput& Input);
 };

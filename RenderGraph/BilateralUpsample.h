@@ -12,8 +12,8 @@ namespace RDAG
 
 struct BilateralUpsampleRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::HalfResInput, RDAG::HalfResDepth, RDAG::DepthTexture>;
-	using PassOutputType = ResourceTable<RDAG::UpsampleResult>;
+	using BilateralUpsampleInput = ResourceTable<RDAG::HalfResInput, RDAG::HalfResDepth, RDAG::DepthTexture>;
+	using BilateralUpsampleResult = ResourceTable<RDAG::UpsampleResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input);
+	static BilateralUpsampleResult Build(const RenderPassBuilder& Builder, const BilateralUpsampleInput& Input);
 };

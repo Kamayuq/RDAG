@@ -5,7 +5,7 @@ namespace RDAG
 	EXTERNAL_TEX_HANDLE(TemporalAAHistory);
 }
 
-typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename TemporalAARenderPass::TemporalAARenderResult TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const TemporalAARenderInput& Input, const SceneViewInfo& ViewInfo)
 {
 	if (ViewInfo.TemporalAaEnabled)
 	{
@@ -25,8 +25,8 @@ typename TemporalAARenderPass::PassOutputType TemporalAARenderPass::Build(const 
 			Builder.CreateResource<RDAG::TemporalAAHistory>(HistoryDescriptors)
 		}(Input);
 
-		typedef decltype(MergedTable) MergedTableType;
-		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext& Ctx, const MergedTableType&)
+		typedef decltype(MergedTable) TemporalAAAction;
+		return Builder.QueueRenderAction("TemporalAAAction", [](RenderContext& Ctx, const TemporalAAAction&)
 		{
 			Ctx.Draw("TemporalAAAction");
 		})(MergedTable);

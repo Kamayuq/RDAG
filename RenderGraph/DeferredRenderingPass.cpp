@@ -9,7 +9,7 @@
 #include "TransparencyPass.h"
 #include "TemporalAA.h"
 
-typename DeferredRendererPass::PassOutputType DeferredRendererPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename DeferredRendererPass::DeferredRendererOutput DeferredRendererPass::Build(const RenderPassBuilder& Builder, const DeferredRendererInput& Input, const SceneViewInfo& ViewInfo)
 {
 	return Seq
 	{

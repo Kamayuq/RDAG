@@ -7,7 +7,7 @@ namespace RDAG
 
 static constexpr U32 NumGbuffers = 4;
 
-typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename GbufferRenderPass::GbufferRenderResult GbufferRenderPass::Build(const RenderPassBuilder& Builder, const GbufferRenderInput& Input)
 {
 	Texture2d::Descriptor GbufferDescriptors[NumGbuffers];
 	for (U32 i = 0; i < NumGbuffers; i++)
@@ -17,11 +17,11 @@ typename GbufferRenderPass::PassOutputType GbufferRenderPass::Build(const Render
 		GbufferDescriptors[i].Format = ERenderResourceFormat::ARGB16F;
 	}
 
-	using PassActionType = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTarget>;
+	using GbufferRenderAction = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTarget>;
 	return Seq
 	{
 		Builder.CreateResource<RDAG::GbufferTarget>(GbufferDescriptors),
-		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext& Ctx, const GbufferRenderAction&)
 		{
 			Ctx.Draw("GbufferRenderAction");
 		})

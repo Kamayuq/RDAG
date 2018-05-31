@@ -10,10 +10,10 @@ namespace RDAG
 
 struct HalfResTransparencyRenderPass
 {
-	using PassInputType = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
-	using PassOutputType = ResourceTable<RDAG::HalfResTransparencyResult>;
+	using HalfResTransparencyRenderInput = ResourceTable<RDAG::TransparencyTarget, RDAG::DepthTarget>;
+	using HalfResTransparencyRenderResult = ResourceTable<RDAG::HalfResTransparencyResult>;
 
-	static PassOutputType Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+	static HalfResTransparencyRenderResult Build(const RenderPassBuilder& Builder, const HalfResTransparencyRenderInput& Input)
 	{
 		const Texture2d::Descriptor& TransparencyInfo = Input.GetDescriptor<RDAG::TransparencyTarget>();
 		Texture2d::Descriptor HalfResTransparencyDescriptor;
@@ -43,9 +43,9 @@ struct HalfResTransparencyRenderPass
 	}
 };
 
-typename TransparencyRenderPass::PassOutputType TransparencyRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename TransparencyRenderPass::TransparencyRenderResult TransparencyRenderPass::Build(const RenderPassBuilder& Builder, const TransparencyRenderInput& Input, const SceneViewInfo& ViewInfo)
 {
-	auto Output = Input;
+	TransparencyRenderResult Output = Input;
 
 	if (ViewInfo.TransparencyEnabled)
 	{

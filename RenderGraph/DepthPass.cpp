@@ -1,7 +1,7 @@
 #include "DepthPass.h"
 #include "RHI.h"
 
-typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename DepthRenderPass::DepthRenderResult DepthRenderPass::Build(const RenderPassBuilder& Builder, const DepthRenderInput& Input, const SceneViewInfo& ViewInfo)
 {
 	Texture2d::Descriptor DepthDescriptor;
 	DepthDescriptor.Name = "DepthRenderTarget";
@@ -9,11 +9,11 @@ typename DepthRenderPass::PassOutputType DepthRenderPass::Build(const RenderPass
 	DepthDescriptor.Height = ViewInfo.SceneHeight;
 	DepthDescriptor.Width = ViewInfo.SceneWidth;
 
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using DepthRenderAction = decltype(std::declval<DepthRenderInput>().Union(std::declval<DepthRenderResult>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::DepthTarget>({ DepthDescriptor }),
-		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const DepthRenderAction&)
 		{
 			Ctx.Draw("DepthRenderAction");
 		})

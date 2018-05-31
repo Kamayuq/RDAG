@@ -4,7 +4,7 @@
 #include "DepthOfField.h"
 
 
-typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input)
+typename ToneMappingPass::ToneMappingResult ToneMappingPass::Build(const RenderPassBuilder& Builder, const ToneMappingInput& Input)
 {
 	const Texture2d::Descriptor& PPfxInfo = Input.GetDescriptor<RDAG::PostProcessingInput>();
 	ExternalTexture2dDescriptor ResultDescriptor;
@@ -14,18 +14,18 @@ typename ToneMappingPass::PassOutputType ToneMappingPass::Build(const RenderPass
 	ResultDescriptor.Height = PPfxInfo.Height;
 	ResultDescriptor.Width = PPfxInfo.Width;
 
-	using PassActionType = decltype(std::declval<PassInputType>().Union(std::declval<PassOutputType>()));
+	using ToneMappingAction = decltype(std::declval<ToneMappingInput>().Union(std::declval<ToneMappingResult>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
-		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const PassActionType&)
+		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const ToneMappingAction&)
 		{
 			Ctx.Draw("ToneMappingAction");
 		})
 	}(Input);
 }
 
-typename PostProcessingPass::PassOutputType PostProcessingPass::Build(const RenderPassBuilder& Builder, const PassInputType& Input, const SceneViewInfo& ViewInfo)
+typename PostProcessingPass::PostProcessingPassResult PostProcessingPass::Build(const RenderPassBuilder& Builder, const PostProcessingPassInput& Input, const SceneViewInfo& ViewInfo)
 {
 	return Seq
 	{
