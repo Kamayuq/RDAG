@@ -119,6 +119,9 @@ struct ResourceRevision
 
 struct RevisionSet
 {
+	ResourceRevision* const Revisions = nullptr;
+	U32 RevisionCount = 0;
+
 	RevisionSet(const RevisionSet&) = default;
 
 	RevisionSet(ResourceRevision* const InRevisions, U32 InRevisionCount)
@@ -127,8 +130,21 @@ struct RevisionSet
 	{
 	}
 
-	ResourceRevision* const Revisions = nullptr;
-	U32 RevisionCount = 0;
+	/* Handles can get undefined when they never have been written to */
+	bool IsUndefined(U32 i = 0) const
+	{
+		check(i < RevisionCount);
+		check(Revisions[i].ImaginaryResource != nullptr);
+		return Revisions[i].Parent == nullptr;
+	}
+
+	void CheckAllValid() const
+	{
+		for (U32 i = 0; i < RevisionCount; i++)
+		{
+			check(Revisions[i].ImaginaryResource != nullptr);
+		}
+	}
 };
 
 template<typename Handle>
@@ -143,40 +159,19 @@ struct RevisionSetInterface
 		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->Descriptor;
 	}
 
-	static U32 GetResourceCount(const RevisionSet& Revisions)
-	{
-		return Revisions.RevisionCount;
-	}
-
 	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
 	static void OnExecute(const RevisionSet& Revisions, struct ImmediateRenderContext& RndCtx)
 	{
 		for (U32 i = 0; i < Revisions.RevisionCount; i++)
 		{
-			if (!IsUndefined(Revisions, i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
+			if (!Revisions.IsUndefined(i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
 			{
 				Handle::OnExecute(RndCtx, GetResource(Revisions, i));
 			}
 		}
 	}
 
-	static void CheckAllValid(const RevisionSet& Revisions)
-	{
-		for (U32 i = 0; i < Revisions.RevisionCount; i++)
-		{
-			check(Revisions.Revisions[i].ImaginaryResource != nullptr);
-		}
-	}
-
 private:
-	/* Handles can get undefined when they never have been written to */
-	static bool IsUndefined(const RevisionSet& Revisions, U32 i = 0)
-	{
-		check(i < Revisions.RevisionCount);
-		check(Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return Revisions.Revisions[i].Parent == nullptr;
-	}
-
 	static const ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
 	{
 		check(i < Revisions.RevisionCount);
@@ -309,12 +304,12 @@ public:
 	template<typename Handle>
 	const U32 GetResourceCount() const
 	{
-		return RevisionSetInterface<Handle>::GetResourceCount(GetRevisionSet<Handle>());
+		return GetRevisionSet<Handle>().RevisionCount;
 	}
 
 	void CheckAllValid() const
 	{
-		(RevisionSetInterface<TS>::CheckAllValid(GetRevisionSet<TS>()), ...);
+		(GetRevisionSet<TS>().CheckAllValid(), ...);
 	}
 
 	const char* GetName() const
