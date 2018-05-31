@@ -176,7 +176,7 @@ class ResourceTable : public IResourceTableBase
 {
 	using ThisType = ResourceTable<TS...>;
 	using HandleTypes = Set::Type<TS...>;
-	using CompatibleType = Set::Type<typename TS::CompatibleType...>;
+	using CompatibleTypes = Set::Type<typename TS::CompatibleType...>;
 	static constexpr size_t StorageSize = sizeof...(TS) > 0 ? sizeof...(TS) : 1;
 
 	const char* Name = nullptr;
@@ -230,8 +230,8 @@ public:
 	template
 	<
 		typename... Handles, 
-		bool ContainsAll = (ResourceTable<Handles...>::template Contains<TS>() && ...),
-		typename = std::enable_if_t<ContainsAll>
+		bool ContainsAllHandles = (ResourceTable<Handles...>::template Contains<TS>() && ...),
+		typename = std::enable_if_t<ContainsAllHandles>
 	>
 	ResourceTable(const ResourceTable<Handles...>& Other)
 		: ResourceTable(Other.GetName(), { Other.template GetRevisionSet<TS>()... })
@@ -256,7 +256,7 @@ public:
 	template<typename Handle>
 	static constexpr bool Contains() 
 	{ 
-		return CompatibleType::template Contains<typename Handle::CompatibleType>();
+		return CompatibleTypes::template Contains<typename Handle::CompatibleType>();
 	}
 	/*                   StaticStuff                     */
 
@@ -265,7 +265,7 @@ public:
 	template<typename OtherResourceTable>
 	constexpr auto Union(const OtherResourceTable& Other) const
 	{
-		using ThisTypeMinusOtherType = decltype(Set::Filter<UnionFilterOp<OtherResourceTable>, ::ResourceTable>(typename ThisType::CompatibleType()));
+		using ThisTypeMinusOtherType = decltype(Set::Filter<UnionFilterOp<OtherResourceTable>, ::ResourceTable>(typename ThisType::CompatibleTypes()));
 		return Meld(Other.GetName(), ThisTypeMinusOtherType(*this), Other);
 	}
 	/*                  SetOperations                    */
@@ -303,9 +303,9 @@ private:
 	template<typename Handle>
 	RevisionSet GetRevisionSet() const
 	{
-		static_assert(CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
+		static_assert(CompatibleTypes::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
 		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
-		constexpr int RevisionIndex = CompatibleType::template GetIndex<typename Handle::CompatibleType>();
+		constexpr int RevisionIndex = CompatibleTypes::template GetIndex<typename Handle::CompatibleType>();
 		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
 	}
 
@@ -315,7 +315,7 @@ private:
 		template<typename Handle>
 		static constexpr bool Filter()
 		{
-			return !OtherResourceTable::CompatibleType::template Contains<typename Handle::CompatibleType>();
+			return !OtherResourceTable::CompatibleTypes::template Contains<typename Handle::CompatibleType>();
 		}
 	};
 
@@ -513,9 +513,9 @@ private:
 	constexpr void LinkInternal(ResourceTable<ZS...>& MergedOutput) const
 	{
 		using MergedTable = ResourceTable<ZS...>;
-		static_assert(MergedTable::CompatibleType::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
+		static_assert(MergedTable::CompatibleTypes::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
 		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
-		constexpr int DestIndex = MergedTable::CompatibleType::template GetIndex<typename Handle::CompatibleType>();
+		constexpr int DestIndex = MergedTable::CompatibleTypes::template GetIndex<typename Handle::CompatibleType>();
 		
 		ResourceRevision* NewRevisions = LinearAlloc<ResourceRevision>(MergedOutput.RevisionCounts[DestIndex]);
 		for (U32 i = 0; i < MergedOutput.RevisionCounts[DestIndex]; i++)
