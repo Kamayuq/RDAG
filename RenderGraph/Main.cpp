@@ -50,35 +50,48 @@ int main(int argc, char* argv[])
 	RenderPassBuilder Builder;
 
 	{
-		using PassInputType = ResourceTable<>;
-		using PassOutputType = ResourceTable<RDAG::SimpleResourceHandle>;
-		auto SimpleRenderPass = [](const RenderPassBuilder& Builder, const PassInputType& Input) -> PassOutputType
+		std::chrono::duration<long long, std::nano> minDuration(std::numeric_limits<long long>::max());
+		for (int i = 0; i < ItterationCount; i++)
 		{
-			Texture2d::Descriptor TargetDescriptor;
-			TargetDescriptor.Name = "RenderTarget";
-			TargetDescriptor.Format = ERenderResourceFormat::ARGB8U;
-			TargetDescriptor.Height = 32;
-			TargetDescriptor.Width = 32;
+			LinearReset();
 
-			return Seq
+			auto start = std::chrono::high_resolution_clock::now();
+
+			using PassInputType = ResourceTable<>;
+			using PassOutputType = ResourceTable<RDAG::SimpleResourceHandle>;
+			auto SimpleRenderPass = [](const RenderPassBuilder& Builder, const PassInputType& Input) -> PassOutputType
 			{
-				Builder.CreateResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
-				Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
-				{
-					Ctx.Draw("SimpleRenderAction");
-				})
-			}(Input);
-		};
+				Texture2d::Descriptor TargetDescriptor;
+				TargetDescriptor.Name = "RenderTarget";
+				TargetDescriptor.Format = ERenderResourceFormat::ARGB8U;
+				TargetDescriptor.Height = 32;
+				TargetDescriptor.Width = 32;
 
-		auto val = Seq
-		{
-			Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
-			Builder.RenameEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
-			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
-			Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::PostProcessingInput>(2, 0),
-			Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
-		}(ResourceTable<>());
-		(void)val;
+				return Seq
+				{
+					Builder.CreateResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
+					Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
+					{
+						Ctx.Draw("SimpleRenderAction");
+					})
+				}(Input);
+			};
+
+			auto val = Seq
+			{
+				Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
+				Builder.RenameEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
+				Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
+				Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::PostProcessingInput>(2, 0),
+				Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
+			}(ResourceTable<>());
+			(void)val;
+
+
+			auto time = std::chrono::high_resolution_clock::now() - start;
+			minDuration = std::min(minDuration, time);
+		}
+		std::cout << "simple build time: " << (std::chrono::duration_cast<std::chrono::microseconds>(minDuration).count()) << "us\n";
 	}
 
 	{

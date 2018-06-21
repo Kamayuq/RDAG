@@ -53,6 +53,10 @@ public:
 	bool IsMaterialized() const { return Resource != nullptr; }
 	bool IsExternalResource() const { return Resource && Resource->IsExternalResource(); }
 
+	virtual const char* GetResourceName() const = 0;
+	virtual U32 GetResourceWidth() const = 0;
+	virtual U32 GetResourceHeight() const = 0;
+
 private:
 	virtual MaterializedResource* MaterializeInternal() const = 0;
 };
@@ -71,6 +75,21 @@ public:
 	
 	const DescriptorType& GetDescriptor() const { return Descriptor; }
 	const ResourceType* GetResource() const { return static_cast<const ResourceType*>(Resource); }
+
+	const char* GetResourceName() const override
+	{
+		return Descriptor.Name;
+	}
+
+	U32 GetResourceWidth() const override
+	{
+		return Descriptor.Width;
+	}
+
+	U32 GetResourceHeight() const override
+	{
+		return Descriptor.Height;
+	}
 
 private:
 	/* use the descriptor to create a resource and trigger OnMaterilize callback */

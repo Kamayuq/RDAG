@@ -89,6 +89,28 @@ public:
 		});
 	}
 
+	template<typename Handle>
+	auto DisableEntry() const
+	{
+		return Seq([](const auto& s)
+		{
+			CheckIsValidResourceTable(s);
+			typedef typename std::decay<decltype(s)>::type StateType;
+			static_assert(StateType::template Contains<Handle>(), "Source was not found in the resource table");
+
+			RevisionSet Revision = s.template GetRevisionSet<Handle>();
+			RevisionSet NewEntry(LinearAlloc<ResourceRevision>(Revision.RevisionCount), Revision.RevisionCount);
+			for (U32 i = 0; i < Revision.RevisionCount; i++)
+			{
+				NewEntry.Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(RevisionSetInterface<Handle>::GetDescriptor(Revision, i));
+				NewEntry.Revisions[i].Parent = nullptr;
+			}
+
+			//remove the old output and copy it into the new destination
+			return ResourceTable<Handle>{ "DisableEntry", { NewEntry } };
+		});
+	}
+
 	/* this function moves a Handle between the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
 	auto RenameEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
