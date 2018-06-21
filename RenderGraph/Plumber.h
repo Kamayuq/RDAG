@@ -4,6 +4,8 @@
 #include "Assert.h"
 #include "LinearAlloc.h"
 
+static const U32 ALL_SUBRESOURCE_INDICIES = ~0u;
+
 /* A ResourceHande is used to implement and specialize your own Resources and callbacks */
 template<typename Compatible>
 struct ResourceHandle
@@ -36,26 +38,101 @@ public:
 /* Transient ResourceBase */
 class TransientResource
 {
-protected:
+private:
 	/* The type can be recovered by the TransientResourceImpl */
 	mutable MaterializedResource* Resource = nullptr;
+	mutable U64* MaterializedSubResources = nullptr;
+	U32 SubResourceCount = 0;
+	U32 BitFieldIntegers = 0;
+	static const U64 BitsPerInt = sizeof(U64) * 8;
+
+protected:
+	TransientResource(U32 InSubResourceCount) : SubResourceCount(InSubResourceCount)
+	{
+		BitFieldIntegers = (SubResourceCount + BitsPerInt - 1) / BitsPerInt;
+		MaterializedSubResources = LinearAlloc<U64>(BitFieldIntegers);
+		memset(MaterializedSubResources, 0, sizeof(U64) * BitFieldIntegers);
+
+		U64 Remainder = (BitFieldIntegers * BitsPerInt) - SubResourceCount;
+		if (Remainder != 0)
+		{
+			U64 FillValue = ~0ull;
+			FillValue <<= BitsPerInt - Remainder;
+			MaterializedSubResources[BitFieldIntegers - 1] = FillValue;
+		}
+	}
 
 public:
 	/* use the descriptor to create a resource and trigger OnMaterilize callback */
-	void Materialize() const
+	void Materialize(U32 SubResourceIndex) const
 	{
 		if (Resource == nullptr)
 		{
 			Resource = MaterializeInternal();
 		}
+
+		if (SubResourceIndex == ALL_SUBRESOURCE_INDICIES)
+		{
+			for (U32 i = 0; i < BitFieldIntegers; i++)
+			{
+				MaterializedSubResources[i] = ~0ull;
+			}
+		}
+		else
+		{
+			check(SubResourceIndex < SubResourceCount);
+			MaterializedSubResources[SubResourceIndex / BitsPerInt] |= 1ull << (SubResourceIndex % BitsPerInt);
+		}
 	}
 
-	bool IsMaterialized() const { return Resource != nullptr; }
-	bool IsExternalResource() const { return Resource && Resource->IsExternalResource(); }
+	bool IsMaterialized(U32 SubResourceIndex) const 
+	{ 
+		if (Resource != nullptr)
+		{
+			if (SubResourceIndex == ALL_SUBRESOURCE_INDICIES)
+			{
+				for (U32 i = 0; i < BitFieldIntegers; i++)
+				{
+					if (MaterializedSubResources[i] != ~0ull)
+					{
+						return false;
+					}
+				}
+				return true;
+			}
+			else
+			{
+				check(SubResourceIndex < SubResourceCount);
+				if ((MaterializedSubResources[SubResourceIndex / BitsPerInt] >> (SubResourceIndex % BitsPerInt)) & 1ull)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	bool IsExternalResource() const 
+	{ 
+		return Resource && Resource->IsExternalResource(); 
+	}
+
+	template<typename Handle>
+	const typename Handle::DescriptorType GetDescriptor(U32 SubResourceIndex) const
+	{
+		return Handle::GetSubResourceDescriptor(static_cast<const TransientResourceImpl<Handle>*>(this)->Descriptor, SubResourceIndex);
+	}
+
+	template<typename Handle>
+	const typename Handle::ResourceType& GetResource() const
+	{
+		return *static_cast<const typename Handle::ResourceType*>(static_cast<const TransientResourceImpl<Handle>*>(this)->Resource);
+	}
 
 	virtual const char* GetResourceName() const = 0;
-	virtual U32 GetResourceWidth() const = 0;
-	virtual U32 GetResourceHeight() const = 0;
+	virtual U32 GetResourceWidth(U32 SubResourceIndex) const = 0;
+	virtual U32 GetResourceHeight(U32 SubResourceIndex) const = 0;
+	virtual U32 GetNumSubResources() const = 0;
 
 private:
 	virtual MaterializedResource* MaterializeInternal() const = 0;
@@ -66,29 +143,35 @@ private:
 template<typename Handle>
 class TransientResourceImpl final : public TransientResource
 {
+	friend class TransientResource;
+
 	typedef typename Handle::ResourceType ResourceType;
 	typedef typename Handle::DescriptorType DescriptorType;
 	DescriptorType Descriptor;
 
 public:
-	TransientResourceImpl(const DescriptorType& InDescriptor) : Descriptor(InDescriptor) {}
-	
-	const DescriptorType& GetDescriptor() const { return Descriptor; }
-	const ResourceType* GetResource() const { return static_cast<const ResourceType*>(Resource); }
+	TransientResourceImpl(const DescriptorType& InDescriptor) 
+		: TransientResource(Handle::GetSubResourceCount(InDescriptor))
+		, Descriptor(InDescriptor) {}
 
 	const char* GetResourceName() const override
 	{
 		return Descriptor.Name;
 	}
 
-	U32 GetResourceWidth() const override
+	U32 GetResourceWidth(U32 SubResourceIndex) const override
 	{
-		return Descriptor.Width;
+		return Handle::GetSubResourceDescriptor(Descriptor, SubResourceIndex).Width;
 	}
 
-	U32 GetResourceHeight() const override
+	U32 GetResourceHeight(U32 SubResourceIndex) const override
 	{
-		return Descriptor.Height;
+		return Handle::GetSubResourceDescriptor(Descriptor, SubResourceIndex).Height;
+	}
+
+	U32 GetNumSubResources() const override
+	{
+		return Handle::GetSubResourceCount(Descriptor);
 	}
 
 private:
@@ -118,67 +201,51 @@ struct ResourceRevision
 		return Parent == Other.Parent;
 	}
 
+	bool IsUndefined() const
+	{
+		return Parent != nullptr;
+	}
+
+	bool IsValid() const
+	{
+		return ImaginaryResource != nullptr;
+	}
+
 	bool operator!=(ResourceRevision Other) const
 	{
 		return!(*this == Other);
 	}
 };
 
-struct RevisionSet
+struct SubResourceRevision
 {
-	ResourceRevision* const Revisions = nullptr;
-	U32 RevisionCount = 0;
-
-	RevisionSet(const RevisionSet&) = default;
-	RevisionSet(ResourceRevision* const InRevisions, U32 InRevisionCount)
-		: Revisions(InRevisions)
-		, RevisionCount(InRevisionCount)
-	{}
-
-	/* Handles can get undefined when they never have been written to */
-	bool IsUndefined(U32 i = 0) const
-	{
-		check(i < RevisionCount);
-		check(Revisions[i].ImaginaryResource != nullptr);
-		return Revisions[i].Parent == nullptr;
-	}
-
-	void CheckAllValid() const
-	{
-		for (U32 i = 0; i < RevisionCount; i++)
-		{
-			check(Revisions[i].ImaginaryResource != nullptr);
-		}
-	}
+	ResourceRevision Revision;
+	U32 SubResourceIndex;
 };
 
 template<typename Handle>
-struct RevisionSetInterface
+struct ResourceRevisionInterface
 {
-	static const typename Handle::DescriptorType& GetDescriptor(const RevisionSet& Revisions, U32 i = 0)
+	static const typename Handle::DescriptorType GetDescriptor(const SubResourceRevision& SubResource)
 	{
-		check(i < Revisions.RevisionCount && Revisions.Revisions[i].ImaginaryResource != nullptr);
-		return static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->GetDescriptor();
+		check(SubResource.Revision.IsValid());
+		return SubResource.Revision.ImaginaryResource->GetDescriptor<Handle>(SubResource.SubResourceIndex);
 	}
 
 	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
-	static void OnExecute(const RevisionSet& Revisions, struct ImmediateRenderContext& RndCtx)
+	static void OnExecute(const SubResourceRevision& SubResource, struct ImmediateRenderContext& RndCtx)
 	{
-		for (U32 i = 0; i < Revisions.RevisionCount; i++)
+		if (SubResource.Revision.IsUndefined() && SubResource.Revision.ImaginaryResource->IsMaterialized(SubResource.SubResourceIndex))
 		{
-			if (!Revisions.IsUndefined(i) && Revisions.Revisions[i].ImaginaryResource->IsMaterialized())
-			{
-				Handle::OnExecute(RndCtx, GetResource(Revisions, i));
-			}
+			Handle::OnExecute(RndCtx, GetResource(SubResource));
 		}
 	}
 
 private:
-	static const typename Handle::ResourceType& GetResource(const RevisionSet& Revisions, U32 i = 0)
+	static const typename Handle::ResourceType& GetResource(const SubResourceRevision& SubResource)
 	{
-		check(i < Revisions.RevisionCount);
-		check(Revisions.Revisions[i].ImaginaryResource != nullptr && Revisions.Revisions[i].ImaginaryResource->IsMaterialized());
-		return *static_cast<const TransientResourceImpl<Handle>*>(Revisions.Revisions[i].ImaginaryResource)->GetResource();
+		check(SubResource.Revision.IsValid() && SubResource.Revision.ImaginaryResource->IsMaterialized(SubResource.SubResourceIndex));
+		return SubResource.Revision.ImaginaryResource->GetResource<Handle>();
 	}
 };
 
@@ -200,8 +267,8 @@ class ResourceTable : public IResourceTableBase
 
 	const char* Name = nullptr;
 	const char* HandleNames[StorageSize];
-	ResourceRevision* HandleRevisions[StorageSize];
-	U32 RevisionCounts[StorageSize];
+	ResourceRevision HandleRevisions[StorageSize];
+	U32 SubResourceIndicies[StorageSize];
 
 public:
 	/*                   MakeFriends                    */
@@ -224,13 +291,13 @@ public:
 		Name = InName;
 	}
 
-	explicit ResourceTable(const char* Name, const RevisionSet (&InRevisions)[sizeof...(TS)])
+	explicit ResourceTable(const char* Name, const SubResourceRevision (&InSubResources)[sizeof...(TS)])
 		: Name(Name)
 		, HandleNames{ TS::Name... }
-		, HandleRevisions{ InRevisions[HandleTypes::template GetIndex<TS>()].Revisions... }
-		, RevisionCounts{ InRevisions[HandleTypes::template GetIndex<TS>()].RevisionCount... }
+		, HandleRevisions{ InSubResources[HandleTypes::template GetIndex<TS>()].Revision... }
+		, SubResourceIndicies{ InSubResources[HandleTypes::template GetIndex<TS>()].SubResourceIndex... }
 	{
-		(void)InRevisions;
+		(void)InSubResources;
 	}
 
 	template
@@ -242,7 +309,7 @@ public:
 		: Name("EmptyTable")
 		, HandleNames{ "DummyHandle" }
 		, HandleRevisions{ nullptr }
-		, RevisionCounts{ 0 }
+		, SubResourceIndicies{ ALL_SUBRESOURCE_INDICIES }
 	{}
 
 	/* assignment constructor from another resourcetable with SINFAE*/
@@ -253,7 +320,7 @@ public:
 		typename = std::enable_if_t<ContainsAllHandles>
 	>
 	ResourceTable(const ResourceTable<Handles...>& Other)
-		: ResourceTable(Other.GetName(), { Other.template GetRevisionSet<TS>()... })
+		: ResourceTable(Other.GetName(), { Other.template GetSubResource<TS>()... })
 	{ 
 		(void)Other; 
 	}
@@ -291,20 +358,20 @@ public:
 
 	/*                ElementOperations                  */
 	template<typename Handle>
-	const typename Handle::DescriptorType& GetDescriptor(U32 i = 0) const
+	const typename Handle::DescriptorType GetDescriptor() const
 	{
-		return RevisionSetInterface<Handle>::GetDescriptor(GetRevisionSet<Handle>(), i);
+		return ResourceRevisionInterface<Handle>::GetDescriptor(GetSubResource<Handle>());
 	}
 
 	template<typename Handle>
 	const U32 GetResourceCount() const
 	{
-		return GetRevisionSet<Handle>().RevisionCount;
+		return GetSubResource<Handle>().RevisionCount;
 	}
 
 	void CheckAllValid() const
 	{
-		(GetRevisionSet<TS>().CheckAllValid(), ...);
+		(GetSubResource<TS>().Revision.IsValid(), ...);
 	}
 
 	const char* GetName() const
@@ -316,16 +383,16 @@ private:
 	/* forward OnExecute callback for all the handles the Table contains */
 	void OnExecute(struct ImmediateRenderContext& Ctx) const
 	{
-		(RevisionSetInterface<TS>::OnExecute(GetRevisionSet<TS>(), Ctx), ...);
+		(ResourceRevisionInterface<TS>::OnExecute(GetSubResource<TS>(), Ctx), ...);
 	}
 
 	template<typename Handle>
-	RevisionSet GetRevisionSet() const
+	SubResourceRevision GetSubResource() const
 	{
 		static_assert(CompatibleTypes::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
 		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
 		constexpr int RevisionIndex = CompatibleTypes::template GetIndex<typename Handle::CompatibleType>();
-		return { HandleRevisions[RevisionIndex], RevisionCounts[RevisionIndex] };
+		return { HandleRevisions[RevisionIndex], SubResourceIndicies[RevisionIndex] };
 	}
 
 	template<typename OtherResourceTable>
@@ -342,7 +409,7 @@ private:
 	static constexpr ResourceTable<XS..., YS...> Meld(const char* Name, const ResourceTable<XS...>& A, const ResourceTable<YS...>& B)
 	{	
 		(void)A; (void)B;
-		return ResourceTable<XS..., YS...>{ Name, { A.template GetRevisionSet<XS>()..., B.template GetRevisionSet<YS>()... }};
+		return ResourceTable<XS..., YS...>{ Name, { A.template GetSubResource<XS>()..., B.template GetSubResource<YS>()... }};
 	}
 };
 
@@ -350,7 +417,7 @@ private:
 class ResourceTableEntry
 {
 	//Graph connectivity information 
-	ResourceRevision Revision;
+	SubResourceRevision SubResource;
 	//the current owner
 	const class IResourceTableInfo* Owner = nullptr;
 	//the name as given by the constexpr value of the Handle
@@ -359,18 +426,23 @@ class ResourceTableEntry
 public:
 	ResourceTableEntry() = default;
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
-	ResourceTableEntry(const ResourceRevision& InRevision, const class IResourceTableInfo* InOwner, const char* HandleName)
-		: Revision(InRevision), Owner(InOwner), Name(HandleName)
+	ResourceTableEntry(const SubResourceRevision& InSubResource, const class IResourceTableInfo* InOwner, const char* HandleName)
+		: SubResource(InSubResource), Owner(InOwner), Name(HandleName)
 	{}
 
 	const TransientResource* GetImaginaryResource() const
 	{
-		return Revision.ImaginaryResource;
+		return SubResource.Revision.ImaginaryResource;
+	}
+
+	U32 GetSubResourceIndex() const
+	{
+		return SubResource.SubResourceIndex;
 	}
 
 	const class IResourceTableInfo* GetParent() const
 	{
-		return Revision.Parent;
+		return SubResource.Revision.Parent;
 	}
 
 	const class IResourceTableInfo* GetOwner() const
@@ -380,19 +452,19 @@ public:
 
 	bool IsUndefined() const
 	{
-		return Revision.ImaginaryResource == nullptr || Revision.Parent == nullptr;
+		return SubResource.Revision.ImaginaryResource == nullptr || SubResource.Revision.Parent == nullptr;
 	}
 
 	bool IsMaterialized() const
 	{
-		return Revision.ImaginaryResource && Revision.ImaginaryResource->IsMaterialized();
+		return SubResource.Revision.ImaginaryResource && SubResource.Revision.ImaginaryResource->IsMaterialized(SubResource.SubResourceIndex);
 	}
 
 	/* Materialization from for-each loops starts here */
 	void Materialize() const
 	{
-		check(Revision.ImaginaryResource != nullptr);
-		Revision.ImaginaryResource->Materialize();
+		check(SubResource.Revision.IsValid());
+		SubResource.Revision.ImaginaryResource->Materialize(SubResource.SubResourceIndex);
 	}
 
 	const char* GetName() const
@@ -402,20 +474,20 @@ public:
 
 	UintPtr ParentHash() const
 	{
-		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
-			+ ((reinterpret_cast<UintPtr>(Revision.Parent) >> 3) * 1610612741));
+		return (((reinterpret_cast<UintPtr>(SubResource.Revision.ImaginaryResource) >> 3) * 805306457)
+			+ ((reinterpret_cast<UintPtr>(SubResource.Revision.Parent) >> 3) * 1610612741));
 	}
 
 	UintPtr Hash() const
 	{
-		return (((reinterpret_cast<UintPtr>(Revision.ImaginaryResource) >> 3) * 805306457)
+		return (((reinterpret_cast<UintPtr>(SubResource.Revision.ImaginaryResource) >> 3) * 805306457)
 			+ ((reinterpret_cast<UintPtr>(Owner) >> 3) * 1610612741));
 	}
 
 	/* External resourcers are not managed by the graph and the user has to provide an implementation to retrieve the resource */
 	bool IsExternal() const
 	{
-		return IsMaterialized() && Revision.ImaginaryResource->IsExternalResource();
+		return IsMaterialized() && SubResource.Revision.ImaginaryResource->IsExternalResource();
 	}
 };
 
@@ -434,22 +506,20 @@ public:
 	{
 		const IResourceTableInfo* ResourceTable = nullptr;
 		const char* const* HandleNames = nullptr;
-		ResourceRevision* const* HandleRevisions = nullptr;
-		const U32* RevisionCounts = nullptr;
+		const ResourceRevision* HandleRevisions = nullptr;
+		const U32* SubResourceIndicies = nullptr;
 		size_t NumHandles = 0;
 		U32 CurrentHandleIndex = 0;
-		U32 CurrentRevisionIndex = 0;
 
 		bool Equals(const Iterator& Other) const
 		{
 			return ResourceTable == Other.ResourceTable
-				&& CurrentHandleIndex == Other.CurrentHandleIndex
-				&& CurrentRevisionIndex == Other.CurrentRevisionIndex;
+				&& CurrentHandleIndex == Other.CurrentHandleIndex;
 		}
 
 	public:
-		Iterator(const IResourceTableInfo* InResourceTable, const char* const* InHandleNames, ResourceRevision* const* InHandleRevisions, const U32* InRevisionCounts, size_t InNumHandles, bool SetToEnd)
-			: ResourceTable(InResourceTable), HandleNames(InHandleNames), HandleRevisions(InHandleRevisions), RevisionCounts(InRevisionCounts), NumHandles(InNumHandles)
+		Iterator(const IResourceTableInfo* InResourceTable, const char* const* InHandleNames, const ResourceRevision* InHandleRevisions, const U32* InSubResourceIndicies, size_t InNumHandles, bool SetToEnd)
+			: ResourceTable(InResourceTable), HandleNames(InHandleNames), HandleRevisions(InHandleRevisions), SubResourceIndicies(InSubResourceIndicies), NumHandles(InNumHandles)
 		{
 			if (SetToEnd)
 			{
@@ -459,12 +529,7 @@ public:
 
 		Iterator& operator++()
 		{
-			CurrentRevisionIndex++;
-			if (CurrentRevisionIndex >= RevisionCounts[CurrentHandleIndex])
-			{
-				CurrentRevisionIndex = 0;
-				CurrentHandleIndex++;
-			}
+			CurrentHandleIndex++;
 			return *this;
 		}
 
@@ -473,7 +538,7 @@ public:
 
 		ResourceTableEntry operator*() const
 		{
-			return ResourceTableEntry(HandleRevisions[CurrentHandleIndex][CurrentRevisionIndex], ResourceTable, HandleNames[CurrentHandleIndex]);
+			return ResourceTableEntry({ HandleRevisions[CurrentHandleIndex],  SubResourceIndicies[CurrentHandleIndex] }, ResourceTable, HandleNames[CurrentHandleIndex]);
 		}
 	};
 
@@ -509,12 +574,12 @@ private:
 
 	Iterator begin() const override
 	{
-		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), false };
+		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->SubResourceIndicies[0], this->Size(), false };
 	}
 
 	Iterator end() const override
 	{
-		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->RevisionCounts[0], this->Size(), true };
+		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->SubResourceIndicies[0], this->Size(), true };
 	}
 
 	/* First the tables are merged and than the results are linked to track the history */
@@ -536,15 +601,9 @@ private:
 		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
 		constexpr int DestIndex = MergedTable::CompatibleTypes::template GetIndex<typename Handle::CompatibleType>();
 		
-		ResourceRevision* NewRevisions = LinearAlloc<ResourceRevision>(MergedOutput.RevisionCounts[DestIndex]);
-		for (U32 i = 0; i < MergedOutput.RevisionCounts[DestIndex]; i++)
-		{
-			//check that the set has not been tampered with between pass creation and linkage
-			check(MergedOutput.HandleRevisions[DestIndex][i].ImaginaryResource == this->template GetRevisionSet<Handle>().Revisions[i].ImaginaryResource);
-			NewRevisions[i].ImaginaryResource = MergedOutput.HandleRevisions[DestIndex][i].ImaginaryResource;
-			//point to the new parent
-			NewRevisions[i].Parent = this;
-		}
-		MergedOutput.HandleRevisions[DestIndex] = NewRevisions;
+		//check that the set has not been tampered with between pass creation and linkage
+		check(MergedOutput.HandleRevisions[DestIndex].ImaginaryResource == this->template GetSubResource<Handle>().Revision.ImaginaryResource);
+		//point to the new parent
+		MergedOutput.HandleRevisions[DestIndex].Parent = this;
 	}
 };	

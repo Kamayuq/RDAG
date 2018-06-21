@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 	//ViewInfo.TransparencyEnabled = false;
 	//ViewInfo.TransparencySeperateEnabled = false;
 	//ViewInfo.TemporalAaEnabled = false;
-	//ViewInfo.DepthOfFieldEnabled = false;
+	ViewInfo.DepthOfFieldEnabled = false;
 
 	//ViewInfo.DofSettings.EnabledForegroundLayer = false;
 	//ViewInfo.DofSettings.EnabledBackgroundLayer = false;
@@ -66,6 +66,7 @@ int main(int argc, char* argv[])
 				TargetDescriptor.Format = ERenderResourceFormat::ARGB8U;
 				TargetDescriptor.Height = 32;
 				TargetDescriptor.Width = 32;
+				TargetDescriptor.ComputeFullMipChain();
 
 				return Seq
 				{
@@ -80,9 +81,9 @@ int main(int argc, char* argv[])
 			auto val = Seq
 			{
 				Builder.BuildRenderPass("SimpleRenderPass", SimpleRenderPass),
-				Builder.RenameEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
+				Builder.AssignEntry<RDAG::SimpleResourceHandle, RDAG::DownsampleInput>(),
 				Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
-				Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::PostProcessingInput>(2, 0),
+				Builder.AssignEntry<RDAG::DownsamplePyramid, RDAG::PostProcessingInput>(2),
 				Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)
 			}(ResourceTable<>());
 			(void)val;

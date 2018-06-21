@@ -113,14 +113,13 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, const SceneViewInfo
 	{
 		CheckIsValidResourceTable(s);
 
-		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc[ResourceCount];
-		for (U32 i = 0; i < ResourceCount; i++)
-		{
-			ConvolutionOutputDesc[i].Name = ConvolutionGatherType::Name;
-			ConvolutionOutputDesc[i].Format = ERenderResourceFormat::ARGB16F;
-			ConvolutionOutputDesc[i].Height = ViewInfo.SceneHeight;
-			ConvolutionOutputDesc[i].Width = ViewInfo.SceneWidth;
-		}
+		typename ConvolutionGatherType::DescriptorType ConvolutionOutputDesc;
+		ConvolutionOutputDesc.Name = ConvolutionGatherType::Name;
+		ConvolutionOutputDesc.Format = ERenderResourceFormat::ARGB16F;
+		ConvolutionOutputDesc.Height = ViewInfo.SceneHeight;
+		ConvolutionOutputDesc.Width = ViewInfo.SceneWidth;
+		ConvolutionOutputDesc.TexSlices = ResourceCount;
+
 		auto ConvolutionOutputTable = Builder.CreateResource<ConvolutionGatherType>(ConvolutionOutputDesc)(s);
 
 		if (Enabled)
@@ -130,12 +129,12 @@ auto ConvolutionGatherPass(const RenderPassBuilder& Builder, const SceneViewInfo
 				using GatherPassData = ResourceTable<RDAG::ConvolutionUav, RDAG::GatheringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
 				ConvolutionOutputTable = Seq
 				{
-					Builder.RenameEntry<ConvolutionGatherType, RDAG::ConvolutionUav>(i, 0),
+					Builder.AssignEntry<ConvolutionGatherType, RDAG::ConvolutionUav>(i),
 					Builder.QueueRenderAction("GatherPassDataAction", [](RenderContext& Ctx, const GatherPassData&)
 					{
 						Ctx.Draw("GatherPassDataAction");
 					}),
-					Builder.RenameEntry<RDAG::ConvolutionUav, ConvolutionGatherType>(0, i)
+					Builder.AssignEntry<RDAG::ConvolutionUav, ConvolutionGatherType>()
 				}(ConvolutionOutputTable);
 			}
 		}
@@ -231,9 +230,9 @@ typename DepthOfFieldPass::DepthOfFieldResult DepthOfFieldPass::Build(const Rend
 			}),
 			Scope(Seq
 			{
-				Builder.RenameEntry<RDAG::GatherColorTexture, RDAG::TemporalAAInput>(),
+				Builder.AssignEntry<RDAG::GatherColorTexture, RDAG::TemporalAAInput>(),
 				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build, ViewInfo),
-				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::GatherColorTexture>()
+				Builder.AssignEntry<RDAG::TemporalAAOutput, RDAG::GatherColorTexture>()
 			}),
 			Select<RDAG::GatherColorTexture>(
 			Extract<RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture>(Seq
@@ -259,7 +258,7 @@ typename DepthOfFieldPass::DepthOfFieldResult DepthOfFieldPass::Build(const Rend
 				SlightlyOutOfFocusPass(Builder, ViewInfo)
 			})),
 			BuildBokehLut<RDAG::ScatteringBokehLUTUav>(Builder, ViewInfo),
-			Builder.CreateResource<RDAG::DepthOfFieldUav>({ DofResultDesc }), //recreation is equal to fully overwrite re-setting transition state
+			Builder.CreateResource<RDAG::DepthOfFieldUav>( DofResultDesc ), //recreation is equal to fully overwrite re-setting transition state
 			Builder.QueueRenderAction("RecombineAction", [](RenderContext& Ctx, const RecombineData&)
 			{
 				Ctx.Draw("RecombineAction");

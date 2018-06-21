@@ -27,9 +27,9 @@ typename DeferredRendererPass::DeferredRendererOutput DeferredRendererPass::Buil
 		{
 			Scope(Seq
 			{
-				Builder.RenameEntry<RDAG::SceneColorTexture, RDAG::TemporalAAInput>(),
+				Builder.AssignEntry<RDAG::SceneColorTexture, RDAG::TemporalAAInput>(),
 				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build, ViewInfo),
-				Builder.RenameEntry<RDAG::TemporalAAOutput, RDAG::SceneColorTexture>()
+				Builder.AssignEntry<RDAG::TemporalAAOutput, RDAG::SceneColorTexture>()
 			}),
 			Builder.BuildRenderPass("PostProcessingPass", PostProcessingPass::Build, ViewInfo)
 		})

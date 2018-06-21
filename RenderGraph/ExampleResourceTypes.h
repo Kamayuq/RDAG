@@ -11,6 +11,21 @@ struct Texture2d : MaterializedResource
 		const char* Name = "Noname";
 		U32 Width = 0;
 		U32 Height = 0;
+		U32 MipLevel = 1;
+		U32 TexSlices = 1;
+
+		void ComputeFullMipChain()
+		{
+			U32 MaxMipLevel = 1;
+			U32 LocalWidth = Width;
+			U32 LocalHeight = Height;
+			while ((LocalWidth >>= 1) || (LocalHeight >>= 1))
+			{
+				MaxMipLevel++;
+			}
+			MipLevel = MaxMipLevel;
+		}
+
 		ERenderResourceFormat::Type Format = ERenderResourceFormat::Invalid;
 
 		bool operator==(const Descriptor& Other) const
@@ -80,6 +95,29 @@ struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
 		Ctx.BindTexture(Resource);
+	}
+
+	static DescriptorType GetSubResourceDescriptor(const DescriptorType& ResourceDescriptor, U32 SubResourceIndex)
+	{
+		if (SubResourceIndex == ALL_SUBRESOURCE_INDICIES)
+		{
+			return ResourceDescriptor;
+		}
+		else
+		{
+			check(SubResourceIndex < GetSubResourceCount(ResourceDescriptor));
+			DescriptorType ReturnValue = ResourceDescriptor;
+			ReturnValue.Width >>= (SubResourceIndex % ResourceDescriptor.MipLevel);
+			ReturnValue.Height >>= (SubResourceIndex % ResourceDescriptor.MipLevel);
+			ReturnValue.MipLevel = 1;
+			ReturnValue.TexSlices = 1;
+			return ReturnValue;
+		}
+	}
+
+	static U32 GetSubResourceCount(const DescriptorType& ResourceDescriptor)
+	{
+		return ResourceDescriptor.MipLevel * ResourceDescriptor.TexSlices;
 	}
 
 	template<typename OTHER>
@@ -156,7 +194,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CompatibleType>::template OnCreate<Handle>(InDescriptor);
 		if (InDescriptor.Index >= 0)
 		{
-			Ret->Materialize();
+			Ret->Materialize(ALL_SUBRESOURCE_INDICIES);
 		}
 		return Ret;
 	}

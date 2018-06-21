@@ -9,18 +9,16 @@ static constexpr U32 NumGbuffers = 4;
 
 typename GbufferRenderPass::GbufferRenderResult GbufferRenderPass::Build(const RenderPassBuilder& Builder, const GbufferRenderInput& Input)
 {
-	Texture2d::Descriptor GbufferDescriptors[NumGbuffers];
-	for (U32 i = 0; i < NumGbuffers; i++)
-	{
-		GbufferDescriptors[i] = Input.GetDescriptor<RDAG::DepthTarget>();
-		GbufferDescriptors[i].Name = "GbufferTarget";
-		GbufferDescriptors[i].Format = ERenderResourceFormat::ARGB16F;
-	}
+	Texture2d::Descriptor GbufferDescriptor;
+	GbufferDescriptor = Input.GetDescriptor<RDAG::DepthTarget>();
+	GbufferDescriptor.Name = "GbufferTarget";
+	GbufferDescriptor.Format = ERenderResourceFormat::ARGB16F;
+	GbufferDescriptor.TexSlices = NumGbuffers;
 
 	using GbufferRenderAction = ResourceTable<RDAG::GbufferTarget, RDAG::DepthTarget>;
 	return Seq
 	{
-		Builder.CreateResource<RDAG::GbufferTarget>(GbufferDescriptors),
+		Builder.CreateResource<RDAG::GbufferTarget>(GbufferDescriptor),
 		Builder.QueueRenderAction("GbufferRenderAction", [](RenderContext& Ctx, const GbufferRenderAction&)
 		{
 			Ctx.Draw("GbufferRenderAction");

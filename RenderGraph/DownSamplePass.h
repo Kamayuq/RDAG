@@ -14,7 +14,7 @@ namespace RDAG
 
 struct DownsampleRenderPass
 {
-	using DownsampleRenderInput = ResourceTable<RDAG::DownsampleInput>;
+	using DownsampleRenderInput = ResourceTable<RDAG::DownsampleInput, RDAG::DownsampleResult>;
 	using DownsampleRenderResult = ResourceTable<RDAG::DownsampleResult>;
 
 	static DownsampleRenderResult Build(const RenderPassBuilder& Builder, const DownsampleRenderInput& Input);

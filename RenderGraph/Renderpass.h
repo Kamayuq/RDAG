@@ -98,101 +98,31 @@ public:
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<Handle>(), "Source was not found in the resource table");
 
-			RevisionSet Revision = s.template GetRevisionSet<Handle>();
-			RevisionSet NewEntry(LinearAlloc<ResourceRevision>(Revision.RevisionCount), Revision.RevisionCount);
-			for (U32 i = 0; i < Revision.RevisionCount; i++)
-			{
-				NewEntry.Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(RevisionSetInterface<Handle>::GetDescriptor(Revision, i));
-				NewEntry.Revisions[i].Parent = nullptr;
-			}
+			SubResourceRevision SubResource = s.template GetSubResource<Handle>();
+			SubResource.Revision.Parent = nullptr;
 
 			//remove the old output and copy it into the new destination
-			return ResourceTable<Handle>{ "DisableEntry", { NewEntry } };
+			return ResourceTable<Handle>{ "DisableEntry", { SubResource } };
 		});
 	}
 
 	/* this function moves a Handle between the OutputList the destination is overwitten and the Source stays */
 	template<typename From, typename To>
-	auto RenameEntry(U32 FromIndex = 0, U32 ToIndex = 0) const
+	auto AssignEntry(U32 DestinationSubResourceIndex = ALL_SUBRESOURCE_INDICIES) const
 	{
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
-		return Seq([FromIndex, ToIndex](const auto& s)
-		{
-			CheckIsValidResourceTable(s);
-			typedef typename std::decay<decltype(s)>::type StateType;
-			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
-
-			RevisionSet FromEntry = s.template GetRevisionSet<From>();
-			U32 ResourceCount = (ToIndex + 1);
-
-			if constexpr (s.template Contains<To>())
-			{
-				RevisionSet Destination = s.template GetRevisionSet<To>();
-				ResourceCount = ResourceCount > Destination.RevisionCount ? ResourceCount : Destination.RevisionCount;
-			}
-
-			//make a new destination
-			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
-			RevisionSet ToEntry(LinearAlloc<ResourceRevision>(ResourceCount), ResourceCount);
-
-			if constexpr (s.template Contains<To>()) // destination already in the table
-			{
-				RevisionSet Destination = s.template GetRevisionSet<To>();
-
-				//copy over the previous entries
-				for (U32 i = 0; i < ResourceCount; i++)
-				{
-					if (i < Destination.RevisionCount)
-					{
-						ToEntry.Revisions[i] = Destination.Revisions[i];
-					}
-					else if (i != ToIndex)
-					{
-						//create undefined dummy resources with the same descriptor
-						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(RevisionSetInterface<From>::GetDescriptor(FromEntry, FromIndex));
-						ToEntry.Revisions[i].Parent = nullptr;
-						check(ToEntry.Revisions[i].ImaginaryResource);
-					}
-				}
-			}
-			else // destination not in the table and need to be created
-			{
-				for (U32 i = 0; i < ResourceCount; i++)
-				{
-					if (i != ToIndex)
-					{
-						//create undefined dummy resources with the same descriptor
-						ToEntry.Revisions[i].ImaginaryResource = To::template OnCreate<To>(RevisionSetInterface<From>::GetDescriptor(FromEntry, FromIndex));
-						ToEntry.Revisions[i].Parent = nullptr;
-						check(ToEntry.Revisions[i].ImaginaryResource);
-					}
-				}
-			}
-
-			check(FromIndex < FromEntry.RevisionCount);
-			check(ToIndex < ResourceCount);
-			ToEntry.Revisions[ToIndex] = FromEntry.Revisions[FromIndex];
-
-			//remove the old output and copy it into the new destination
-			return ResourceTable<To>{ "RenameEntry", { ToEntry } };
-		});
-	}
-
-	/* this function moves all Handles from the InputList into the OutputList the destination is overwitten and the Source stays */
-	template<typename From, typename To>
-	auto RenameAllEntries() const
-	{
-		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
-		return Seq([](const auto& s) 
+		return Seq([DestinationSubResourceIndex](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
 			typedef typename std::decay<decltype(s)>::type StateType;
 			static_assert(StateType::template Contains<From>(), "Source was not found in the resource table");
 
 			//make a new destination 
-			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");			
+			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
 			//remove the old output and copy it into the new destination
-			return ResourceTable<To>{ "RenameAllEntries", { s.template GetRevisionSet<From>() } };
+			SubResourceRevision SubResource = s.template GetSubResource<From>();
+			SubResource.SubResourceIndex = DestinationSubResourceIndex;
+			return ResourceTable<To>{ "RenameAllEntries", { SubResource } };
 		});
 	}
 
@@ -207,45 +137,14 @@ public:
 		ActionList.clear();
 	}
 
-	template<typename Handle>
-	auto CreateResource() const
-	{
-		return CreateResourceInternal<Handle>(nullptr, 0);
-	}
-
 	/* this function adds a new resource to the resourcetable all descriptors have to be provided */ 
-	template<typename Handle, unsigned ResourceCount>
-	auto CreateResource(const typename Handle::DescriptorType(&InDescriptors)[ResourceCount]) const
-	{
-		return CreateResourceInternal<Handle>(&InDescriptors[0], ResourceCount);
-	}
-
-	template
-	<
-		typename Handle, typename VectorType,
-		typename = std::void_t //use SFINAE to check for supported interface of VectorType
-		<
-			decltype(std::declval<VectorType>().data()), //requires member function data()
-			decltype(std::declval<VectorType>().size())  //requires member function size()
-		>
-	>
-	auto CreateResource(const VectorType& InDescriptors) const
-	{
-		return CreateResourceInternal<Handle>(InDescriptors.data(), (U32)InDescriptors.size());
-	}
-
-private:
-	/* this function adds a new resource to the resourcetable all descriptors have to be provided */
 	template<typename Handle>
-	auto CreateResourceInternal(const typename Handle::DescriptorType* InDescriptors, U32 ResourceCount) const
+	auto CreateResource(const typename Handle::DescriptorType& Descriptor) const
 	{
-		RevisionSet WrappedResource(LinearAlloc<ResourceRevision>(ResourceCount), ResourceCount);
-		for (U32 i = 0; i < ResourceCount; i++)
-		{
-			WrappedResource.Revisions[i].ImaginaryResource = Handle::template OnCreate<Handle>(InDescriptors[i]);
-			WrappedResource.Revisions[i].Parent = nullptr;
-			check(WrappedResource.Revisions[i].ImaginaryResource);
-		}
+		SubResourceRevision WrappedResource;	
+		WrappedResource.Revision.ImaginaryResource = Handle::template OnCreate<Handle>(Descriptor);
+		WrappedResource.Revision.Parent = nullptr;
+		WrappedResource.SubResourceIndex = ALL_SUBRESOURCE_INDICIES;
 
 		return Seq([WrappedResource](const auto& s)
 		{
@@ -254,6 +153,7 @@ private:
 		});
 	}
 
+private:
 	struct IsMutableOp
 	{
 		template<typename T>

@@ -31,9 +31,9 @@ typename PostProcessingPass::PostProcessingPassResult PostProcessingPass::Build(
 	{
 		Scope(Seq
 		{
-			Builder.RenameEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
+			Builder.AssignEntry<RDAG::PostProcessingInput, RDAG::DownsampleInput>(),
 			Builder.BuildRenderPass("PyramidDownSampleRenderPass", PyramidDownSampleRenderPass::Build),
-			Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::SceneColorTexture>(4, 0),
+			Builder.AssignEntry<RDAG::DownsamplePyramid, RDAG::SceneColorTexture>(4),
 			Builder.BuildRenderPass("DepthOfFieldRenderPass", DepthOfFieldPass::Build, ViewInfo)
 		}),
 		Builder.BuildRenderPass("ToneMappingPass", ToneMappingPass::Build)

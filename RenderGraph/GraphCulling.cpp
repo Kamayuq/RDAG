@@ -1,63 +1,68 @@
 #include "GraphCulling.h"
 #include "Plumber.h"
 #include "Renderpass.h"
+#include <unordered_map>
 
 void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions, U32 ParentColor)
 {
 	const IResourceTableInfo& Pass = Action->GetRenderPassData();
 
 	U32 NumValidMutables = 0;
-	for (const ResourceTableEntry& Output : Pass)
+	if (ParentColor != UINT32_MAX)
 	{
-		if (Output.IsMaterialized())
+		for (const ResourceTableEntry& Output : Pass)
 		{
-			NumValidMutables++;
-			if (const IRenderPassAction* Parent = Output.GetParent() ? Output.GetParent()->GetAction() : nullptr)
+			if (Output.IsMaterialized())
 			{
-				auto Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
-				if (Iter != InAllActions.end() && *Iter != Action)
+				NumValidMutables++;
+				if (const IRenderPassAction* Parent = Output.GetParent() ? Output.GetParent()->GetAction() : nullptr)
 				{
-					ColorGraphNodesInternal(*Iter, InAllActions, GetNewColor(ParentColor));
-					Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
-					if (Iter != InAllActions.end())
+					auto Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
+					if (Iter != InAllActions.end() && *Iter != Action)
 					{
-						InAllActions.erase(Iter);
+						ColorGraphNodesInternal(*Iter, InAllActions, GetNewColor(ParentColor));
+						Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
+						if (Iter != InAllActions.end())
+						{
+							InAllActions.erase(Iter);
+						}
 					}
 				}
 			}
 		}
 	}
 
-	if (NumValidMutables)
+	if (Action != nullptr)
 	{
-		//Statics only need to be processed for Leafs
-		if (Action != nullptr)
+		for (const ResourceTableEntry& Input : Pass)
 		{
-			for (const ResourceTableEntry& Input : Pass)
+			if (!Input.IsUndefined())
 			{
-				if (!Input.IsUndefined())
+				if (const IRenderPassAction* Parent = Input.GetParent() ? Input.GetParent()->GetAction() : nullptr)
 				{
-					if (const IRenderPassAction* Parent = Input.GetParent() ? Input.GetParent()->GetAction() : nullptr)
+					if (NumValidMutables)
 					{
+						//Statics only need to be processed for Leafs
 						Input.Materialize();
-						auto Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
-						if (Iter != InAllActions.end() && *Iter != Action)
+					}
+
+					auto Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
+					if (Iter != InAllActions.end() && *Iter != Action)
+					{
+						ColorGraphNodesInternal(*Iter, InAllActions, NumValidMutables ? GetNewColor(ParentColor) : UINT32_MAX);
+						Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
+						if (Iter != InAllActions.end())
 						{
-							ColorGraphNodesInternal(*Iter, InAllActions, GetNewColor(ParentColor));
-							Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
-							if (Iter != InAllActions.end())
-							{
-								InAllActions.erase(Iter);
-							}
+							InAllActions.erase(Iter);
 						}
 					}
 				}
 			}
+		}
 
-			if (Action->GetColor() == UINT32_MAX || Action->GetColor() < ParentColor)
-			{
-				Action->SetColor(ParentColor);
-			}
+		if ((Action->GetColor() == UINT32_MAX || Action->GetColor() < ParentColor) && ParentColor != UINT32_MAX)
+		{
+			Action->SetColor(ParentColor);
 		}
 	}
 }

@@ -21,12 +21,13 @@ namespace EBlendMode
 namespace RDAG
 {
 	SIMPLE_UAV_HANDLE(BlendDest, BlendDest);
-	SIMPLE_TEX_HANDLE(BlendSource);
+	SIMPLE_TEX_HANDLE(BlendSourceA);
+	SIMPLE_TEX_HANDLE(BlendSourceB);
 }
 
 struct SimpleBlendPass
 {
-	using SimpleBlendInput = ResourceTable<RDAG::BlendSource>;
+	using SimpleBlendInput = ResourceTable<RDAG::BlendSourceA, RDAG::BlendSourceB>;
 	using SimpleBlendResult = ResourceTable<RDAG::BlendDest>;
 
 	static SimpleBlendResult Build(const RenderPassBuilder& Builder, const SimpleBlendInput& Input, EBlendMode::Type BlendMode);

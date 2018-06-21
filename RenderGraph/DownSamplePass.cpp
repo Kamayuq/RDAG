@@ -1,19 +1,18 @@
 #include "DownSamplePass.h"
+#include "CopyTexturePass.h"
 
 
 typename DownsampleRenderPass::DownsampleRenderResult DownsampleRenderPass::Build(const RenderPassBuilder& Builder, const DownsampleRenderInput& Input)
 {
-	const Texture2d::Descriptor& DownSampleInfo = Input.GetDescriptor<RDAG::DownsampleInput>();
-	Texture2d::Descriptor DownsampleDescriptor;
-	DownsampleDescriptor.Name = "DownsampleRenderTarget";
-	DownsampleDescriptor.Format = DownSampleInfo.Format;
-	DownsampleDescriptor.Height = DownSampleInfo.Height >> 1;
-	DownsampleDescriptor.Width = DownSampleInfo.Width >> 1;
+	const Texture2d::Descriptor& DownSampleInInfo = Input.GetDescriptor<RDAG::DownsampleInput>();
+	const Texture2d::Descriptor& DownSampleOutInfo = Input.GetDescriptor<RDAG::DownsampleResult>();
+	check(DownSampleInInfo.Height >> 1 == DownSampleOutInfo.Height);
+	check(DownSampleInInfo.Width >> 1 == DownSampleOutInfo.Width);
+	check(DownSampleInInfo.Format == DownSampleOutInfo.Format);
 
 	using DownsampleRenderAction = decltype(std::declval<DownsampleRenderInput>().Union(std::declval<DownsampleRenderResult>()));
 	return Seq
 	{
-		Builder.CreateResource<RDAG::DownsampleResult>({ DownsampleDescriptor }),
 		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContext& Ctx, const DownsampleRenderAction&)
 		{
 			Ctx.Draw("DownsampleRenderAction");
@@ -43,19 +42,30 @@ typename DownsampleDepthRenderPass::DownsampleDepthResult DownsampleDepthRenderP
 
 typename PyramidDownSampleRenderPass::PyramidDownSampleRenderResult PyramidDownSampleRenderPass::Build(const RenderPassBuilder& Builder, const PyramidDownSampleRenderInput& Input)
 {
-	PyramidDownSampleRenderResult Output = Builder.RenameEntry<RDAG::DownsampleInput, RDAG::DownsamplePyramid>(0, 0)(Input);
+	Texture2d::Descriptor PyramidDescriptor = Input.GetDescriptor<RDAG::DownsampleInput>();
+	PyramidDescriptor.Name = "PyramidTexture";
+	PyramidDescriptor.ComputeFullMipChain();
+
+	PyramidDownSampleRenderResult Output = Seq
+	{
+		Builder.CreateResource<RDAG::DownsamplePyramid>(PyramidDescriptor),
+		Builder.AssignEntry<RDAG::DownsamplePyramid, RDAG::CopyDestination>(0),
+		Builder.AssignEntry<RDAG::DownsampleInput, RDAG::CopySource>(),
+		Builder.BuildRenderPass("CopyInitialPyramidSlice", CopyTexturePass::Build),
+		Builder.AssignEntry<RDAG::CopyDestination, RDAG::DownsamplePyramid>()
+	}(Input);
 
 	for (U32 i = 1; true; i++)
 	{
-		const Texture2d::Descriptor& DownSampleInfo = Output.template GetDescriptor<RDAG::DownsamplePyramid>(i - 1);
-		if (((DownSampleInfo.Width >> 1) == 0) || ((DownSampleInfo.Height >> 1) == 0))
+		if (((PyramidDescriptor.Width >>= 1) == 0) || ((PyramidDescriptor.Height >>= 1) == 0))
 			break;
 
 		Output = Seq
 		{
-			Builder.RenameEntry<RDAG::DownsamplePyramid, RDAG::DownsampleInput>(i-1, 0),
+			Builder.AssignEntry<RDAG::DownsamplePyramid, RDAG::DownsampleInput>(i-1),
+			Builder.AssignEntry<RDAG::DownsamplePyramid, RDAG::DownsampleResult>(i),
 			Builder.BuildRenderPass("DownsampleRenderPass", DownsampleRenderPass::Build),
-			Builder.RenameEntry<RDAG::DownsampleResult, RDAG::DownsamplePyramid>(0, i)
+			Builder.AssignEntry<RDAG::DownsampleResult, RDAG::DownsamplePyramid>()
 		}(Output);
 	}
 	return Output;

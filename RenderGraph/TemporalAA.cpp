@@ -9,20 +9,15 @@ typename TemporalAARenderPass::TemporalAARenderResult TemporalAARenderPass::Buil
 {
 	if (ViewInfo.TemporalAaEnabled)
 	{
-		std::vector<ExternalTexture2dDescriptor> OutputDescriptors;
-		std::vector<ExternalTexture2dDescriptor> HistoryDescriptors;
-		for (U32 i = 0; i < Input.GetResourceCount<RDAG::TemporalAAInput>(); i++)
-		{
-			HistoryDescriptors.push_back(ExternalTexture2dDescriptor(Input.GetDescriptor<RDAG::TemporalAAInput>(i)));
-			HistoryDescriptors[i].Index = i;
-			HistoryDescriptors[i].Name = "TemporalAAHistory";
-			OutputDescriptors.push_back(HistoryDescriptors[i]);
-		}
+		ExternalTexture2dDescriptor OutputDescriptor = Input.GetDescriptor<RDAG::TemporalAAInput>();
+		OutputDescriptor.Index = 1;
+		OutputDescriptor.Name = "TemporalAAHistory";
+		ExternalTexture2dDescriptor HistoryDescriptor = OutputDescriptor;
 
 		auto MergedTable = Seq
 		{
-			Builder.CreateResource<RDAG::TemporalAAOutput>(OutputDescriptors),
-			Builder.CreateResource<RDAG::TemporalAAHistory>(HistoryDescriptors)
+			Builder.CreateResource<RDAG::TemporalAAOutput>(OutputDescriptor),
+			Builder.CreateResource<RDAG::TemporalAAHistory>(HistoryDescriptor)
 		}(Input);
 
 		typedef decltype(MergedTable) TemporalAAAction;
@@ -33,6 +28,6 @@ typename TemporalAARenderPass::TemporalAARenderResult TemporalAARenderPass::Buil
 	}
 	else
 	{
-		return Builder.RenameAllEntries<RDAG::TemporalAAInput, RDAG::TemporalAAOutput>()(Input);
+		return Builder.AssignEntry<RDAG::TemporalAAInput, RDAG::TemporalAAOutput>()(Input);
 	}
 }

@@ -99,6 +99,9 @@
     <ClInclude Include="ExampleResourceTypes.h">
       <Filter>Core\Plumber</Filter>
     </ClInclude>
+    <ClInclude Include="CopyTexturePass.h">
+      <Filter>Lego</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -156,6 +159,9 @@
       <Filter>Core\Tool</Filter>
     </ClCompile>
     <ClCompile Include="DepthOfField.cpp">
+      <Filter>Lego</Filter>
+    </ClCompile>
+    <ClCompile Include="CopyTexturePass.cpp">
       <Filter>Lego</Filter>
     </ClCompile>
   </ItemGroup>

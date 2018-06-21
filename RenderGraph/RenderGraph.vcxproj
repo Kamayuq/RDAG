@@ -120,6 +120,7 @@
     <ClInclude Include="GbufferPass.h" />
     <ClInclude Include="GraphCulling.h" />
     <ClInclude Include="Graphvis.h" />
+    <ClInclude Include="CopyTexturePass.h" />
     <ClInclude Include="PostprocessingPass.h" />
     <ClInclude Include="Renderpass.h" />
     <ClInclude Include="ExampleResourceTypes.h" />
@@ -149,6 +150,7 @@
     <ClCompile Include="Graphvis.cpp" />
     <ClCompile Include="LinearAlloc.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="CopyTexturePass.cpp" />
     <ClCompile Include="PostProcessingPass.cpp" />
     <ClCompile Include="ShadowMapPass.cpp" />
     <ClCompile Include="SimpleBlendPass.cpp" />

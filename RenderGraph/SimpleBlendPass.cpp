@@ -3,7 +3,7 @@
 typename SimpleBlendPass::SimpleBlendResult SimpleBlendPass::Build(const RenderPassBuilder& Builder, const SimpleBlendInput& Input, EBlendMode::Type BlendMode)
 {
 	(void)BlendMode;
-	const Texture2d::Descriptor& BlendSrcInfo = Input.GetDescriptor<RDAG::BlendSource>();
+	const Texture2d::Descriptor& BlendSrcInfo = Input.GetDescriptor<RDAG::BlendSourceA>();
 	Texture2d::Descriptor BlendDstDescriptor;
 	BlendDstDescriptor.Name = "BlendDestinationRenderTarget";
 	BlendDstDescriptor.Format = BlendSrcInfo.Format;
