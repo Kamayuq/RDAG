@@ -43,6 +43,9 @@ struct SceneViewInfo
 	EAmbientOcclusionType::Enum AmbientOcclusionType = EAmbientOcclusionType::HorizonBased;
 
 	DepthOfFieldSettings DofSettings;
+
+	char* MainTemporalAAKey = nullptr;
+	char* DoFTemporalAAKey = nullptr;
 };
 
 namespace RDAG

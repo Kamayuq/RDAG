@@ -13,7 +13,7 @@ typename SimpleBlendPass::SimpleBlendResult SimpleBlendPass::Build(const RenderP
 	using SimpleBlendAction = decltype(std::declval<SimpleBlendInput>().Union(std::declval<SimpleBlendResult>()));
 	return Seq
 	{
-		Builder.CreateResource<RDAG::BlendDest>({ BlendDstDescriptor }),
+		Builder.CreateResource<RDAG::BlendDest>( BlendDstDescriptor ),
 		Builder.QueueRenderAction("SimpleBlendAction", [](RenderContext& Ctx, const SimpleBlendAction&)
 		{
 			Ctx.Draw("SimpleBlendAction");

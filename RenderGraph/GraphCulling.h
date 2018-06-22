@@ -15,7 +15,7 @@ struct GraphProcessor
 			std::vector<const IRenderPassAction*> AllActions;
 			AllActions.assign(InAllActions.begin(), InAllActions.end());
 			std::sort(AllActions.begin(), AllActions.end(), std::less<const IRenderPassAction*>());
-			ColorGraphNodesInternal(InAllActions.back(), AllActions, 0);
+			ColorGraphNodesInternal(InAllActions.back(), AllActions);
 		}
 	}
 
@@ -31,10 +31,11 @@ struct GraphProcessor
 	}
 
 private:
-	void ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions, U32 ParentColor);
+	bool ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions);
 
-	U32 GetNewColor(U32 OldColor)
+	U32 CurrentColor = 1;
+	void NextColor()
 	{
-		return OldColor + 1 < UINT_MAX ? OldColor + 1 : 0;
+		++CurrentColor %= UINT_MAX;
 	}
 };

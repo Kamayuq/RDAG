@@ -21,7 +21,7 @@ typename AmbientOcclusionPass::AmbientOcclusionResult AmbientOcclusionPass::Buil
 
 			return Seq
 			{
-				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
+				Builder.CreateResource<RDAG::AmbientOcclusionUAV>( AoDescriptor ),
 				Builder.QueueRenderAction("DistancefieldAOAction", [](RenderContext& Ctx, const DFAOAction&)
 				{
 					Ctx.Draw("DistancefieldAOAction");
@@ -37,7 +37,7 @@ typename AmbientOcclusionPass::AmbientOcclusionResult AmbientOcclusionPass::Buil
 
 			return Seq
 			{
-				Builder.CreateResource<RDAG::AmbientOcclusionUAV>({ AoDescriptor }),
+				Builder.CreateResource<RDAG::AmbientOcclusionUAV>( AoDescriptor ),
 				Builder.QueueRenderAction("HorizonBasedAOAction", [](RenderContext& Ctx, const HBAOAction&)
 				{
 					Ctx.Draw("HorizonBasedAOAction");

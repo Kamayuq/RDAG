@@ -36,6 +36,19 @@ int main(int argc, char* argv[])
 	//ViewInfo.DofSettings.EnablePostfilterMethod = false;
 	ViewInfo.DofSettings.RecombineQuality = 0;
 
+	{
+		const char* Key = "MainTemporalAA";
+		U64 Size = strlen(Key) + 1;
+		ViewInfo.MainTemporalAAKey = new char[Size];
+		strcpy(ViewInfo.MainTemporalAAKey, Key);
+	}
+	{
+		const char* Key = "DofTemporalAA";
+		U64 Size = strlen(Key) + 1;
+		ViewInfo.DoFTemporalAAKey = new char[Size];
+		strcpy(ViewInfo.DoFTemporalAAKey, Key);
+	}
+
 	if (argc > 200)
 	{
 		check(0);
@@ -70,7 +83,7 @@ int main(int argc, char* argv[])
 
 				return Seq
 				{
-					Builder.CreateResource<RDAG::SimpleResourceHandle>({ TargetDescriptor }),
+					Builder.CreateResource<RDAG::SimpleResourceHandle>( TargetDescriptor ),
 					Builder.QueueRenderAction("SimpleRenderAction", [](RenderContext& Ctx, const PassOutputType&)
 					{
 						Ctx.Draw("SimpleRenderAction");

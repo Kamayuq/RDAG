@@ -145,7 +145,7 @@ public:
 	template<typename Handle>
 	auto CreateResource(const typename Handle::DescriptorType& Descriptor) const
 	{
-		U32 NumSubResources = Handle::GetSubResourceCount(Descriptor);
+		U32 NumSubResources = Handle::TransientResourceType::GetSubResourceCount(Descriptor);
 		SubResourceRevision WrappedResource;	
 		WrappedResource.Revision.ImaginaryResource = Handle::template OnCreate<Handle>(Descriptor);
 		WrappedResource.Revision.Parent = nullptr;
@@ -186,7 +186,11 @@ private:
 
 		void Execute(ImmediateRenderContext& RndCtx) const override
 		{
-			RenderPassData.OnExecute(RndCtx);
+			RenderPassData.OnProcess([&RndCtx](auto Handle, auto Resource, U32 SubresourceIndex) 
+			{
+				using HandleType = decltype(Handle);
+				HandleType::OnExecute(RndCtx, Resource, SubresourceIndex);
+			});
 			Task(checked_cast<ContextType&>(RndCtx), RenderPassData);
 		}
 

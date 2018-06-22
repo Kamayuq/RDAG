@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <limits>
 #include <cstring>
+#include <type_traits>
 
 #if _DEBUG
 #define checked_cast dynamic_cast
@@ -112,6 +113,20 @@ namespace Traits
 	//Function Pointers:
 	template <typename RET, typename... ARGS>
 	struct function_traits<RET(*)(ARGS...)> : function_traits<RET(ARGS...)> {};
+
+
+	template<typename F, typename... ARGS>
+	class IsCallable
+	{
+		struct Yes { char val[1]; };
+		struct No { char val[2]; };
+
+		static Yes Check(decltype(std::declval<F>()(std::declval<ARGS>()...))*);
+		static No Check(...);
+
+	public:
+		static constexpr bool value = sizeof(decltype(Check(nullptr))) == sizeof(Yes);
+	};
 };
 
 

@@ -11,7 +11,7 @@ typename DepthRenderPass::DepthRenderResult DepthRenderPass::Build(const RenderP
 
 	return Seq
 	{
-		Builder.CreateResource<RDAG::DepthTarget>({ DepthDescriptor }),
+		Builder.CreateResource<RDAG::DepthTarget>( DepthDescriptor ),
 		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const DepthRenderResult&)
 		{
 			Ctx.Draw("DepthRenderAction");

@@ -1,13 +1,8 @@
 #pragma once
 #include "Set.h"
+#include "Types.h"
 #include <utility>
 #include <type_traits>
-
-template<typename F, typename V, typename = std::void_t<>> 
-struct IsCallable : std::false_type {};
-
-template<typename F, typename V>
-struct IsCallable<F, V, std::void_t<decltype(std::declval<F>()(std::declval<V>()))>> : std::true_type {};
 
 template<typename...>
 class ResourceTable;
@@ -72,7 +67,7 @@ namespace Internal
 		{ 
 			using InputType = std::decay_t<decltype(s0)>;
 			CheckIsValidResourceTable(s0);
-			if constexpr (IsCallable<X, InputType>::value)
+			if constexpr (Traits::IsCallable<X, InputType>::value)
 			{
 				auto s1 = x(s0);
 				auto s2 = s0.Union(s1);

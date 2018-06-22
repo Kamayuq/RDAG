@@ -59,12 +59,12 @@ auto HybridScatteringLayerProcessing(const RenderPassBuilder& Builder, const Sce
 			using DOFHybridScatter = ResourceTable<ConvolutionOutputType, RDAG::ScatterCompilationTexture, RDAG::ScatteringBokehLUTTexture>;
 			Result = Seq
 			{
-				Builder.CreateResource<RDAG::ScatteringReduceTexture>({ ScatteringReduceDesc }),
+				Builder.CreateResource<RDAG::ScatteringReduceTexture>( ScatteringReduceDesc ),
 				Builder.QueueRenderAction("ScatteringReduceAction", [](RenderContext& Ctx, const ScatteringReduceData&)
 				{
 					Ctx.Draw("ScatteringReduceAction");
 				}),
-				Builder.CreateResource<RDAG::ScatterCompilationTexture>({ ScatterCompilationDesc }),
+				Builder.CreateResource<RDAG::ScatterCompilationTexture>( ScatterCompilationDesc ),
 				Builder.QueueRenderAction("ScatterCompilationAction", [](RenderContext& Ctx, const ScatterCompilationData&)
 				{
 					Ctx.Draw("ScatterCompilationAction");
@@ -92,7 +92,7 @@ auto BuildBokehLut(const RenderPassBuilder& Builder, const SceneViewInfo& ViewIn
 		LutOutputDesc.Height = ViewInfo.SceneHeight;
 		LutOutputDesc.Width = ViewInfo.SceneWidth;
 
-		auto LutOutputTable = Builder.CreateResource<BokehLUTType>({ LutOutputDesc })(s);
+		auto LutOutputTable = Builder.CreateResource<BokehLUTType>( LutOutputDesc )(s);
 
 		if (!ViewInfo.DofSettings.BokehShapeIsCircle)
 		{
@@ -175,7 +175,7 @@ auto SlightlyOutOfFocusPass(const RenderPassBuilder& Builder, const SceneViewInf
 		SlightOutOfFocusConvolutionDesc.Height = ViewInfo.SceneHeight;
 		SlightOutOfFocusConvolutionDesc.Width = ViewInfo.SceneWidth;
 
-		auto SlightlyOutOfFocusTable = Builder.CreateResource<RDAG::SlightOutOfFocusConvolutionUav>({ SlightOutOfFocusConvolutionDesc })(s);
+		auto SlightlyOutOfFocusTable = Builder.CreateResource<RDAG::SlightOutOfFocusConvolutionUav>( SlightOutOfFocusConvolutionDesc )(s);
 		if (ViewInfo.DofSettings.RecombineQuality > 0)
 		{
 			using GatherPassData = ResourceTable<RDAG::SlightOutOfFocusConvolutionUav, RDAG::ScatteringBokehLUTTexture, RDAG::PrefilterTexture, RDAG::CocTileTexture>;
@@ -222,8 +222,8 @@ typename DepthOfFieldPass::DepthOfFieldResult DepthOfFieldPass::Build(const Rend
 
 		Output = Seq
 		{
-			Builder.CreateResource<RDAG::GatherColorUav>({ GatherColorDesc }),
-			Builder.CreateResource<RDAG::FullresColorUav>({ FullresColorDesc }),
+			Builder.CreateResource<RDAG::GatherColorUav>( GatherColorDesc ),
+			Builder.CreateResource<RDAG::FullresColorUav>( FullresColorDesc ),
 			Builder.QueueRenderAction("DOFSetupAction", [](RenderContext& Ctx, const DofSetupPassData&)
 			{
 				Ctx.Draw("DOFSetupAction");
@@ -231,18 +231,18 @@ typename DepthOfFieldPass::DepthOfFieldResult DepthOfFieldPass::Build(const Rend
 			Scope(Seq
 			{
 				Builder.AssignEntry<RDAG::GatherColorTexture, RDAG::TemporalAAInput>(),
-				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build, ViewInfo),
+				Builder.BuildRenderPass("TemporalAARenderPass", TemporalAARenderPass::Build, ViewInfo, ViewInfo.DoFTemporalAAKey),
 				Builder.AssignEntry<RDAG::TemporalAAOutput, RDAG::GatherColorTexture>()
 			}),
 			Select<RDAG::GatherColorTexture>(
 			Extract<RDAG::SlightOutOfFocusConvolutionTexture, RDAG::ForegroundConvolutionTexture, RDAG::BackgroundConvolutionTexture>(Seq
 			{
-				Builder.CreateResource<RDAG::CocTileUav>({ CocTileDesc }),
+				Builder.CreateResource<RDAG::CocTileUav>( CocTileDesc ),
 				Builder.QueueRenderAction("CocDilateAction", [](RenderContext& Ctx, const CocDilateData&)
 				{
 					Ctx.Draw("CocDilateAction");
 				}),
-				Builder.CreateResource<RDAG::PrefilterUav>({ PrefilterOutputDesc }),
+				Builder.CreateResource<RDAG::PrefilterUav>( PrefilterOutputDesc ),
 				Builder.QueueRenderAction("PreFilterAction", [](RenderContext& Ctx, const PreFilterData&)
 				{
 					Ctx.Draw("PreFilterAction");

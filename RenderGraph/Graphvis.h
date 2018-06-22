@@ -11,11 +11,11 @@
 
 struct ColorStyle
 {
-	enum Values                                              {  Grey,     Black,  Mangenta,   Red,   Orange,   Gold,   Darkgreen,   Blue,   Darkturquoise,   Brown,   Coral,   Purple,   Yellowgreen,   Indigo,   MaxValues };
+	enum Values                                              {  Grey,     Black,   Magenta,   Red,   Orange,   Gold,   Darkgreen,   Blue,   Darkturquoise,   Brown,   Coral,   Purple,   Yellowgreen,   Indigo,   MaxValues };
 	static constexpr const char* ColorChart[MaxValues + 1] = { "grey95", "black", "magenta", "red", "orange", "gold", "darkgreen", "blue", "darkturquoise", "brown", "coral", "purple", "yellowgreen", "indigo", "MaxValues" };
 
 public:
-	ColorStyle(U32 Index) : Value(Values(1 + (Index % (MaxValues - 1)))) {}
+	ColorStyle(U32 Index) : Value(Values(2 + (Index % (MaxValues - 2)))) {}
 	ColorStyle(Values InValue) : Value(InValue) {}
 
 	void Print(FILE* fhp) const

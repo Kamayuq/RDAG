@@ -48,9 +48,7 @@ struct Texture2d : MaterializedResource
 
 	explicit Texture2d(const Descriptor& InDesc, EResourceFlags::Type InResourceFlags)
 		: MaterializedResource(InResourceFlags), Desc(InDesc)
-	{
-
-	}
+	{}
 
 	const char* GetName() const
 	{
@@ -73,29 +71,10 @@ private:
 	mutable EResourceTransition::Type CurrentState = EResourceTransition::Undefined;
 };
 
-template<typename CompatibleType>
-struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
+struct TransientTexture2d
 {
 	typedef Texture2d ResourceType;
 	typedef Texture2d::Descriptor DescriptorType;
-	static constexpr bool IsOutputResource = false;
-
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreate(const typename Handle::DescriptorType& InDescriptor)
-	{
-		return LinearNew<TransientResourceImpl<Handle>>(InDescriptor);
-	}
-
-	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
-	{
-		return LinearNew<ResourceType>(Descriptor, EResourceFlags::Managed);
-	}
-
-	static void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource, U32 SubResourceIndex)
-	{
-		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
-		Ctx.BindTexture(Resource, SubResourceIndex);
-	}
 
 	static DescriptorType GetSubResourceDescriptor(const DescriptorType& ResourceDescriptor, U32 SubResourceIndex)
 	{
@@ -118,6 +97,33 @@ struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 	static U32 GetSubResourceCount(const DescriptorType& ResourceDescriptor)
 	{
 		return ResourceDescriptor.MipLevel * ResourceDescriptor.TexSlices;
+	}
+};
+
+template<typename CompatibleType>
+struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
+{
+	using TransientResourceType = TransientTexture2d;
+	using DescriptorType = typename TransientResourceType::DescriptorType;
+	using ResourceType = typename TransientResourceType::ResourceType;
+
+	static constexpr bool IsOutputResource = false;
+
+	template<typename HandleType>
+	static TransientResourceImpl<HandleType>* OnCreate(const typename HandleType::DescriptorType& InDescriptor)
+	{
+		return LinearNew<TransientResourceImpl<HandleType>>(InDescriptor);
+	}
+
+	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
+	{
+		return LinearNew<ResourceType>(Descriptor, EResourceFlags::Managed);
+	}
+
+	static void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource, U32 SubResourceIndex)
+	{
+		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 
 	template<typename OTHER>
@@ -176,14 +182,14 @@ struct HandleName : RendertargetResourceHandle<Compatible>			\
 template<typename CompatibleType>
 struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
-	typedef Texture2d ResourceType;
-	typedef Texture2d::Descriptor DescriptorType;
 	static constexpr bool IsOutputResource = false;
+	using ResourceType = typename Texture2dResourceHandle<CompatibleType>::ResourceType;
+	using DescriptorType = typename Texture2dResourceHandle<CompatibleType>::DescriptorType;
 
-	template<typename Handle>
-	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
+	template<typename HandleType>
+	static TransientResourceImpl<HandleType>* OnCreate(const DescriptorType& InDescriptor)
 	{
-		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CompatibleType>::template OnCreate<Handle>(InDescriptor);
+		TransientResourceImpl<HandleType>* Ret = LinearNew<TransientResourceImpl<HandleType>>(InDescriptor);
 		Ret->Materialize(ALL_SUBRESOURCE_INDICIES);
 		return Ret;
 	}
@@ -271,7 +277,7 @@ struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename DepthTexture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
 		Ctx.BindTexture(Resource, SubResourceIndex);
@@ -283,7 +289,7 @@ struct DepthRendertargetResourceHandle : DepthTexture2dResourceHandle<Compatible
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename DepthTexture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
 		check(SubResourceIndex != ALL_SUBRESOURCE_INDICIES);
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTarget);

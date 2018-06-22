@@ -14,7 +14,7 @@ typename BilateralUpsampleRenderPass::BilateralUpsampleResult BilateralUpsampleR
 	using BilateralUpsampleAction = decltype(std::declval<BilateralUpsampleInput>().Union(std::declval<BilateralUpsampleResult>()));
 	return Seq
 	{
-		Builder.CreateResource<RDAG::UpsampleResult>({ UpsampleDescriptor }),
+		Builder.CreateResource<RDAG::UpsampleResult>( UpsampleDescriptor ),
 		Builder.QueueRenderAction("BilateralUpsampleAction", [](RenderContext& Ctx, const BilateralUpsampleAction&)
 		{
 			Ctx.Draw("BilateralUpsampleAction");

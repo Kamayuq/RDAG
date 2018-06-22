@@ -5,12 +5,12 @@ namespace RDAG
 	EXTERNAL_TEX_HANDLE(TemporalAAHistory);
 }
 
-typename TemporalAARenderPass::TemporalAARenderResult TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const TemporalAARenderInput& Input, const SceneViewInfo& ViewInfo)
+typename TemporalAARenderPass::TemporalAARenderResult TemporalAARenderPass::Build(const RenderPassBuilder& Builder, const TemporalAARenderInput& Input, const SceneViewInfo& ViewInfo, const char* TaaKey)
 {
 	if (ViewInfo.TemporalAaEnabled)
 	{
 		Texture2d::Descriptor OutputDescriptor = Input.GetDescriptor<RDAG::TemporalAAInput>();
-		OutputDescriptor.Name = Input.GetName();
+		OutputDescriptor.Name = TaaKey;
 		Texture2d::Descriptor HistoryDescriptor = OutputDescriptor;
 
 		auto MergedTable = Seq

@@ -13,7 +13,7 @@ typename ToneMappingPass::ToneMappingResult ToneMappingPass::Build(const RenderP
 	using ToneMappingAction = decltype(std::declval<ToneMappingInput>().Union(std::declval<ToneMappingResult>()));
 	return Seq
 	{
-		Builder.CreateResource<RDAG::PostProcessingResult>({ ResultDescriptor }),
+		Builder.CreateResource<RDAG::PostProcessingResult>( ResultDescriptor ),
 		Builder.QueueRenderAction("ToneMappingAction", [](RenderContext& Ctx, const ToneMappingAction&)
 		{
 			Ctx.Draw("ToneMappingAction");

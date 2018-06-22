@@ -17,7 +17,7 @@ typename VelocityRenderPass::VelocityRenderResult VelocityRenderPass::Build(cons
 	using VelocityRenderAction = ResourceTable<RDAG::VelocityVectorTarget, RDAG::DepthTexture>;
 	return Seq
 	{
-		Builder.CreateResource<RDAG::VelocityVectors>({ VelocityDescriptor }),
+		Builder.CreateResource<RDAG::VelocityVectors>( VelocityDescriptor ),
 		Builder.QueueRenderAction("VelocityRenderAction", [](RenderContext& Ctx, const VelocityRenderAction&)
 		{
 			Ctx.Draw("VelocityRenderAction");

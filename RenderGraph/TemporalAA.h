@@ -15,5 +15,5 @@ struct TemporalAARenderPass
 	using TemporalAARenderInput = ResourceTable<RDAG::TemporalAAInput, RDAG::VelocityVectors, RDAG::DepthTexture>;
 	using TemporalAARenderResult = ResourceTable<RDAG::TemporalAAOutput>;
 
-	static TemporalAARenderResult Build(const RenderPassBuilder& Builder, const TemporalAARenderInput& Input, const SceneViewInfo& ViewInfo);
+	static TemporalAARenderResult Build(const RenderPassBuilder& Builder, const TemporalAARenderInput& Input, const SceneViewInfo& ViewInfo, const char* TaaKey);
 };

@@ -32,7 +32,7 @@ typename DownsampleDepthRenderPass::DownsampleDepthResult DownsampleDepthRenderP
 	using DownsampleDepthAction = decltype(std::declval<DownsampleDepthInput>().Union(std::declval<DownsampleDepthResult>()));
 	return Seq
 	{
-		Builder.CreateResource<RDAG::DownsampleDepthResult>({ DownsampleDescriptor }),
+		Builder.CreateResource<RDAG::DownsampleDepthResult>( DownsampleDescriptor ),
 		Builder.QueueRenderAction("DownsampleRenderAction", [](RenderContext& Ctx, const DownsampleDepthAction&)
 	{
 		Ctx.Draw("DownsampleDepthRenderAction");

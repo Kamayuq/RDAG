@@ -2,9 +2,10 @@
 #include "Plumber.h"
 #include "Renderpass.h"
 
-void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions, U32 ParentColor)
+bool GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, std::vector<const IRenderPassAction*>& InAllActions)
 {
 	const IResourceTableInfo& Pass = Action->GetRenderPassData();
+	bool isFirstPath = true;
 
 	U32 NumValidMutables = 0;
 	for (const ResourceTableEntry& Output : Pass)
@@ -12,19 +13,6 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 		if (Output.IsOutput() && Output.IsMaterialized())
 		{
 			NumValidMutables++;
-			if (const IRenderPassAction* Parent = Output.GetParent() ? Output.GetParent()->GetAction() : nullptr)
-			{
-				auto Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
-				if (Iter != InAllActions.end() && *Iter != Action)
-				{
-					ColorGraphNodesInternal(*Iter, InAllActions, GetNewColor(ParentColor));
-					Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
-					if (Iter != InAllActions.end())
-					{
-						InAllActions.erase(Iter);
-					}
-				}
-			}
 		}
 	}
 
@@ -45,7 +33,12 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 					auto Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
 					if (Iter != InAllActions.end() && *Iter != Action)
 					{
-						ColorGraphNodesInternal(*Iter, InAllActions, GetNewColor(ParentColor));
+						if (!isFirstPath)
+						{
+							NextColor();
+						}
+
+						isFirstPath &= ColorGraphNodesInternal(*Iter, InAllActions);
 						Iter = std::find(InAllActions.begin(), InAllActions.end(), Parent);
 						if (Iter != InAllActions.end())
 						{
@@ -56,9 +49,12 @@ void GraphProcessor::ColorGraphNodesInternal(const IRenderPassAction* Action, st
 			}
 		}
 
-		if (NumValidMutables && (Action->GetColor() == UINT32_MAX || Action->GetColor() < ParentColor))
+		if (NumValidMutables && (Action->GetColor() == UINT32_MAX || Action->GetColor() < CurrentColor))
 		{
-			Action->SetColor(ParentColor);
+			Action->SetColor(CurrentColor);
+			return false;
 		}
 	}
+
+	return isFirstPath;
 }

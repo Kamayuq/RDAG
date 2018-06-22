@@ -36,7 +36,7 @@ public:
 };
 
 /* Transient ResourceBase */
-class TransientResource
+class TransientResourceBase
 {
 private:
 	/* The type can be recovered by the TransientResourceImpl */
@@ -47,7 +47,7 @@ private:
 	static const U64 BitsPerInt = sizeof(U64) * 8;
 
 protected:
-	TransientResource(U32 InSubResourceCount) : SubResourceCount(InSubResourceCount)
+	TransientResourceBase(U32 InSubResourceCount) : SubResourceCount(InSubResourceCount)
 	{
 		BitFieldIntegers = (SubResourceCount + BitsPerInt - 1) / BitsPerInt;
 		MaterializedSubResources = LinearAlloc<U64>(BitFieldIntegers);
@@ -124,13 +124,13 @@ public:
 	template<typename Handle>
 	const typename Handle::DescriptorType GetDescriptor(U32 SubResourceIndex) const
 	{
-		return Handle::GetSubResourceDescriptor(static_cast<const TransientResourceImpl<Handle>*>(this)->Descriptor, SubResourceIndex);
+		return Handle::TransientResourceType::GetSubResourceDescriptor(static_cast<const TransientResource<typename Handle::TransientResourceType>*>(this)->Descriptor, SubResourceIndex);
 	}
 
 	template<typename Handle>
 	const typename Handle::ResourceType& GetResource() const
 	{
-		return *static_cast<const typename Handle::ResourceType*>(static_cast<const TransientResourceImpl<Handle>*>(this)->Resource);
+		return *static_cast<const typename Handle::ResourceType*>(static_cast<const TransientResource<typename Handle::TransientResourceType>*>(this)->Resource);
 	}
 
 	virtual const char* GetResourceName() const = 0;
@@ -142,51 +142,58 @@ private:
 	virtual MaterializedResource* MaterializeInternal() const = 0;
 };
 
-/* Specialized Transient resource Implementation */
-/* Handle is of ResourceHandle Type */
-template<typename Handle>
-class TransientResourceImpl final : public TransientResource
+template<typename TransientType>
+class TransientResource : public TransientResourceBase
 {
-	friend class TransientResource;
+	friend class TransientResourceBase;
 
-	typedef typename Handle::ResourceType ResourceType;
-	typedef typename Handle::DescriptorType DescriptorType;
+protected:
+	typedef typename TransientType::ResourceType ResourceType;
+	typedef typename TransientType::DescriptorType DescriptorType;
 	DescriptorType Descriptor;
 
 public:
-	TransientResourceImpl(const DescriptorType& InDescriptor) 
-		: TransientResource(Handle::GetSubResourceCount(InDescriptor))
-		, Descriptor(InDescriptor) 
-	{
-		static_assert(std::is_same_v<ResourceType, typename Handle::CompatibleType::ResourceType>, "ResourceTypes must match");
-		static_assert(std::is_same_v<DescriptorType, typename Handle::CompatibleType::DescriptorType>, "DescriptorTypes must match");
-	}
+	TransientResource(const DescriptorType& InDescriptor)
+		: TransientResourceBase(TransientType::GetSubResourceCount(InDescriptor))
+		, Descriptor(InDescriptor)
+	{}
 
-	const char* GetResourceName() const override
+	const char* GetResourceName() const final override
 	{
 		return Descriptor.Name;
 	}
 
-	U32 GetResourceWidth(U32 SubResourceIndex) const override
+	U32 GetResourceWidth(U32 SubResourceIndex) const final override
 	{
-		return Handle::GetSubResourceDescriptor(Descriptor, SubResourceIndex).Width;
+		return TransientType::GetSubResourceDescriptor(Descriptor, SubResourceIndex).Width;
 	}
 
-	U32 GetResourceHeight(U32 SubResourceIndex) const override
+	U32 GetResourceHeight(U32 SubResourceIndex) const final override
 	{
-		return Handle::GetSubResourceDescriptor(Descriptor, SubResourceIndex).Height;
+		return TransientType::GetSubResourceDescriptor(Descriptor, SubResourceIndex).Height;
 	}
 
-	U32 GetNumSubResources() const override
+	U32 GetNumSubResources() const final override
 	{
-		return Handle::GetSubResourceCount(Descriptor);
+		return TransientType::GetSubResourceCount(Descriptor);
 	}
+};
+/* Specialized Transient resource Implementation */
+/* Handle is of ResourceHandle Type */
+template<typename HandleType>
+class TransientResourceImpl final : public TransientResource<typename HandleType::TransientResourceType>
+{
+	using BaseType = ::TransientResource<typename HandleType::TransientResourceType>;
+public:
+	TransientResourceImpl(const typename HandleType::DescriptorType& InDescriptor)
+		: BaseType(InDescriptor)
+	{}
 
 private:
 	/* use the descriptor to create a resource and trigger OnMaterilize callback */
 	MaterializedResource* MaterializeInternal() const override
 	{
-		return Handle::OnMaterialize(Descriptor);
+		return HandleType::OnMaterialize(this->Descriptor);
 	}
 };
 
@@ -194,11 +201,11 @@ private:
 struct ResourceRevision
 {
 	/* a link to it's underlying immaginary resource */
-	const TransientResource* ImaginaryResource = nullptr;
+	const TransientResourceBase* ImaginaryResource = nullptr;
 	/* a link to the resourcetable set where this revision came from originally */
 	const class IResourceTableInfo* Parent = nullptr;
 
-	ResourceRevision(const TransientResource* InImaginaryResource = nullptr) : ImaginaryResource(InImaginaryResource) {}
+	ResourceRevision(const TransientResourceBase* InImaginaryResource = nullptr) : ImaginaryResource(InImaginaryResource) {}
 
 	bool operator==(ResourceRevision Other) const
 	{
@@ -240,12 +247,16 @@ struct ResourceRevisionInterface
 		return SubResource.Revision.ImaginaryResource->GetDescriptor<Handle>(SubResource.SubResourceIndex);
 	}
 
-	/* forward the OnExecute callback to the Handles implementation and all of it's Resources*/
-	static void OnExecute(const SubResourceRevision& SubResource, struct ImmediateRenderContext& RndCtx)
+	/* forward the OnProcess callback to the Handles implementation and all of it's Resources*/
+	template<typename CALLABLE>
+	static void OnProcess(CALLABLE&& Callable, const SubResourceRevision& SubResource)
 	{
-		if (SubResource.Revision.IsUndefined() && SubResource.Revision.ImaginaryResource->IsMaterialized(SubResource.SubResourceIndex))
+		if constexpr (Traits::IsCallable<CALLABLE, Handle, typename Handle::ResourceType, U32>::value)
 		{
-			Handle::OnExecute(RndCtx, GetResource(SubResource), SubResource.SubResourceIndex);
+			if (SubResource.Revision.IsUndefined() && SubResource.Revision.ImaginaryResource->IsMaterialized(SubResource.SubResourceIndex))
+			{
+				Callable(Handle(), GetResource(SubResource), SubResource.SubResourceIndex);
+			}
 		}
 	}
 
@@ -391,15 +402,18 @@ public:
 	}
 
 private:
-	/* forward OnExecute callback for all the handles the Table contains */
-	void OnExecute(struct ImmediateRenderContext& Ctx) const
+	/* forward OnProcess callback for all the handles the Table contains */
+	template<typename CALLABLE>
+	void OnProcess(CALLABLE&& Callable) const
 	{
-		(ResourceRevisionInterface<TS>::OnExecute(GetSubResource<TS>(), Ctx), ...);
+		(ResourceRevisionInterface<TS>::OnProcess(std::forward<CALLABLE>(Callable), GetSubResource<TS>()), ...);
 	}
 
 	template<typename Handle>
 	SubResourceRevision GetSubResource() const
 	{
+		static_assert(std::is_same_v<typename Handle::ResourceType, typename Handle::CompatibleType::ResourceType>, "ResourceTypes must match");
+		static_assert(std::is_same_v<typename Handle::DescriptorType, typename Handle::CompatibleType::DescriptorType>, "DescriptorTypes must match");
 		static_assert(CompatibleTypes::template Contains<typename Handle::CompatibleType>(), "the Handle is not available");
 		static_assert(Handle::CompatibleType::template IsConvertible<Handle>(), "the Handle is not convertible");
 		constexpr int RevisionIndex = CompatibleTypes::template GetIndex<typename Handle::CompatibleType>();
@@ -442,7 +456,7 @@ public:
 		: SubResource(InSubResource), Owner(InOwner), Name(HandleName), IsOutputResource(InIsOutputResource)
 	{}
 
-	const TransientResource* GetImaginaryResource() const
+	const TransientResourceBase* GetImaginaryResource() const
 	{
 		return SubResource.Revision.ImaginaryResource;
 	}

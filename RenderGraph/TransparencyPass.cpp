@@ -32,7 +32,7 @@ struct HalfResTransparencyRenderPass
 					Builder.BuildRenderPass("HalfResTransparency_DownsampleDepthRenderPass", DownsampleDepthRenderPass::Build),
 					Builder.AssignEntry<RDAG::DownsampleDepthResult, RDAG::DepthTarget>()
 				}),
-				Builder.CreateResource<RDAG::ForwardRenderTarget>({ HalfResTransparencyDescriptor }),
+				Builder.CreateResource<RDAG::ForwardRenderTarget>( HalfResTransparencyDescriptor ),
 				Builder.BuildRenderPass("HalfResTransparency_ForwardRenderPass", ForwardRenderPass::Build, ESortOrder::BackToFront),
 				Builder.AssignEntry<RDAG::DepthTarget, RDAG::HalfResDepth>(),
 				Builder.AssignEntry<RDAG::ForwardRenderTarget, RDAG::HalfResInput>()

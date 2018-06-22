@@ -17,7 +17,7 @@ typename DeferredLightingPass::DeferredLightingResult DeferredLightingPass::Buil
 	using DeferredLightingAction = ResourceTable<RDAG::LightingUAV, RDAG::ShadowMapTextureArray, RDAG::AmbientOcclusionTexture, RDAG::GbufferTexture, RDAG::DepthTexture>;
 	return Seq
 	{
-		Builder.CreateResource<RDAG::LightingUAV>({ LightingDescriptor }),
+		Builder.CreateResource<RDAG::LightingUAV>( LightingDescriptor ),
 		Builder.QueueRenderAction("DeferredLightingAction", [](RenderContext& Ctx, const DeferredLightingAction&)
 		{
 			Ctx.Draw("DeferredLightingAction");
