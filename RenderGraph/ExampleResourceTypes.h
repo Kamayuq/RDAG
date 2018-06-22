@@ -130,6 +130,7 @@ struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 	static constexpr bool IsConvertible()
 	{
 		static_assert(std::is_base_of_v<Texture2dResourceHandle<typename CompatibleType::CompatibleType>, CompatibleType>, "The compatible Type needs to be same base class");
+		static_assert(std::is_same_v<typename CompatibleType::TransientResourceType, TransientResourceType>, "Resources move between Handles that is why there Transient types need to match");
 		return std::is_base_of_v<Texture2dResourceHandle<typename OTHER::CompatibleType>, OTHER>;
 	}
 };

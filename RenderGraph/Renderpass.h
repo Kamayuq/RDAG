@@ -111,6 +111,7 @@ public:
 	auto AssignEntry(U32 DestinationSubResourceIndex = ALL_SUBRESOURCE_INDICIES) const
 	{
 		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to rename the same resource to itself");
+		static_assert(std::is_same_v<typename From::TransientResourceType, typename To::TransientResourceType>, "Resources move between Handles that is why there Transient types need to match");
 		static_assert(std::is_same_v<typename From::ResourceType, typename To::ResourceType>, "ResourceTypes must match");
 		static_assert(std::is_same_v<typename From::DescriptorType, typename To::DescriptorType>, "DescriptorTypes must match");
 
