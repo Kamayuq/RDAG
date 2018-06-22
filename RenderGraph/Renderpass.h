@@ -159,7 +159,7 @@ private:
 		template<typename T>
 		static constexpr bool Filter()
 		{
-			return !T::IsReadOnlyResource;
+			return T::IsOutputResource;
 		}
 	};
 

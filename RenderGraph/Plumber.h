@@ -51,7 +51,11 @@ protected:
 	{
 		BitFieldIntegers = (SubResourceCount + BitsPerInt - 1) / BitsPerInt;
 		MaterializedSubResources = LinearAlloc<U64>(BitFieldIntegers);
-		memset(MaterializedSubResources, 0, sizeof(U64) * BitFieldIntegers);
+
+		for (U32 i = 0; i < BitFieldIntegers; i++)
+		{
+			MaterializedSubResources[i] = 0ull;
+		}
 
 		U64 Remainder = (BitFieldIntegers * BitsPerInt) - SubResourceCount;
 		if (Remainder != 0)
@@ -269,6 +273,7 @@ class ResourceTable : public IResourceTableBase
 	const char* HandleNames[StorageSize];
 	ResourceRevision HandleRevisions[StorageSize];
 	U32 SubResourceIndicies[StorageSize];
+	bool AreOutputResources[StorageSize];
 
 public:
 	/*                   MakeFriends                    */
@@ -296,6 +301,7 @@ public:
 		, HandleNames{ TS::Name... }
 		, HandleRevisions{ InSubResources[HandleTypes::template GetIndex<TS>()].Revision... }
 		, SubResourceIndicies{ InSubResources[HandleTypes::template GetIndex<TS>()].SubResourceIndex... }
+		, AreOutputResources{ TS::IsOutputResource... }
 	{
 		(void)InSubResources;
 	}
@@ -310,6 +316,7 @@ public:
 		, HandleNames{ "DummyHandle" }
 		, HandleRevisions{ nullptr }
 		, SubResourceIndicies{ ALL_SUBRESOURCE_INDICIES }
+		, AreOutputResources{ false }
 	{}
 
 	/* assignment constructor from another resourcetable with SINFAE*/
@@ -422,12 +429,13 @@ class ResourceTableEntry
 	const class IResourceTableInfo* Owner = nullptr;
 	//the name as given by the constexpr value of the Handle
 	const char* Name = nullptr;
+	bool IsOutputResource = false;
 
 public:
 	ResourceTableEntry() = default;
 	ResourceTableEntry(const ResourceTableEntry& Entry) = default;
-	ResourceTableEntry(const SubResourceRevision& InSubResource, const class IResourceTableInfo* InOwner, const char* HandleName)
-		: SubResource(InSubResource), Owner(InOwner), Name(HandleName)
+	ResourceTableEntry(const SubResourceRevision& InSubResource, bool InIsOutputResource, const class IResourceTableInfo* InOwner, const char* HandleName)
+		: SubResource(InSubResource), Owner(InOwner), Name(HandleName), IsOutputResource(InIsOutputResource)
 	{}
 
 	const TransientResource* GetImaginaryResource() const
@@ -453,6 +461,11 @@ public:
 	bool IsUndefined() const
 	{
 		return SubResource.Revision.ImaginaryResource == nullptr || SubResource.Revision.Parent == nullptr;
+	}
+
+	bool IsOutput() const
+	{
+		return IsOutputResource;
 	}
 
 	bool IsMaterialized() const
@@ -508,6 +521,7 @@ public:
 		const char* const* HandleNames = nullptr;
 		const ResourceRevision* HandleRevisions = nullptr;
 		const U32* SubResourceIndicies = nullptr;
+		const bool* AreOutputResources = nullptr;
 		size_t NumHandles = 0;
 		U32 CurrentHandleIndex = 0;
 
@@ -518,8 +532,8 @@ public:
 		}
 
 	public:
-		Iterator(const IResourceTableInfo* InResourceTable, const char* const* InHandleNames, const ResourceRevision* InHandleRevisions, const U32* InSubResourceIndicies, size_t InNumHandles, bool SetToEnd)
-			: ResourceTable(InResourceTable), HandleNames(InHandleNames), HandleRevisions(InHandleRevisions), SubResourceIndicies(InSubResourceIndicies), NumHandles(InNumHandles)
+		Iterator(const IResourceTableInfo* InResourceTable, const char* const* InHandleNames, const ResourceRevision* InHandleRevisions, const U32* InSubResourceIndicies, const bool* InAreOutputResources, size_t InNumHandles, bool SetToEnd)
+			: ResourceTable(InResourceTable), HandleNames(InHandleNames), HandleRevisions(InHandleRevisions), SubResourceIndicies(InSubResourceIndicies), AreOutputResources(InAreOutputResources), NumHandles(InNumHandles)
 		{
 			if (SetToEnd)
 			{
@@ -538,7 +552,7 @@ public:
 
 		ResourceTableEntry operator*() const
 		{
-			return ResourceTableEntry({ HandleRevisions[CurrentHandleIndex],  SubResourceIndicies[CurrentHandleIndex] }, ResourceTable, HandleNames[CurrentHandleIndex]);
+			return ResourceTableEntry({ HandleRevisions[CurrentHandleIndex],  SubResourceIndicies[CurrentHandleIndex] }, AreOutputResources[CurrentHandleIndex], ResourceTable, HandleNames[CurrentHandleIndex]);
 		}
 	};
 
@@ -574,12 +588,12 @@ private:
 
 	Iterator begin() const override
 	{
-		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->SubResourceIndicies[0], this->Size(), false };
+		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->SubResourceIndicies[0], &this->AreOutputResources[0], this->Size(), false };
 	}
 
 	Iterator end() const override
 	{
-		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->SubResourceIndicies[0], this->Size(), true };
+		return Iterator{ this, &this->HandleNames[0], &this->HandleRevisions[0], &this->SubResourceIndicies[0], &this->AreOutputResources[0], this->Size(), true };
 	}
 
 	/* First the tables are merged and than the results are linked to track the history */

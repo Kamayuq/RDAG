@@ -120,7 +120,8 @@ struct PinStyle
 		PinDrawStyle.Print(fhp); fprintf(fhp, ", ");
 		PinColorStyle.Print(fhp); fprintf(fhp, ", ");
 		PinFontColorStyle.Print(fhp);
-		fprintf(fhp, R"(, label="%s\n%s\nW:%i H:%i\n I:%i N:%i")", 
+		fprintf(fhp, R"(, label="%s\n%s\n%s\nW:%i H:%i\n I:%i N:%i")", 
+			Entry.IsOutput() ? "Output" : "Input",
 			Entry.GetName(), 
 			Entry.GetImaginaryResource()->GetResourceName(), 
 			Entry.GetImaginaryResource()->GetResourceWidth(Entry.GetSubResourceIndex()),

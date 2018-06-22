@@ -78,7 +78,7 @@ struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 {
 	typedef Texture2d ResourceType;
 	typedef Texture2d::Descriptor DescriptorType;
-	static constexpr bool IsReadOnlyResource = true;
+	static constexpr bool IsOutputResource = false;
 
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const typename Handle::DescriptorType& InDescriptor)
@@ -131,7 +131,7 @@ struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 template<typename CompatibleType>
 struct Uav2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = false;
+	static constexpr bool IsOutputResource = true;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
@@ -143,7 +143,7 @@ struct Uav2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 template<typename CompatibleType>
 struct RendertargetResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = false;
+	static constexpr bool IsOutputResource = true;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
@@ -186,7 +186,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	typedef Texture2d ResourceType;
 	typedef ExternalTexture2dDescriptor DescriptorType;
-	static constexpr bool IsReadOnlyResource = true;
+	static constexpr bool IsOutputResource = false;
 
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
@@ -224,7 +224,7 @@ struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 template<typename CompatibleType>
 struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = false;
+	static constexpr bool IsOutputResource = true;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
@@ -236,7 +236,7 @@ struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CompatibleT
 template<typename CompatibleType>
 struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = false;
+	static constexpr bool IsOutputResource = true;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
@@ -268,7 +268,7 @@ struct HandleName : ExternalRendertargetResourceHandle<Compatible>	\
 template<typename CompatibleType>
 struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = true;
+	static constexpr bool IsOutputResource = false;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
@@ -286,7 +286,7 @@ struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 template<typename CompatibleType>
 struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = false;
+	static constexpr bool IsOutputResource = true;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{
@@ -298,7 +298,7 @@ struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 template<typename CompatibleType>
 struct DepthRendertargetResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 {
-	static constexpr bool IsReadOnlyResource = false;
+	static constexpr bool IsOutputResource = true;
 
 	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
 	{

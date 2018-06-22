@@ -9,11 +9,10 @@ typename DepthRenderPass::DepthRenderResult DepthRenderPass::Build(const RenderP
 	DepthDescriptor.Height = ViewInfo.SceneHeight;
 	DepthDescriptor.Width = ViewInfo.SceneWidth;
 
-	using DepthRenderAction = decltype(std::declval<DepthRenderInput>().Union(std::declval<DepthRenderResult>()));
 	return Seq
 	{
 		Builder.CreateResource<RDAG::DepthTarget>({ DepthDescriptor }),
-		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const DepthRenderAction&)
+		Builder.QueueRenderAction("DepthRenderAction", [](RenderContext& Ctx, const DepthRenderResult&)
 		{
 			Ctx.Draw("DepthRenderAction");
 		})

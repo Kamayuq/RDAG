@@ -15,3 +15,8 @@ inline void checkFunc(bool cond)
 #ifdef _MSC_VER
 #pragma warning( pop ) 
 #endif
+
+#ifndef _DEBUG
+#undef check
+#define check(a) { (void)(a); }
+#endif

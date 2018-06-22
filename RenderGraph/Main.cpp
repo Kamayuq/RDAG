@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 	//ViewInfo.TransparencyEnabled = false;
 	//ViewInfo.TransparencySeperateEnabled = false;
 	//ViewInfo.TemporalAaEnabled = false;
-	ViewInfo.DepthOfFieldEnabled = false;
+	//ViewInfo.DepthOfFieldEnabled = false;
 
 	//ViewInfo.DofSettings.EnabledForegroundLayer = false;
 	//ViewInfo.DofSettings.EnabledBackgroundLayer = false;
