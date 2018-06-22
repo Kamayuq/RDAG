@@ -110,7 +110,10 @@ public:
 	template<typename From, typename To>
 	auto AssignEntry(U32 DestinationSubResourceIndex = ALL_SUBRESOURCE_INDICIES) const
 	{
-		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to remane the same resource to itself");
+		static_assert(!std::is_same_v<typename From::CompatibleType, typename To::CompatibleType>, "It is not very useful to rename the same resource to itself");
+		static_assert(std::is_same_v<typename From::ResourceType, typename To::ResourceType>, "ResourceTypes must match");
+		static_assert(std::is_same_v<typename From::DescriptorType, typename To::DescriptorType>, "DescriptorTypes must match");
+
 		return Seq([DestinationSubResourceIndex](const auto& s)
 		{
 			CheckIsValidResourceTable(s);
@@ -121,7 +124,8 @@ public:
 			static_assert(To::template IsConvertible<From>(), "HandleTypes do not match");
 			//remove the old output and copy it into the new destination
 			SubResourceRevision SubResource = s.template GetSubResource<From>();
-			SubResource.SubResourceIndex = DestinationSubResourceIndex;
+			U32 NumSubResources = SubResource.Revision.ImaginaryResource->GetNumSubResources();
+			SubResource.SubResourceIndex = (DestinationSubResourceIndex == ALL_SUBRESOURCE_INDICIES) && (NumSubResources == 1) ? 0 : DestinationSubResourceIndex;
 			return ResourceTable<To>{ "RenameAllEntries", { SubResource } };
 		});
 	}
@@ -141,10 +145,11 @@ public:
 	template<typename Handle>
 	auto CreateResource(const typename Handle::DescriptorType& Descriptor) const
 	{
+		U32 NumSubResources = Handle::GetSubResourceCount(Descriptor);
 		SubResourceRevision WrappedResource;	
 		WrappedResource.Revision.ImaginaryResource = Handle::template OnCreate<Handle>(Descriptor);
 		WrappedResource.Revision.Parent = nullptr;
-		WrappedResource.SubResourceIndex = ALL_SUBRESOURCE_INDICIES;
+		WrappedResource.SubResourceIndex = NumSubResources == 1 ? 0 : ALL_SUBRESOURCE_INDICIES;
 
 		return Seq([WrappedResource](const auto& s)
 		{

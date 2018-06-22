@@ -23,9 +23,9 @@ public:
 		}
 	}
 
-	void BindTexture(const struct Texture2d& Tex)
+	void BindTexture(const struct Texture2d& Tex, U32 SubResourceIndex)
 	{
-		printf("BindTexture: %s \n", Tex.GetName());
+		printf("BindTexture: %s SubResource:%i \n", Tex.GetName(), SubResourceIndex);
 	}
 
 	void BindRenderTarget(const struct Texture2d& Tex)

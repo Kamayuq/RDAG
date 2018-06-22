@@ -6,13 +6,9 @@
 
 typename ToneMappingPass::ToneMappingResult ToneMappingPass::Build(const RenderPassBuilder& Builder, const ToneMappingInput& Input)
 {
-	const Texture2d::Descriptor& PPfxInfo = Input.GetDescriptor<RDAG::PostProcessingInput>();
-	ExternalTexture2dDescriptor ResultDescriptor;
-	ResultDescriptor.Index = 0x10;
+	Texture2d::Descriptor ResultDescriptor = Input.GetDescriptor<RDAG::PostProcessingInput>();
 	ResultDescriptor.Name = "PostProcessingResult";
 	ResultDescriptor.Format = ERenderResourceFormat::ARGB8U;
-	ResultDescriptor.Height = PPfxInfo.Height;
-	ResultDescriptor.Width = PPfxInfo.Width;
 
 	using ToneMappingAction = decltype(std::declval<ToneMappingInput>().Union(std::declval<ToneMappingResult>()));
 	return Seq

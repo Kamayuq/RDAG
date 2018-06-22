@@ -2,7 +2,7 @@
 #include "Types.h"
 #include "Plumber.h"
 #include "LinearAlloc.h"
-
+#include <unordered_map>
 /* example Texture2d implementation */
 struct Texture2d : MaterializedResource
 {
@@ -91,10 +91,10 @@ struct Texture2dResourceHandle : ResourceHandle<CompatibleType>
 		return LinearNew<ResourceType>(Descriptor, EResourceFlags::Managed);
 	}
 
-	static void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource)
+	static void OnExecute(struct ImmediateRenderContext& Ctx, const ResourceType& Resource, U32 SubResourceIndex)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::Texture);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 
 	static DescriptorType GetSubResourceDescriptor(const DescriptorType& ResourceDescriptor, U32 SubResourceIndex)
@@ -133,10 +133,10 @@ struct Uav2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 };
 
@@ -145,10 +145,11 @@ struct RendertargetResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
+		check(SubResourceIndex != ALL_SUBRESOURCE_INDICIES);
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 };
 
@@ -172,52 +173,33 @@ struct HandleName : RendertargetResourceHandle<Compatible>			\
 
 #define SIMPLE_TEX_HANDLE(HandleName) SIMPLE_TEX_HANDLE2(HandleName, HandleName)
 
-
-struct ExternalTexture2dDescriptor : Texture2d::Descriptor
-{
-	I32 Index = -1;
-public:
-	ExternalTexture2dDescriptor() = default;
-	ExternalTexture2dDescriptor(const Texture2d::Descriptor& Other) : Texture2d::Descriptor(Other) {};
-};
-
 template<typename CompatibleType>
 struct ExternalTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	typedef Texture2d ResourceType;
-	typedef ExternalTexture2dDescriptor DescriptorType;
+	typedef Texture2d::Descriptor DescriptorType;
 	static constexpr bool IsOutputResource = false;
 
 	template<typename Handle>
 	static TransientResourceImpl<Handle>* OnCreate(const DescriptorType& InDescriptor)
 	{
 		TransientResourceImpl<Handle>* Ret = Texture2dResourceHandle<CompatibleType>::template OnCreate<Handle>(InDescriptor);
-		if (InDescriptor.Index >= 0)
-		{
-			Ret->Materialize(ALL_SUBRESOURCE_INDICIES);
-		}
+		Ret->Materialize(ALL_SUBRESOURCE_INDICIES);
 		return Ret;
 	}
 
 	static ResourceType* OnMaterialize(const DescriptorType& Descriptor)
 	{
-		static std::vector<ResourceType*> ExternalResourceMap;
-		if (Descriptor.Index < 0)
+		//TODO static string key is not really safe
+		static std::unordered_map<const char*, ResourceType*> ExternalResourceMap;
+		auto it = ExternalResourceMap.find(Descriptor.Name);
+		if (it == ExternalResourceMap.end())
 		{
-			return nullptr;
+			ResourceType* ExternalResource = new ResourceType(Descriptor, EResourceFlags::External);
+			ExternalResourceMap[Descriptor.Name] = ExternalResource;
+			return ExternalResource;
 		}
-
-		if (ExternalResourceMap.size() <= (size_t)Descriptor.Index)
-		{
-			ExternalResourceMap.resize(Descriptor.Index + 1);
-		}
-
-		if (ExternalResourceMap[Descriptor.Index] == nullptr)
-		{
-			ExternalResourceMap[Descriptor.Index] = new ResourceType(Descriptor, EResourceFlags::External);
-		}
-
-		return ExternalResourceMap[Descriptor.Index];
+		return it->second;
 	}
 };
 
@@ -226,10 +208,10 @@ struct ExternalUav2dResourceHandle : ExternalTexture2dResourceHandle<CompatibleT
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 };
 
@@ -238,10 +220,11 @@ struct ExternalRendertargetResourceHandle : ExternalTexture2dResourceHandle<Comp
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename ExternalTexture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
+		check(SubResourceIndex != ALL_SUBRESOURCE_INDICIES);
 		Ctx.TransitionResource(Resource, EResourceTransition::Target);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 };
 
@@ -270,10 +253,10 @@ struct DepthTexture2dResourceHandle : Texture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsOutputResource = false;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTexture);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 
 	template<typename OTHER>
@@ -288,10 +271,10 @@ struct DepthUav2dResourceHandle : DepthTexture2dResourceHandle<CompatibleType>
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
 		Ctx.TransitionResource(Resource, EResourceTransition::UAV);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 };
 
@@ -300,10 +283,11 @@ struct DepthRendertargetResourceHandle : DepthTexture2dResourceHandle<Compatible
 {
 	static constexpr bool IsOutputResource = true;
 
-	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource)
+	static void OnExecute(ImmediateRenderContext& Ctx, const typename Texture2dResourceHandle<CompatibleType>::ResourceType& Resource, U32 SubResourceIndex)
 	{
+		check(SubResourceIndex != ALL_SUBRESOURCE_INDICIES);
 		Ctx.TransitionResource(Resource, EResourceTransition::DepthTarget);
-		Ctx.BindTexture(Resource);
+		Ctx.BindTexture(Resource, SubResourceIndex);
 	}
 };
 

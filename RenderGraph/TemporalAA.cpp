@@ -9,10 +9,9 @@ typename TemporalAARenderPass::TemporalAARenderResult TemporalAARenderPass::Buil
 {
 	if (ViewInfo.TemporalAaEnabled)
 	{
-		ExternalTexture2dDescriptor OutputDescriptor = Input.GetDescriptor<RDAG::TemporalAAInput>();
-		OutputDescriptor.Index = 1;
-		OutputDescriptor.Name = "TemporalAAHistory";
-		ExternalTexture2dDescriptor HistoryDescriptor = OutputDescriptor;
+		Texture2d::Descriptor OutputDescriptor = Input.GetDescriptor<RDAG::TemporalAAInput>();
+		OutputDescriptor.Name = Input.GetName();
+		Texture2d::Descriptor HistoryDescriptor = OutputDescriptor;
 
 		auto MergedTable = Seq
 		{

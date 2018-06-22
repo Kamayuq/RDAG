@@ -156,7 +156,11 @@ class TransientResourceImpl final : public TransientResource
 public:
 	TransientResourceImpl(const DescriptorType& InDescriptor) 
 		: TransientResource(Handle::GetSubResourceCount(InDescriptor))
-		, Descriptor(InDescriptor) {}
+		, Descriptor(InDescriptor) 
+	{
+		static_assert(std::is_same_v<ResourceType, typename Handle::CompatibleType::ResourceType>, "ResourceTypes must match");
+		static_assert(std::is_same_v<DescriptorType, typename Handle::CompatibleType::DescriptorType>, "DescriptorTypes must match");
+	}
 
 	const char* GetResourceName() const override
 	{
@@ -241,7 +245,7 @@ struct ResourceRevisionInterface
 	{
 		if (SubResource.Revision.IsUndefined() && SubResource.Revision.ImaginaryResource->IsMaterialized(SubResource.SubResourceIndex))
 		{
-			Handle::OnExecute(RndCtx, GetResource(SubResource));
+			Handle::OnExecute(RndCtx, GetResource(SubResource), SubResource.SubResourceIndex);
 		}
 	}
 
